@@ -60,7 +60,10 @@ export interface ResolvedWood {
   /** bending size / depth factor (sawn C_F; SCL depth factor). Glulam uses C_V instead. */
   CF: number;
   Cfu: number;
-  CM: { Fb: number; Fv: number; Fcperp: number; E: number };
+  /** size factors for compression and tension parallel to grain (sawn C_F; 1.0 otherwise) */
+  CFc: number;
+  CFt: number;
+  CM: { Fb: number; Fv: number; Fcperp: number; E: number; Fc: number; Ft: number };
   density: number;
   selfWeight: number;
   G: number;
@@ -93,6 +96,8 @@ export interface WoodBeamInput {
   Kcr: number;
   /** remaining depth at a tension-face notch over the supports (birdsmouth), in */
   notchDepth?: number;
+  /** supports where the notch is cut (default: all supports) */
+  notchSupports?: number[];
   /** manual C_D override (flagged on the sheet) */
   cdOverride?: number;
   /** manual C_r override (flagged on the sheet) */
@@ -268,8 +273,10 @@ export function resolveWood(m: WoodMaterial, nds: "NDS-2018" | "NDS-2024"): Reso
       EminStab: data.ref.Emin,
       nominalRatio: nominalRatio(m.size, m.plies),
       CF: data.CF.Fb,
+      CFc: data.CF.Fc,
+      CFt: data.CF.Ft,
       Cfu: data.Cfu,
-      CM: { Fb: data.CM.Fb, Fv: data.CM.Fv, Fcperp: data.CM.Fcperp, E: data.CM.E },
+      CM: { Fb: data.CM.Fb, Fv: data.CM.Fv, Fcperp: data.CM.Fcperp, E: data.CM.E, Fc: data.CM.Fc, Ft: data.CM.Ft },
       density,
       selfWeight: (density * A) / 144,
       G: data.G,
@@ -303,8 +310,10 @@ export function resolveWood(m: WoodMaterial, nds: "NDS-2018" | "NDS-2024"): Reso
       Emin: g.Ex_min,
       EminStab: g.Ey_min,
       CF: 1,
+      CFc: 1,
+      CFt: 1,
       Cfu: 1,
-      CM: { Fb: 1, Fv: 1, Fcperp: 1, E: 1 },
+      CM: { Fb: 1, Fv: 1, Fcperp: 1, E: 1, Fc: 1, Ft: 1 },
       density: g.density,
       selfWeight: (g.density * A) / 144,
       G: g.G,
@@ -340,8 +349,10 @@ export function resolveWood(m: WoodMaterial, nds: "NDS-2018" | "NDS-2024"): Reso
     Emin: s.Emin,
     EminStab: s.Emin,
     CF: depthFactor,
+    CFc: 1,
+    CFt: 1,
     Cfu: 1,
-    CM: { Fb: 1, Fv: 1, Fcperp: 1, E: 1 },
+    CM: { Fb: 1, Fv: 1, Fcperp: 1, E: 1, Fc: 1, Ft: 1 },
     density: s.density,
     selfWeight: (s.density * A) / 144,
     G: s.G,
@@ -436,7 +447,10 @@ export function designWoodBeam(input: WoodBeamInput): WoodBeamResult {
   const wet = input.conditions.wetService;
   if (wet && mat.kind !== "sawn") throw new Error("Wet service is not supported for glulam / SCL in this version");
   const CMFb = wet ? (mat.Fb * mat.CF <= 1150 ? 1 : mat.CM.Fb) : 1;
-  const CM = wet ? { Fb: CMFb, Fv: mat.CM.Fv, Fcperp: mat.CM.Fcperp, E: mat.CM.E } : { Fb: 1, Fv: 1, Fcperp: 1, E: 1 };
+  const CMFc = wet ? (mat.Fc * mat.CFc <= 750 ? 1 : mat.CM.Fc) : 1;
+  const CM = wet
+    ? { Fb: CMFb, Fv: mat.CM.Fv, Fcperp: mat.CM.Fcperp, E: mat.CM.E, Fc: CMFc, Ft: mat.CM.Ft }
+    : { Fb: 1, Fv: 1, Fcperp: 1, E: 1, Fc: 1, Ft: 1 };
   const Ct = 1;
   const incised = input.conditions.incised && mat.kind === "sawn";
   const Ci = incised ? 0.8 : 1;
@@ -703,7 +717,8 @@ export function designWoodBeam(input: WoodBeamInput): WoodBeamResult {
     let worst = { ratio: 0, V: 0, Vr: 0, combo: "", CD: 1 };
     for (const r of rows) {
       let Vsup = 0;
-      analysis.supports.forEach((xs) => {
+      analysis.supports.forEach((xs, si) => {
+        if (input.notchSupports && !input.notchSupports.includes(si)) return;
         for (const side of ["L", "R"] as const) {
           if ((side === "R" && xs >= total - 1e-6) || (side === "L" && xs <= 1e-6)) continue;
           Vsup = Math.max(Vsup, shearAtSection(r.combo, xs, side));
@@ -1053,4 +1068,39 @@ export function designWoodBeam(input: WoodBeamInput): WoodBeamResult {
     simpleUDL,
     wTotalUDL: wTotalUDL !== undefined ? r3(wTotalUDL) : undefined,
   };
+}
+
+/** Max / min moment arrays (lb-ft) for any combination, from the pattern envelopes of a designed member. */
+export function comboMomentEnvelope(r: WoodBeamResult, c: Combination): { max: number[]; min: number[] } {
+  const a = r.analysis;
+  const n = a.x.length;
+  const max = new Array(n).fill(0);
+  const min = new Array(n).fill(0);
+  for (const t of LOAD_TYPES) {
+    const f = c.factors[t] ?? 0;
+    if (!f) continue;
+    const env = patternEnvelope(a, t, "M");
+    for (let i = 0; i < n; i++) {
+      max[i] += f * (f > 0 ? env.max[i] : env.min[i]);
+      min[i] += f * (f > 0 ? env.min[i] : env.max[i]);
+    }
+  }
+  return { max, min };
+}
+
+/** Max / min moment (lb-ft) at the station nearest x for a combination. */
+export function comboMomentAt(r: WoodBeamResult, c: Combination, x: number): { max: number; min: number } {
+  const a = r.analysis;
+  let i = 0;
+  for (let k = 1; k < a.x.length; k++) if (Math.abs(a.x[k] - x) < Math.abs(a.x[i] - x)) i = k;
+  const env = comboMomentEnvelope(r, c);
+  return { max: env.max[i], min: env.min[i] };
+}
+
+/** NDS Eq. 3.7-1 column stability factor; c = 0.8 sawn lumber, 0.9 glulam and SCL. */
+export function columnStabilityFactor(FcE: number, FcStar: number, c: number): number {
+  if (!(FcE > 0) || !Number.isFinite(FcE)) return 1;
+  const a = FcE / FcStar;
+  const t = (1 + a) / (2 * c);
+  return t - Math.sqrt(t * t - a / c);
 }
