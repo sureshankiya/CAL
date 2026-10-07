@@ -1153,12 +1153,14 @@ export function WoodMemberSheet({
   index,
   total,
   received,
+  connections,
 }: {
   m: SheetMeta;
   r: WoodMemberResult;
   index: number;
   total: number;
   received: string[];
+  connections?: string[];
 }) {
   const d = r.design;
   const names = supportNames(r, d.analysis.supports.length);
@@ -1244,11 +1246,12 @@ export function WoodMemberSheet({
           ["Reactions (max down)", r.reactions.map((x) => `${x.name} ${f0(x.maxDown)} lb`).join("; ")],
           [
             "Connections",
-            r.kind === "ceilingJoist" && r.tension?.nail
-              ? `Heel joint: ${r.tension.nail.provided} × ${r.tension.nail.label} (≥ ${f2(r.tension.nail.required)} required)`
-              : r.kind === "rafter"
-                ? "Rafter-to-plate and ridge connections per connection schedule (Phase 2)"
-                : "Bearing / hangers per connection schedule (Phase 2)",
+            [
+              ...(r.kind === "ceilingJoist" && r.tension?.nail
+                ? [`Heel joint: ${r.tension.nail.provided} × ${r.tension.nail.label} (≥ ${f2(r.tension.nail.required)} required)`]
+                : []),
+              ...(connections ?? []),
+            ].join("; ") || "Bearing per framing schedule; toe-nailing per CBC Table 2304.10.2",
           ],
           [
             "Field verification",

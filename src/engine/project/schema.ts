@@ -78,7 +78,11 @@ const common = {
   description: z.string().default(""),
   structureId: z.string(),
   levelId: z.string(),
-  status: z.enum(["new", "existing"]).default("new"),
+  /** new, existing (re-checked for new loads) or existing-modified (strengthened / altered) */
+  status: z.enum(["new", "existing", "modified"]).default("new"),
+  /** existing members: properties confirmed in the field */
+  fieldVerified: z.boolean().optional(),
+  existingNote: z.string().optional(),
   links: z.array(linkedLoadSchema).default([]),
 };
 
@@ -231,13 +235,217 @@ export const beamSpecSchema = z.object({
   crOverride: pos.optional(),
 });
 
+
+export const studPackSchema = z.object({ x: nonneg, studs: z.number().int().min(1).max(6), label: z.string().optional() });
+export const wallOpeningSchema = z.object({ label: z.string(), x1: nonneg, x2: nonneg, kings: z.number().int().min(1).max(4) });
+
+export const wallSpecSchema = z.object({
+  kind: z.literal("wall"),
+  ...common,
+  species: speciesSchema,
+  grade: gradeSchema,
+  size: z.string(),
+  spacing: pos,
+  plateHeight: pos,
+  topPlates: z.number().int().min(1).max(3),
+  bottomPlates: z.number().int().min(1).max(2),
+  length: pos,
+  sheathing: z.enum(["both", "one", "none"]),
+  blocking: nonneg.optional(),
+  self: deadRefSchema,
+  area: z.array(areaLoadSchema).default([]),
+  walls: z.array(wallAboveSchema).default([]),
+  extra: z.array(extraLoadSchema).default([]),
+  wind: z.object({
+    mode: z.enum(["none", "computed", "entered"]),
+    psf: nonneg.optional(),
+    zone: z.union([z.literal(4), z.literal(5)]).optional(),
+  }),
+  deflN: pos,
+  packs: z.array(studPackSchema).default([]),
+  openings: z.array(wallOpeningSchema).default([]),
+  wetService: z.boolean().optional(),
+  incised: z.boolean().optional(),
+});
+
+export const postSpecSchema = z.object({
+  kind: z.literal("post"),
+  ...common,
+  material: woodMaterialSchema,
+  builtUp: z.enum(["nailed", "bolted"]).optional(),
+  height: pos,
+  Ke: pos,
+  braceWeak: nonneg.optional(),
+  braceStrong: nonneg.optional(),
+  extra: z.array(extraLoadSchema).default([]),
+  eccentricity: nonneg.optional(),
+  wind: z.object({ psf: nonneg, width: nonneg }).optional(),
+  bearing: z.object({
+    on: z.enum(["wood", "concrete", "steel"]),
+    species: speciesSchema.optional(),
+    grade: gradeSchema.optional(),
+    size: z.string().optional(),
+    lb: pos.optional(),
+    atEnd: z.boolean().optional(),
+  }),
+  selfWeight: z.boolean(),
+  wetService: z.boolean().optional(),
+  incised: z.boolean().optional(),
+});
+
+export const trussSpecSchema = z.object({
+  kind: z.literal("truss"),
+  ...common,
+  spacing: nonneg,
+  girder: z.boolean(),
+  plies: z.number().int().min(1).max(4),
+  span: pos,
+  designRef: z.string().default(""),
+  bearings: z.array(
+    z.object({ name: z.string(), x: nonneg, D: num, L: num, Lr: num, S: num, W: num, width: pos }),
+  ),
+  plate: z.object({ species: speciesSchema, grade: gradeSchema, size: z.string() }),
+});
+
+export const connectorSpecSchema = z.object({
+  kind: z.literal("connector"),
+  ...common,
+  hardwareId: z.string(),
+  quantity: z.number().int().min(1).max(8),
+  sourceId: z.string(),
+  support: z.number().int().min(0),
+  lateral: nonneg.optional(),
+});
+
+export const footingSpecSchema = z.object({
+  kind: z.literal("footing"),
+  ...common,
+  type: z.enum(["strip", "pad"]),
+  B: pos,
+  L: pos.optional(),
+  h: pos,
+  depth: pos,
+  soilOver: nonneg.optional(),
+  c1: pos,
+  c2: pos.optional(),
+  stem: z.object({ width: pos, height: pos }).optional(),
+  rebar: z.object({ size: z.string(), spacing: pos.optional(), count: z.number().int().min(2).optional() }).optional(),
+  longitudinal: z.object({ size: z.string(), top: z.number().int().min(0), bottom: z.number().int().min(0) }).optional(),
+  extra: z.array(extraLoadSchema).default([]),
+  qaOverride: pos.optional(),
+  stories: z.number().int().min(1).max(3),
+});
+
+export const shearWallSpecSchema = z.object({
+  kind: z.literal("shearWall"),
+  ...common,
+  lineId: z.string(),
+  b: pos,
+  h: pos,
+  sides: z
+    .array(z.object({ key: z.string(), spacing: pos, vsOverride: pos.optional(), GaOverride: pos.optional() }))
+    .min(1)
+    .max(2),
+  stud: z.object({ species: speciesSchema, grade: gradeSchema, size: z.string(), spacing: pos }),
+  endPost: z.object({ size: z.string(), plies: z.number().int().min(1).max(4), holeDia: nonneg }),
+  top: z.object({ D: nonneg, L: nonneg, Lr: nonneg, S: nonneg }),
+  self: deadRefSchema,
+  overturning: z.enum(["full", "endpost"]),
+  holdownId: z.string().optional(),
+  upliftFrom: z.string().optional(),
+  sill: z.object({
+    type: z.enum(["cast-in", "post-installed"]),
+    d: pos,
+    spacing: pos,
+    embed: pos,
+    edge: pos,
+    allowShear: pos.optional(),
+    label: z.string().optional(),
+  }),
+  sillSize: z.string(),
+  holdownAnchor: z
+    .object({
+      d: pos,
+      steel: z.string(),
+      hef: pos,
+      edges: z.tuple([pos, pos, pos, pos]),
+      plate: pos,
+      cracked: z.boolean(),
+      omega: z.boolean(),
+    })
+    .optional(),
+  ka: pos.optional(),
+  windService: z.object({ factor: pos, limitN: pos }),
+});
+
 export const memberSpecSchema = z.discriminatedUnion("kind", [
   joistSpecSchema,
   rafterSpecSchema,
   ceilingJoistSpecSchema,
   ijoistSpecSchema,
   beamSpecSchema,
+  wallSpecSchema,
+  postSpecSchema,
+  trussSpecSchema,
+  connectorSpecSchema,
+  footingSpecSchema,
+  shearWallSpecSchema,
 ]);
+
+
+export const hardwareItemSchema = z.object({
+  id: z.string(),
+  model: z.string(),
+  kind: z.enum(["holdown", "tie", "hanger", "post-cap", "post-base", "strap", "angle"]),
+  manufacturer: z.string(),
+  description: z.string(),
+  fasteners: z.string(),
+  report: z.string(),
+  down: z
+    .object({ "100": nonneg.optional(), "115": nonneg.optional(), "125": nonneg.optional(), "160": nonneg.optional() })
+    .optional(),
+  uplift: nonneg.optional(),
+  F1: nonneg.optional(),
+  F2: nonneg.optional(),
+  tension: nonneg.optional(),
+  deflection: nonneg.optional(),
+  anchorDia: pos.optional(),
+  minPost: pos.optional(),
+  checked: z.boolean(),
+  source: z.string(),
+});
+
+export const weightItemSchema = z.object({
+  label: z.string(),
+  kind: z.enum(["area", "wall", "lump"]),
+  qty: nonneg,
+  height: nonneg.optional(),
+  assemblyId: z.string().optional(),
+  psf: nonneg.optional(),
+  sloped: z.boolean().optional(),
+  W: nonneg.optional(),
+});
+
+export const lateralSchema = z.object({
+  enabled: z.boolean(),
+  system: z.enum(["wsp", "other"]),
+  rho: pos,
+  TL: pos,
+  S1: nonneg.optional(),
+  driftLowRise: z.boolean(),
+  Lx: pos,
+  Ly: pos,
+  ridge: z.enum(["X", "Y"]),
+  pitch: nonneg,
+  roofRise: nonneg,
+  Ke: pos,
+  stories: z.array(
+    z.object({ id: z.string(), name: z.string(), height: pos, items: z.array(weightItemSchema).default([]) }),
+  ),
+  lines: z.array(
+    z.object({ id: z.string(), name: z.string(), storyId: z.string(), dir: z.enum(["X", "Y"]), trib: pos }),
+  ),
+});
 
 export const assemblySchema = z.object({
   id: z.string(),
@@ -308,12 +516,21 @@ export const projectSchema = z.object({
     Kcr: pos,
     seismic: z.object({ SDS: nonneg, SD1: nonneg, siteClass: z.string(), SDC: z.string() }),
     wind: z.object({ V: pos, exposure: z.enum(["B", "C", "D"]), Kzt: pos }),
-    soil: z.object({ bearing: pos, source: z.string() }),
+    soil: z.object({
+      bearing: pos,
+      source: z.string(),
+      class: z.enum(["1", "2", "3", "4", "5"]).optional(),
+      density: pos.default(120),
+      frostDepth: nonneg.optional(),
+    }),
+    concrete: z.object({ fc: pos, fy: pos, cover: pos }).default({ fc: 2500, fy: 60000, cover: 3 }),
   }),
   assemblies: z.array(assemblySchema),
   structures: z.array(structureSchema).min(1),
   members: z.array(memberSpecSchema),
   marks: z.record(z.string()),
+  hardware: z.array(hardwareItemSchema).default([]),
+  lateral: lateralSchema.optional(),
   drawings: z.array(drawingSchema).default([]),
   review: z.array(reviewItemSchema).default([]),
   notes: z.string().default(""),
@@ -326,6 +543,14 @@ export type RafterSpec = z.infer<typeof rafterSpecSchema>;
 export type CeilingJoistSpec = z.infer<typeof ceilingJoistSpecSchema>;
 export type IJoistSpec = z.infer<typeof ijoistSpecSchema>;
 export type BeamSpec = z.infer<typeof beamSpecSchema>;
+export type WallSpec = z.infer<typeof wallSpecSchema>;
+export type PostSpec = z.infer<typeof postSpecSchema>;
+export type TrussSpec = z.infer<typeof trussSpecSchema>;
+export type ConnectorSpec = z.infer<typeof connectorSpecSchema>;
+export type FootingSpec = z.infer<typeof footingSpecSchema>;
+export type ShearWallSpec = z.infer<typeof shearWallSpecSchema>;
+export type LateralSpec = z.infer<typeof lateralSchema>;
+export type HardwareSpec = z.infer<typeof hardwareItemSchema>;
 export type LinkedLoad = z.infer<typeof linkedLoadSchema>;
 export type ReviewItem = z.infer<typeof reviewItemSchema>;
 export type DrawingMeta = z.infer<typeof drawingSchema>;

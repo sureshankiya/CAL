@@ -10,7 +10,16 @@ import type { MemberSpec, Project, ProjectDesign } from "@/engine/project";
 import { duplicateMarks } from "@/engine/project";
 
 export type SheetKind =
-  "cover" | "summary" | "criteria" | "loads" | "member" | "schedules" | "general-notes" | "assumptions";
+  | "cover"
+  | "summary"
+  | "criteria"
+  | "loads"
+  | "lateral"
+  | "member"
+  | "loadpath"
+  | "schedules"
+  | "general-notes"
+  | "assumptions";
 
 export interface SheetEntry {
   key: string;
@@ -25,6 +34,7 @@ export interface SheetEntry {
 }
 
 const KIND_ORDER: Record<string, number> = {
+  truss: 0,
   rafter: 0,
   ceilingJoist: 1,
   ridge: 2,
@@ -34,6 +44,11 @@ const KIND_ORDER: Record<string, number> = {
   dropped: 3,
   joist: 4,
   ijoist: 5,
+  wall: 6,
+  post: 7,
+  shearWall: 8,
+  connector: 9,
+  footing: 10,
 };
 
 function orderKey(m: MemberSpec): number {
@@ -74,6 +89,13 @@ export function buildPackage(p: Project, design: ProjectDesign): SheetEntry[] {
     { key: "criteria", kind: "criteria", section: "Design criteria", title: "Design criteria" },
     { key: "loads", kind: "loads", section: "Design loads", title: "Dead, live, roof live and snow loads" },
   ];
+  if (p.lateral?.enabled)
+    out.push({
+      key: "lateral",
+      kind: "lateral",
+      section: "Lateral analysis",
+      title: "Seismic (ELF) and wind (MWFRS) story forces, wall-line distribution",
+    });
   for (const g of levelGroups(p)) {
     for (const m of g.members) {
       const o = design.outcomes.get(m.id);
@@ -91,7 +113,13 @@ export function buildPackage(p: Project, design: ProjectDesign): SheetEntry[] {
     }
   }
   out.push(
-    { key: "schedules", kind: "schedules", section: "Schedules", title: "Framing and beam / header schedules" },
+    { key: "loadpath", kind: "loadpath", section: "Load path", title: "Load-path summary — reactions carried from roof to foundation" },
+    {
+      key: "schedules",
+      kind: "schedules",
+      section: "Schedules",
+      title: "Framing, beam, wall, post, shear wall, hold-down, connector and foundation schedules",
+    },
     {
       key: "general-notes",
       kind: "general-notes",
@@ -108,24 +136,25 @@ export interface PackageCheck {
   text: string;
 }
 
-/** Phase 1 consistency checks (plan §11): marks, errors, failures, VERIFY data, reactions not carried. */
+/** Package consistency checks (plan §11): marks, errors, failures, VERIFY data, load path, uplift ties, lateral. */
 export function packageChecks(p: Project, design: ProjectDesign): PackageCheck[] {
   const dup = duplicateMarks(p);
-  const errors = [...design.outcomes.values()].filter((o) => o.error);
-  const fails = [...design.outcomes.values()].filter((o) => o.result && !o.result.pass);
-  const verify = [...design.outcomes.values()].reduce(
-    (n, o) => n + (o.result ? o.result.assumptions.filter((a) => a.verify).length : 0),
-    0,
-  );
+  const outcomes = [...design.outcomes.values()];
+  const errors = outcomes.filter((o) => o.error);
+  const fails = outcomes.filter((o) => o.result && !o.result.pass);
+  const verify = outcomes.reduce((n, o) => n + (o.result ? o.result.assumptions.filter((a) => a.verify).length : 0), 0);
   const carried = new Set(p.members.flatMap((m) => m.links.map((l) => `${l.sourceId}:${l.support}`)));
+  const tied = new Set(p.members.flatMap((m) => (m.kind === "connector" ? [`${m.sourceId}:${m.support}`] : [])));
   const uncarried: string[] = [];
-  for (const o of design.outcomes.values()) {
+  const untied: string[] = [];
+  for (const o of outcomes) {
     if (!o.result) continue;
     o.result.reactions.forEach((r, i) => {
       if (r.maxDown > 1 && !carried.has(`${o.spec.id}:${i}`)) uncarried.push(`${o.result!.mark} ${r.name}`);
+      if (r.minNet < -1 && !tied.has(`${o.spec.id}:${i}`)) untied.push(`${o.result!.mark} ${r.name}`);
     });
   }
-  return [
+  const out: PackageCheck[] = [
     { ok: dup.length === 0, text: dup.length ? `Duplicate marks: ${dup.join(", ")}` : "Member marks are unique" },
     {
       ok: errors.length === 0,
@@ -135,19 +164,36 @@ export function packageChecks(p: Project, design: ProjectDesign): PackageCheck[]
     },
     {
       ok: fails.length === 0,
-      text: fails.length
-        ? `Members failing: ${fails.map((e) => e.spec.mark).join(", ")}`
-        : "Every member passes all checks",
+      text: fails.length ? `Members failing: ${fails.map((e) => e.spec.mark).join(", ")}` : "Every member passes all checks",
     },
     {
       ok: verify === 0,
       text: verify ? `${verify} item(s) marked VERIFY — resolve before the package is issued` : "No VERIFY items",
     },
     {
-      ok: true,
+      ok: uncarried.length === 0,
       text: uncarried.length
-        ? `Reactions to walls, posts or foundations (carried in Phase 2 load takedown): ${uncarried.join(", ")}`
-        : "Every reaction is carried by a supporting member",
+        ? `Reactions not yet carried to a supporting member or footing: ${uncarried.join(", ")}`
+        : "Every reaction is carried down to a supporting member or footing",
+    },
+    {
+      ok: untied.length === 0,
+      text: untied.length
+        ? `Net uplift without a connector: ${untied.join(", ")}`
+        : "Every net uplift reaction has a connector",
     },
   ];
+  if (p.lateral?.enabled) {
+    if (design.lateralError) out.push({ ok: false, text: `Lateral analysis: ${design.lateralError}` });
+    for (const w of design.lateral?.warnings ?? []) out.push({ ok: false, text: `Lateral: ${w}` });
+    const lines = design.lateral?.lines ?? [];
+    const empty = lines.filter((l) => !p.members.some((m) => m.kind === "shearWall" && m.lineId === l.line.id));
+    out.push({
+      ok: empty.length === 0,
+      text: empty.length
+        ? `Wall lines without shear walls: ${empty.map((l) => l.line.name).join(", ")}`
+        : "Every wall line has at least one shear wall",
+    });
+  }
+  return out;
 }

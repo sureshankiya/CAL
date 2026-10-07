@@ -32,6 +32,12 @@ export interface DesignContext {
   /** default creep factor for total deflection */
   Kcr: number;
   SDS: number;
+  /** site wind for components and cladding (from the lateral criteria), when set up */
+  windCC?: { qEff: number; thetaDeg: number; h: number; expr: string };
+  /** concrete for anchorage (from the foundation criteria) */
+  concrete?: { fc: number; fy: number };
+  /** project hardware list (connectors, hold-downs) */
+  hardware?: import("../data/hardware").HardwareItem[];
 }
 
 export const ndsOf = (ctx: DesignContext) => getCycle(ctx.cycleId).nds;

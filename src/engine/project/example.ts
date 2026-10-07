@@ -5,12 +5,14 @@
  * and an I-joist floor bay. Used for first-run, tests and the help sheet.
  */
 
+import { defaultHardware } from "../data/hardware";
 import { defaultAssemblies } from "../loads/dead";
+import { defaultLateral } from "./lateral";
 import { DEFAULT_MARKS } from "./marks";
 import type { Project } from "./schema";
 
 export function newProject(name = "New project"): Project {
-  return {
+  const p: Project = {
     schemaVersion: 1,
     info: {
       name,
@@ -33,7 +35,13 @@ export function newProject(name = "New project"): Project {
       Kcr: 1.0,
       seismic: { SDS: 1.0, SD1: 0.6, siteClass: "D (default)", SDC: "D" },
       wind: { V: 95, exposure: "B", Kzt: 1.0 },
-      soil: { bearing: 1500, source: "Presumptive, CBC Table 1806.2 — verify with geotechnical report" },
+      soil: {
+        bearing: 1500,
+        source: "Presumptive, CBC Table 1806.2, Class 5 — verify with geotechnical report",
+        class: "5",
+        density: 110,
+      },
+      concrete: { fc: 2500, fy: 60000, cover: 3 },
     },
     assemblies: defaultAssemblies(),
     structures: [
@@ -48,10 +56,14 @@ export function newProject(name = "New project"): Project {
     ],
     members: [],
     marks: { ...DEFAULT_MARKS },
+    hardware: defaultHardware(),
+    lateral: undefined,
     drawings: [],
     review: [],
     notes: "",
   };
+  p.lateral = defaultLateral(p);
+  return p;
 }
 
 export function exampleProject(): Project {

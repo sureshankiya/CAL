@@ -5,7 +5,18 @@ import type { LoadVector } from "../core/loads";
 import type { AssumptionEntry } from "../core/provenance";
 import type { LoadLine } from "./common";
 
-export type MemberKind = "joist" | "rafter" | "ceilingJoist" | "ijoist" | "beam";
+export type MemberKind =
+  | "joist"
+  | "rafter"
+  | "ceilingJoist"
+  | "ijoist"
+  | "beam"
+  | "wall"
+  | "post"
+  | "truss"
+  | "connector"
+  | "footing"
+  | "shearWall";
 
 export interface MemberReaction {
   support: number;

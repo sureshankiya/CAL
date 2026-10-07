@@ -9,12 +9,28 @@ import { assemblyDesignValue, assemblySum, needsVerify } from "@/engine/loads/de
 import { DEFLECTION_PRESETS } from "@/engine/loads/deflection";
 import { LIVE_LOADS, liveLoad } from "@/engine/loads/live";
 import { snowLoads } from "@/engine/loads/snow";
+import { hardwareLabel } from "@/engine/data/hardware";
+import { fmtInFraction } from "@/engine/core/fmt";
 import type { AnyResult, Project, ProjectDesign } from "@/engine/project";
 import { B, DataTable, Flag, NotesList, SectionHead, Sheet, SheetTitle, TextRow, TR, eq } from "../report/primitives";
 import type { PackageCheck, SheetEntry } from "../report/package";
 import { DESIGN_AID, DesignBasis, f0, f1, f2, f3, footers, titleFields, type SheetMeta } from "./common";
 
-function spansText(r: AnyResult): string {
+export function spansText(r: AnyResult): string {
+  switch (r.kind) {
+    case "wall":
+      return `${fmtFtIn(r.input.length)} long, ${fmtFtIn(r.input.plateHeight)} plate ht.`;
+    case "post":
+      return `${fmtFtIn(r.input.height)} high`;
+    case "truss":
+      return fmtFtIn(r.input.span);
+    case "shearWall":
+      return `${fmtFtIn(r.input.b)} × ${fmtFtIn(r.input.h)}`;
+    case "footing":
+      return r.input.type === "strip" ? "continuous" : `${fmtFtIn(r.input.B)} × ${fmtFtIn(r.input.L ?? r.input.B)}`;
+    case "connector":
+      return "—";
+  }
   const s = r.kind === "rafter" ? [r.input.run] : r.input.spans;
   const base = s.map((x) => fmtFtIn(x)).join(" + ");
   if (r.kind === "rafter") return `${base} run${r.input.overhang ? ` + ${fmtFtIn(r.input.overhang)} OH` : ""}`;
@@ -175,8 +191,23 @@ export function CriteriaSheet({ m, design }: { m: SheetMeta; design: ProjectDesi
   const ft = footers(m);
   const used = new Set<string>();
   for (const o of design.outcomes.values())
-    if (o.result) used.add("design" in o.result ? o.result.design.mat.speciesLabel : `${o.result.callout}`);
-  const presets = new Set(p.members.map((x) => x.deflection.preset));
+    if (o.result)
+      used.add(
+        "design" in o.result
+          ? o.result.design.mat.speciesLabel
+          : o.result.kind === "wall"
+            ? o.result.typical.mat.speciesLabel
+            : o.result.kind === "post"
+              ? o.result.mat.speciesLabel
+              : o.result.kind === "shearWall"
+                ? o.result.post.speciesLabel
+                : o.result.kind === "footing"
+                  ? `Concrete f'c = ${cr.concrete.fc} psi${o.result.input.rebar ? `, reinforcing f_y = ${cr.concrete.fy} psi` : ""}`
+                  : o.result.kind === "connector"
+                    ? `${o.result.item.manufacturer} connectors`
+                    : "Prefabricated wood trusses (by manufacturer)",
+      );
+  const presets = new Set(p.members.flatMap((x) => ("deflection" in x ? [x.deflection.preset] : [])));
   const combos = asdCombinations({ includeWind: true, includeSeismic: true, SDS: cr.seismic.SDS });
   return (
     <Sheet f={titleFields(m)} footerLeft={ft.left} footerCenter={ft.center} first={m.first} id="sheet-criteria">
@@ -264,7 +295,7 @@ export function CriteriaSheet({ m, design }: { m: SheetMeta; design: ProjectDesi
           }
         />
       ) : null}
-      <SectionHead title="Wind and seismic (recorded for the lateral design, Phase 2)" />
+      <SectionHead title="Wind and seismic — lateral analysis sheet" />
       <TR
         desc="Basic wind speed / exposure / topography"
         expr={
@@ -289,6 +320,22 @@ export function CriteriaSheet({ m, design }: { m: SheetMeta; design: ProjectDesi
           <>
             q<sub>a</sub>
             {eq(`${f0(cr.soil.bearing)} psf`)} — <Flag>{cr.soil.source}</Flag>
+          </>
+        }
+      />
+      <TR
+        desc="Soil unit weight / frost depth"
+        expr={
+          <>
+            γ = {f0(cr.soil.density)} pcf; frost depth {cr.soil.frostDepth ? `${f0(cr.soil.frostDepth)} in` : "— (not applicable)"}
+          </>
+        }
+      />
+      <TR
+        desc="Concrete / reinforcement"
+        expr={
+          <>
+            f'<sub>c</sub> = {f0(cr.concrete.fc)} psi (28 day); f<sub>y</sub> = {f0(cr.concrete.fy)} psi; cover {f1(cr.concrete.cover)} in. cast against earth
           </>
         }
       />
@@ -320,11 +367,14 @@ export function LoadsSheet({ m }: { m: SheetMeta }) {
   const usedAssemblies = new Set<string>();
   for (const x of p.members) {
     if ("dead" in x && x.dead?.assemblyId) usedAssemblies.add(x.dead.assemblyId);
-    if (x.kind === "beam") {
+    if (x.kind === "beam" || x.kind === "wall") {
       for (const a of x.area) if (a.dead?.assemblyId) usedAssemblies.add(a.dead.assemblyId);
       for (const w of x.walls) if (w.dead.assemblyId) usedAssemblies.add(w.dead.assemblyId);
     }
+    if ((x.kind === "wall" || x.kind === "shearWall") && x.self.assemblyId) usedAssemblies.add(x.self.assemblyId);
   }
+  if (p.lateral?.enabled)
+    for (const st of p.lateral.stories) for (const it of st.items) if (it.assemblyId) usedAssemblies.add(it.assemblyId);
   const cr = p.criteria;
   const snowExample =
     cr.snow.pg > 0
@@ -505,81 +555,229 @@ export function LoadsSheet({ m }: { m: SheetMeta }) {
   );
 }
 
+const byMark = <T extends { mark: string }>(a: T, b: T) => a.mark.localeCompare(b.mark, undefined, { numeric: true });
+const pf = (r: { pass: boolean }) => (r.pass ? "PASS" : "FAIL");
+
 export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDesign }) {
   const ft = footers(m);
+  const p = m.project;
   const results = [...design.outcomes.values()].map((o) => o.result).filter((r): r is AnyResult => !!r);
-  const framing = results
-    .filter((r) => r.kind !== "beam")
-    .sort((a, b) => a.mark.localeCompare(b.mark, undefined, { numeric: true }));
-  const beams = results
-    .filter((r) => r.kind === "beam")
-    .sort((a, b) => a.mark.localeCompare(b.mark, undefined, { numeric: true }));
+  const of = <K extends AnyResult["kind"]>(...k: K[]) =>
+    results.filter((r): r is Extract<AnyResult, { kind: K }> => (k as string[]).includes(r.kind)).sort(byMark);
+  const framing = of("joist", "rafter", "ceilingJoist", "ijoist");
+  const trusses = of("truss");
+  const beams = of("beam");
+  const walls = of("wall");
+  const posts = of("post");
+  const sws = of("shearWall");
+  const cns = of("connector");
+  const ftgs = of("footing");
+  const usedHw = new Set<string>([...cns.map((c) => c.item.id), ...sws.flatMap((x) => (x.holdown ? [x.holdown.item.id] : []))]);
   return (
     <Sheet f={titleFields(m)} footerLeft={ft.left} footerCenter={ft.center} first={m.first} id="sheet-schedules">
       <SheetTitle
         title="Schedules"
         subtitle={<>Generated from the member results — schedules and sheets cannot disagree</>}
       />
-      <DataTable
-        caption="Framing schedule (repetitive members)"
-        head={[
-          "Mark",
-          "Member",
-          "Size / species / grade",
-          "Spacing",
-          "Span",
-          "Bearing / connection",
-          "Gov. D/C",
-          "Result",
-        ]}
-        small
-        rows={framing.map((r) => [
-          r.mark,
-          r.title,
-          r.kind === "ijoist" ? `${r.input.depth} ${r.input.series}` : r.design.mat.label,
-          `${fmt(r.input.spacing, r.input.spacing % 1 ? 1 : 0)} in. o.c.`,
-          spansText(r),
-          r.kind === "ceilingJoist" && r.tension?.nail
-            ? `Heel: ${r.tension.nail.provided} × ${r.tension.nail.label.split(" (")[0]}`
-            : r.kind === "rafter"
-              ? `Seat ${f2(r.input.plateSeat)} in.${r.input.seatCut ? `, birdsmouth ${f2(r.input.seatCut)} in.` : ""}`
-              : "bearing" in r.input
-                ? `${r.input.bearing.map((b) => f2(b)).join(" / ")} in.`
-                : "—",
-          f3(r.governing.ratio),
-          r.pass ? "PASS" : "FAIL",
-        ])}
-      />
-      <DataTable
-        caption="Beam / header schedule"
-        head={[
-          "Mark",
-          "Type",
-          "Size / grade",
-          "Span",
-          "Bearing (in.)",
-          "Reactions, max down (lb)",
-          "Gov. D/C",
-          "Result",
-        ]}
-        small
-        rows={beams.map((r) =>
-          r.kind === "beam"
-            ? [
-                r.mark,
-                r.title,
-                r.callout,
-                spansText(r),
-                r.input.bearing.map((b) => f2(b)).join(" / "),
-                r.reactions.map((x) => `${x.name} ${f0(x.maxDown)}`).join("; "),
-                f3(r.governing.ratio),
-                r.pass ? "PASS" : "FAIL",
+      {framing.length ? (
+        <DataTable
+          caption="Framing schedule (repetitive members)"
+          head={["Mark", "Member", "Size / species / grade", "Spacing", "Span", "Bearing / connection", "Gov. D/C", "Result"]}
+          small
+          rows={framing.map((r) => [
+            r.mark,
+            r.title,
+            r.kind === "ijoist" ? `${r.input.depth} ${r.input.series}` : r.design.mat.label,
+            `${fmt(r.input.spacing, r.input.spacing % 1 ? 1 : 0)} in. o.c.`,
+            spansText(r),
+            r.kind === "ceilingJoist" && r.tension?.nail
+              ? `Heel: ${r.tension.nail.provided} × ${r.tension.nail.label.split(" (")[0]}`
+              : r.kind === "rafter"
+                ? `Seat ${f2(r.input.plateSeat)} in.${r.input.seatCut ? `, birdsmouth ${f2(r.input.seatCut)} in.` : ""}`
+                : `${r.input.bearing.map((b) => f2(b)).join(" / ")} in.`,
+            f3(r.governing.ratio),
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {trusses.length ? (
+        <DataTable
+          caption="Truss schedule (deferred submittal — reactions from the truss design)"
+          head={["Mark", "Type", "Span", "Spacing", "Max down per bearing (lb)", "Max uplift (lb)", "Design ref."]}
+          small
+          rows={trusses.map((r) => [
+            r.mark,
+            r.title,
+            fmtFtIn(r.input.span),
+            r.input.girder ? `${r.input.plies}-ply girder` : `${f0(r.input.spacing)} in. o.c.`,
+            r.reactions.map((x) => `${x.name} ${f0(x.maxDown)}`).join("; "),
+            r.reactions.some((x) => x.minNet < 0) ? f0(-Math.min(...r.reactions.map((x) => x.minNet))) : "—",
+            r.input.designRef || "—",
+          ])}
+        />
+      ) : null}
+      {beams.length ? (
+        <DataTable
+          caption="Beam / header schedule"
+          head={["Mark", "Type", "Size / grade", "Span", "Bearing (in.)", "Reactions, max down (lb)", "Gov. D/C", "Result"]}
+          small
+          rows={beams.map((r) => [
+            r.mark,
+            r.title,
+            r.callout,
+            spansText(r),
+            r.input.bearing.map((b) => f2(b)).join(" / "),
+            r.reactions.map((x) => `${x.name} ${f0(x.maxDown)}`).join("; "),
+            f3(r.governing.ratio),
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {walls.length ? (
+        <DataTable
+          caption="Wall schedule (bearing walls)"
+          head={["Wall type", "Stud size", "Spacing", "Species / grade", "Top plate", "Bottom plate", "Stud packs / openings", "Gov. D/C", "Result"]}
+          small
+          rows={walls.map((r) => [
+            r.mark,
+            r.input.size,
+            `${f0(r.input.spacing)} in. o.c.`,
+            `${r.input.species} ${r.input.grade}`,
+            `(${r.input.topPlates}) ${r.input.size}`,
+            `(${r.input.bottomPlates}) ${r.input.size}${r.input.bottomPlates ? " PT where on concrete" : ""}`,
+            [
+              ...r.packs.map((k) => `(${k.n}) studs @ ${fmtFtIn(k.x ?? 0)}`),
+              ...r.input.openings.map((o) => `${o.label}: (${o.kings}) kings`),
+            ].join("; ") || "—",
+            f3(r.governing.ratio),
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {posts.length ? (
+        <DataTable
+          caption="Post schedule"
+          head={["Mark", "Size / grade", "Height", "Base reaction max (lb)", "Uplift (lb)", "Cap / base", "Gov. D/C", "Result"]}
+          small
+          rows={posts.map((r) => [
+            r.mark,
+            r.callout.split(",")[0],
+            fmtFtIn(r.input.height),
+            f0(r.reactions[0].maxDown),
+            r.reactions[0].minNet < 0 ? f0(-r.reactions[0].minNet) : "—",
+            cns.filter((c) => c.input.sourceMark === r.mark).map((c) => c.item.model).join(", ") || "per schedule",
+            f3(r.governing.ratio),
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {sws.length ? (
+        <DataTable
+          caption="Shear wall schedule"
+          head={["Mark", "Line", "Length × height", "Sheathing", "Edge / field nailing", "v (plf) / allow.", "Hold-down", "Sill anchor", "Result"]}
+          small
+          rows={sws.map((r) => [
+            r.mark,
+            r.demand.lineName,
+            `${fmtFtIn(r.input.b)} × ${fmtFtIn(r.input.h)}`,
+            r.sides.map((x) => x.row.label).join(" + "),
+            r.sides.map((x) => `${x.row.nail} @ ${x.spacing}" / 12"`).join(" + "),
+            `${f0(Math.max(r.vS, r.vW))} / ${f0(r.vS >= r.vW ? r.vAllowS : r.vAllowW)}`,
+            r.holdown ? r.holdown.item.model : "—",
+            `${r.input.sill.type === "cast-in" ? `${fmtInFraction(r.input.sill.d)}" A.B.` : (r.input.sill.label ?? "PIA")} @ ${f0(r.input.sill.spacing)}"`,
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {sws.some((r) => r.holdown) ? (
+        <DataTable
+          caption="Hold-down schedule"
+          head={["Mark", "Device", "Location (wall ends)", "Tension T (lb)", "Allowable (lb)", "Anchor"]}
+          small
+          rows={sws
+            .filter((r) => r.holdown)
+            .map((r) => [
+              r.holdown!.item.model,
+              hardwareLabel(r.holdown!.item),
+              `Both ends of ${r.mark}`,
+              f0(r.holdown!.T),
+              f0(r.holdown!.item.tension ?? 0),
+              r.input.holdownAnchor
+                ? `${fmtInFraction(r.input.holdownAnchor.d)}" ${r.input.holdownAnchor.steel}, h_ef ${f0(r.input.holdownAnchor.hef)}"`
+                : `${fmtInFraction(r.holdown!.item.anchorDia ?? 0.625)}" anchor per manufacturer`,
+            ])}
+        />
+      ) : null}
+      {cns.length ? (
+        <DataTable
+          caption="Connector schedule"
+          head={["Tag", "Model", "Location", "Qty", "Max demand (lb)", "Gov. D/C", "Result"]}
+          small
+          rows={cns.map((r) => [
+            r.mark,
+            r.item.model,
+            `${r.input.sourceMark} ${r.input.supportName}`,
+            String(r.input.quantity),
+            f0(r.governing.demand),
+            f3(r.governing.ratio),
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {ftgs.length ? (
+        <DataTable
+          caption="Foundation schedule"
+          head={["Type mark", "Ftg. size", "Reinforcement", "Depth below grade", "q max / q_a (psf)", "Result"]}
+          small
+          rows={ftgs.map((r) => [
+            r.mark,
+            r.input.type === "strip"
+              ? `${f0(r.input.B * 12)}" W × ${f0(r.input.h)}" D continuous`
+              : `${f0(r.input.B * 12)}" × ${f0((r.input.L ?? r.input.B) * 12)}" × ${f0(r.input.h)}" D`,
+            [
+              r.input.rebar
+                ? r.input.type === "strip"
+                  ? `${r.input.rebar.size} @ ${f0(r.input.rebar.spacing ?? 12)}" transverse`
+                  : `(${r.input.rebar.count}) ${r.input.rebar.size} each way`
+                : "plain",
+              r.input.longitudinal
+                ? `(${r.input.longitudinal.top}) ${r.input.longitudinal.size} T & (${r.input.longitudinal.bottom}) ${r.input.longitudinal.size} B`
+                : "",
+            ]
+              .filter(Boolean)
+              .join("; "),
+            `${f0(r.input.depth)}"`,
+            `${f0(r.serviceGov.q)} / ${f0(r.input.qa)}`,
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {usedHw.size ? (
+        <DataTable
+          caption="Connector hardware data used (project hardware list)"
+          head={["Model", "Type", "Fasteners", "Allowable loads (lb)", "Report", "Status"]}
+          small
+          rows={p.hardware
+            .filter((h) => usedHw.has(h.id))
+            .map((h) => [
+              h.model,
+              h.description,
+              h.fasteners,
+              [
+                h.down ? `down ${Object.entries(h.down).map(([k, v]) => `${v} (${k})`).join(", ")}` : "",
+                h.uplift !== undefined ? `uplift ${h.uplift}` : "",
+                h.tension !== undefined ? `tension ${h.tension}` : "",
+                h.F1 !== undefined ? `F1 ${h.F1}` : "",
               ]
-            : [],
-        )}
-      />
+                .filter(Boolean)
+                .join("; "),
+              h.report || "—",
+              h.checked ? "Checked" : <Flag key="v">VERIFY</Flag>,
+            ])}
+        />
+      ) : null}
       <TextRow italic>
-        Jacks / kings, hangers, posts and hold-downs are scheduled with the Phase 2 wall, post and connection design.
+        Wall-to-wall, top-plate splice, diaphragm and collector connections are scheduled with the Phase 3 lateral design.
       </TextRow>
     </Sheet>
   );

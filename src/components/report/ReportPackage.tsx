@@ -13,6 +13,8 @@ import {
   SummarySheet,
 } from "../sheets/PackageSheets";
 import { WoodMemberSheet } from "../sheets/WoodMemberSheet";
+import { ConnectorSheet, FootingSheet, PostSheet, ShearWallSheet, TrussSheet, WallSheet } from "../sheets/Phase2Sheets";
+import { LateralSheet, LoadPathSheet } from "../sheets/LateralSheets";
 import { Flag, Sheet, SheetTitle, TextRow } from "./primitives";
 import { packageChecks, type SheetEntry } from "./package";
 import { footers, titleFields } from "../sheets/common";
@@ -29,11 +31,24 @@ function receivedFrom(p: Project, design: ProjectDesign, id: string): string[] {
     );
   }
   const spec = o.spec;
+  if (spec.kind === "connector") {
+    const src = p.members.find((m) => m.id === spec.sourceId);
+    out.add(`${src?.mark ?? "?"} reaction ${spec.support + 1}`);
+  }
   if (spec.kind === "ceilingJoist" && spec.tensionFrom) {
     const src = p.members.find((m) => m.id === spec.tensionFrom);
     out.add(`${src?.mark ?? "?"} thrust (tension)`);
   }
   return [...out];
+}
+
+function connectionsOf(project: Project, design: ProjectDesign, id: string): string[] {
+  return project.members
+    .filter((m) => m.kind === "connector" && m.sourceId === id)
+    .map((m) => {
+      const r = design.outcomes.get(m.id)?.result;
+      return r ? `${r.mark}: ${r.callout}` : `${m.mark}: (error)`;
+    });
 }
 
 export function SheetView({
@@ -73,6 +88,10 @@ function SheetBody({
       return <CriteriaSheet m={meta} design={design} />;
     case "loads":
       return <LoadsSheet m={meta} />;
+    case "lateral":
+      return <LateralSheet m={meta} design={design} />;
+    case "loadpath":
+      return <LoadPathSheet m={meta} design={design} />;
     case "schedules":
       return <SchedulesSheet m={meta} design={design} />;
     case "general-notes":
@@ -96,9 +115,34 @@ function SheetBody({
         );
       }
       const r = o.result;
-      if (r.kind === "ijoist")
-        return <IJoistSheet m={meta} r={r} index={index} total={members.length} received={received} />;
-      return <WoodMemberSheet m={meta} r={r} index={index} total={members.length} received={received} />;
+      const common = { m: meta, index, total: members.length, received, connections: connectionsOf(project, design, r.id) };
+      switch (r.kind) {
+        case "ijoist":
+          return <IJoistSheet m={meta} r={r} index={index} total={members.length} received={received} />;
+        case "wall":
+          return <WallSheet {...common} r={r} />;
+        case "post":
+          return <PostSheet {...common} r={r} />;
+        case "truss":
+          return <TrussSheet {...common} r={r} />;
+        case "connector":
+          return <ConnectorSheet {...common} r={r} />;
+        case "footing":
+          return <FootingSheet {...common} r={r} />;
+        case "shearWall":
+          return <ShearWallSheet {...common} r={r} />;
+        default:
+          return (
+            <WoodMemberSheet
+              m={meta}
+              r={r}
+              index={index}
+              total={members.length}
+              received={received}
+              connections={common.connections}
+            />
+          );
+      }
     }
   }
 }

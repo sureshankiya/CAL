@@ -5,3 +5,4 @@ export * from "./example";
 export * from "./storage";
 export * from "./templates";
 export * from "./review";
+export * from "./lateral";

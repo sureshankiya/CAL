@@ -51,6 +51,44 @@ export function targetFields(m: MemberSpec): TargetField[] {
         ...spans(m.spans.length),
         { field: "area.0.trib", label: "Tributary width, first area load (ft)", numeric: true },
       ];
+    case "wall":
+      return [
+        ...common,
+        { field: "plateHeight", label: "Plate height (ft)", numeric: true },
+        { field: "length", label: "Wall length (ft)", numeric: true },
+        { field: "spacing", label: "Stud spacing (in)", numeric: true },
+        { field: "size", label: "Stud size", numeric: false },
+      ];
+    case "post":
+      return [...common, { field: "height", label: "Post height (ft)", numeric: true }];
+    case "truss":
+      return [
+        ...common,
+        { field: "span", label: "Truss span (ft)", numeric: true },
+        { field: "spacing", label: "Truss spacing (in)", numeric: true },
+        ...m.bearings.flatMap((b, i) =>
+          (["D", "L", "Lr", "S", "W"] as const).map((t) => ({
+            field: `bearings.${i}.${t}`,
+            label: `Bearing ${b.name} — ${t} reaction (lb)`,
+            numeric: true,
+          })),
+        ),
+      ];
+    case "footing":
+      return [
+        ...common,
+        { field: "B", label: "Width B (ft)", numeric: true },
+        { field: "h", label: "Thickness (in)", numeric: true },
+        { field: "depth", label: "Depth below grade (in)", numeric: true },
+      ];
+    case "shearWall":
+      return [
+        ...common,
+        { field: "b", label: "Segment length (ft)", numeric: true },
+        { field: "h", label: "Wall height (ft)", numeric: true },
+      ];
+    case "connector":
+      return [...common];
   }
 }
 
@@ -93,7 +131,7 @@ export function applyReviewItem(p: Project, item: ReviewItem): Project {
   const def = targetFields(m).find((f) => f.field === item.target!.field);
   if (!def) throw new Error("Field not editable from the review table");
   const value = def.numeric ? parseDrawingNumber(item.value) : item.value.trim();
-  if (def.numeric && (value === undefined || !((value as number) >= 0)))
+  if (def.numeric && (value === undefined || !Number.isFinite(value as number) || (!/\.(D|L|Lr|S|W)$/.test(def.field) && (value as number) < 0)))
     throw new Error(`"${item.value}" is not a valid number`);
   const copy = structuredClone(m) as unknown as Record<string, unknown>;
   setPath(copy, def.field, value);

@@ -7,7 +7,22 @@
 import type { MemberSpec, Project } from "./schema";
 
 export type MarkKey =
-  "joist" | "rafter" | "ceilingJoist" | "ijoist" | "beam" | "header" | "ridge" | "flush" | "dropped";
+  | "joist"
+  | "rafter"
+  | "ceilingJoist"
+  | "ijoist"
+  | "beam"
+  | "header"
+  | "ridge"
+  | "flush"
+  | "dropped"
+  | "wall"
+  | "post"
+  | "truss"
+  | "connector"
+  | "footing"
+  | "pad"
+  | "shearWall";
 
 export const DEFAULT_MARKS: Record<MarkKey, string> = {
   joist: "FJ-{n}",
@@ -19,10 +34,23 @@ export const DEFAULT_MARKS: Record<MarkKey, string> = {
   ridge: "RB-{n}",
   flush: "FB-{n}",
   dropped: "DB-{n}",
+  wall: "{L}W-{n}",
+  post: "P-{n}",
+  truss: "T-{n}",
+  connector: "CN-{n}",
+  footing: "F-{n}",
+  pad: "PF-{n}",
+  shearWall: "{L}SW-{n}",
 };
 
-export const markKeyOf = (m: Pick<MemberSpec, "kind"> & { role?: string }): MarkKey =>
-  m.kind === "beam" ? ((m.role ?? "beam") as MarkKey) : (m.kind as MarkKey);
+export const markKeyOf = (m: Pick<MemberSpec, "kind"> & { role?: string; type?: string }): MarkKey =>
+  m.kind === "beam"
+    ? ((m.role ?? "beam") as MarkKey)
+    : m.kind === "footing"
+      ? m.type === "pad"
+        ? "pad"
+        : "footing"
+      : (m.kind as MarkKey);
 
 export function formatMark(template: string, level: number, seq: number): string {
   return template
