@@ -1,12 +1,13 @@
 # HouseCalc — Wood-Frame House Structural Calculator
 
-Merged build plan · Rev. B · 2026-10-07 · Phase 0 deliverable (for approval)
+Merged build plan · Rev. C · 2026-10-07 · Phase 0 deliverable (for approval)
 
 Sources merged:
 - **Rev. A plan** — review of your Lovable apps JoistCalc, StudCalc and TrussCalc. STRUTURA (steel truss) is excluded.
 - **BUILD_PLAN.md** — "Wood-Frame House Structural Calculator: Build Plan".
+- **Your portfolio** — the five projects summarised in `UPWORK_PORTFOLIO.md` (Google Drive), which describes the work in `D:\WORK SURESH\PORTFOLIO`. The calc files in that folder are on your PC and have not been reviewed yet (§2A).
 
-Where the two differ, the BUILD_PLAN decisions govern. Conflicts that need your decision are in §13.
+Where the sources differ, the BUILD_PLAN decisions govern. Conflicts that need your decision are in §13.
 
 ---
 
@@ -23,6 +24,21 @@ Where the two differ, the BUILD_PLAN decisions govern. Conflicts that need your 
 | QC | Unit tests; audit of Lovable engines | Adds: regression against your hand calcs with stated tolerances, source / edition tag on every table plus a second-pass check, validation on 5–10 past permit calcs |
 | Phases | Rev. A order (gravity incl. footings first) | Your Phase 0–5 structure, with Rev. A content mapped in |
 | Responsibility | — | Design-aid statement on the cover and every sheet; the engineer of record (EOR) reviews and stamps |
+
+## Revision C — changes from your portfolio
+
+| Item | Rev. B | Rev. C (revised) |
+|---|---|---|
+| Code cycles | 2025 first; 2022 deferred to Phase 5 | **Both cycles from Phase 1.** Four of the five portfolio projects are on the 2022 CBC. A mixed set (e.g. 2022 CBC with ASCE 7-22, as listed for the Baily Ave ADU) is allowed only as a flagged override |
+| Steel | Beams and posts optional (Phase 5) | **HSS / pipe posts with base and cap plates in core scope** (Bluebird Lane). W-beams stay optional |
+| Masonry | Excluded | **CMU foundation / stem walls in scope** (San Miguel Ave, TMS 402/602). Masonry above the foundation stays excluded |
+| Existing structures | Not covered | **New module (§8.9):** new / existing / existing-modified status on every member, existing-member checks under new loads, sistering, tie-ins to existing footings, field-verification notes (San Miguel, Bluebird, N Lugo) |
+| Project structure | One building per project | **Several structures per project** (house + detached garage at La Presa), each with its own levels, lateral system and foundation |
+| Marks | Fixed prefixes | **Configurable mark templates** matching your drawings: B101, 1SW1, 2BW1, 2W-1, F1 |
+| Schedules | Structural columns only | Wall and shear-wall schedules also carry the build-up: studs, sheathing, nailing, gypsum, insulation |
+| Connections | — | Adds top-plate splice straps (ST6224-type), blocking clips and ties (A35, H2.5A) to existing framing, multi-ply LVL flush-beam hangers |
+| Foundation | Continuous, pad, stem wall | Adds reinforced footings with bar layout, slab-on-grade notes, and thickened-slab checks under posts |
+| Lateral distribution | Flexible diaphragm | Adds an optional rigid-diaphragm distribution with torsion, to reproduce your ETABS results |
 
 ---
 
@@ -49,6 +65,56 @@ Where the two differ, the BUILD_PLAN decisions govern. Conflicts that need your 
 | STRUTURA | Truss Report Master | Steel truss, dark dashboard UI | **Excluded**. Its drawing-recognition server function was reviewed as a pattern only |
 
 These three apps also serve as **regression oracles**: identical inputs must give identical results, except for the documented corrections in §12.2.
+
+---
+
+## 2A. Portfolio calculation inventory
+
+Source: `UPWORK_PORTFOLIO.md` (Google Drive), which summarises the five projects in `D:\WORK SURESH\PORTFOLIO`. The calc files themselves are on your PC and have not been reviewed yet. They will confirm each sheet type and supply the regression numbers. ● = listed in your portfolio description.
+
+| Calculation | 1 · Baily Ave ADU | 2 · La Presa house + garage | 3 · San Miguel addition | 4 · Bluebird remodel | 5 · N Lugo garage → ADU | Module |
+|---|---|---|---|---|---|---|
+| Code basis | 2022 CBC, ASCE 7-22 ⚑, NDS, SDPWS | 2025 CBC, ASCE 7-22, NDS-2024, SDPWS-2021 | 2022 CBC, ACI 318, NDS | 2022 CBC, ACI 318, AISC 360, NDS | 2022 CBC, NDS, SDPWS | §7 |
+| Roof / ceiling framing | ● | | | | ● 2×6 CJ @ 16″ | 8.2 |
+| Floor framing, I-joists | ● | ● TJI-235 @ 16″ | | | | 8.3 |
+| Beams, multi-ply LVL flush beams | ● | ● B101–B103, (3) 1¾″ × 11⅞″ LVL 2.0E | | | | 8.4 |
+| Wood posts | ● | ● 4×6 | | | | 8.5 |
+| Steel HSS posts | | | | ● HSS 6×6×¼ | | 8.5 |
+| Bearing walls | | | | ● 2BW1–2BW3 | | 8.5 |
+| Lateral analysis (wind + seismic) | ● | | | | | 8.6 |
+| Shear walls and schedule | ● | ● 1SW1–1SW4 | ● SW1–SW3 | ● | | 8.6 |
+| Hold-downs | | ● | | | | 8.6 |
+| Sill anchor bolts | | | ● 5/8″ × 10″ @ 6′-0″, 3″ × 3″ × 0.229″ washers | | | 8.6 |
+| Top-plate splice straps | | | | | ● ST6224 | 8.6 / 8.7 |
+| Clips and ties to existing framing | | | | | ● A35, H2.5A | 8.7 |
+| Connection details | ● | ● | | | ● | 8.7 |
+| Foundation design (type not stated) | ● | ● | | | | 8.8 |
+| Reinforced continuous footing | | | ● 18″W × 10″D, (3) #4 T&B, #4 @ 18″ | | | 8.8 |
+| CMU foundation wall | | | ● 8″ CMU | | | 8.8 |
+| Isolated pad footings | | | | ● F1 24×24×12, F3 15×18, F4 48×48×18, (3) #4 cont. T&B | | 8.8 |
+| Slab on grade | | | | ● | | 8.8 |
+| Continuous load path to foundation | | | | ● | | §9 |
+| Existing structure: tie-ins, reinforcement, field verification | | | ● | ● | ● | 8.9 |
+| Second structure on the site | | ● 504 SF detached garage | | | | §4 |
+| Fire-rated assemblies | | | | | ● UL U465 | §11 (notes only) |
+| Software used | ETABS, Tedds, AutoCAD | ETABS, STAAD.Pro, Tedds, AutoCAD | Tedds, AutoCAD | Tedds, Enercalc, AutoCAD | Tedds, AutoCAD | — |
+
+⚑ The 2022 CBC references ASCE 7-16. The tool flags a mixed code set like this one instead of silently accepting it.
+
+**What the portfolio means for the tool**
+- **Lateral is core.** All five sites are in Southern California (high seismic). Four projects list shear walls and N Lugo lists SDPWS, so the full chain (shear walls, hold-downs, sill anchorage) is needed from the first lateral phase.
+- **Both code cycles are live.** Four projects are on the 2022 CBC and one on the 2025 CBC.
+- **Existing buildings are common.** Three of five projects are additions, remodels or conversions, so new / existing status, existing-member checks and field-verification notes are core.
+- **Scope beyond wood.** Steel HSS posts and CMU foundation walls appear, so AISC 360 posts and TMS 402/602 foundation walls move into scope.
+- **Marks.** Your marks are level-prefixed (B101, 1SW1, 2BW1, 2W-1), so mark templates are configurable per member type.
+- **I-joist series.** The portfolio lists "TJI-235". Please confirm the series so the I-joist library includes it; the series I know are TJI 110 / 210 / 230 / 360 / 560.
+
+**Still to confirm from the calc files in `D:\WORK SURESH\PORTFOLIO`**
+- exact Tedds sheet types and their order;
+- wind / seismic parameters;
+- whether garage-front walls use portal frames or prefabricated shear panels;
+- hold-down and anchor products;
+- the hand-checked numbers for the regression suite.
 
 ---
 
@@ -88,7 +154,8 @@ Every input value carries **provenance**: `default` (with source), `user`, `draw
 | Site | Address / jurisdiction, code cycle, Risk Category, wind speed and exposure, Kzt, ground elevation, SDS / SD1 / site class / SDC, ground snow, soil bearing (presumptive or geotechnical), frost depth |
 | Loads | Dead-load assemblies (roof, floor, wall, ceiling) itemised in psf; live loads; snow; wind and seismic parameters; ASD / strength combinations |
 | Geometry (tabular, no graphic plan editor) | Stories and heights; roof planes (pitch, spans, overhangs, asymmetric spans); floor areas; wall lines (location, length, level); openings |
-| Members | Mark, type, species / grade or product, size, spacing, span, supports, tributary width, loads |
+| Structures | One or more per project (e.g. house + detached garage or ADU). Each has its own levels, lateral system and foundation; site data and code cycle are shared |
+| Members | Mark (from the configurable template), type, status (new / existing / existing-modified, with field-verification notes), species / grade or product, size, spacing, span, supports, tributary width, loads |
 | Connections | Load-path entries linking a member's support to its supporting member and the connector chosen |
 | Lateral | Wall lines, shear-wall segments, diaphragm panels, hold-down locations |
 | Truss import | Manufacturer truss marks, spacing, bearing locations, reactions by load type (D, Lr / S, W uplift), girder point loads |
@@ -162,16 +229,18 @@ New in HouseCalc: the package navigator, the right-pane switch (no-print), autos
 
 ## 7. Code basis — versioned code cycles
 
-| Item | 2025 cycle (default) | 2022 cycle (alternate) |
+| Item | 2025 cycle (default for new permits) | 2022 cycle (projects submitted under it) |
 |---|---|---|
 | Building code | 2025 CBC / CRC (2024 IBC / IRC) | 2022 CBC / CRC (2021 IBC / IRC) |
 | Loads | ASCE 7-22 | ASCE 7-16 |
 | Wood | ANSI/AWC NDS-2024 + Supplement | NDS-2018 + Supplement |
 | Wood lateral | AWC SDPWS-2021 | SDPWS-2015 |
 | Concrete | ACI 318-19 | ACI 318-19 |
-| Steel (optional) | AISC 360-22 | AISC 360-16 |
-| Method | ASD for wood, connectors, soil; strength design for concrete | same |
+| Masonry (CMU foundation walls) | TMS 402/602-22 | TMS 402/602-16 |
+| Steel (HSS / pipe posts, base plates) | AISC 360-22 | AISC 360-16 |
+| Method | ASD for wood, connectors, soil; strength design for concrete; ASD or LRFD for steel | same |
 
+- Both cycles are populated in Phase 1: four of your five portfolio projects are on the 2022 CBC. A mixed set (for example 2022 CBC with ASCE 7-22) is allowed only as a flagged override.
 - Each cycle is a separate data set. Every table carries its source document, edition, table number and entry check status.
 - Edition-specific equations switch with the cycle. Example: flat-roof snow is pf = 0.7 Ce Ct pg in ASCE 7-22 and includes Is in ASCE 7-16.
 - Defaults: Risk Category II. Site hazard values are entered from the ASCE Hazard Tool. Soil defaults to presumptive values (IBC Table 1806.2), flagged "verify with geotechnical report".
@@ -180,7 +249,7 @@ New in HouseCalc: the package navigator, the right-pane switch (no-print), autos
 
 ## 8. Calculation modules
 
-Marks are user-editable and kept identical across sheets, schedules and notes. Wall marks follow your system: 1W-1, 2W-1, 2W-2, …
+Marks come from configurable templates that match your drawings — B101 (level + sequence), 1SW1, 2BW1, 2W-1, F1 — and are kept identical across sheets, schedules and notes. The prefixes shown below are defaults.
 
 ### 8.1 Criteria and loads
 
@@ -231,19 +300,20 @@ Marks are user-editable and kept identical across sheets, schedules and notes. W
 
 | Mark | Member | Checks |
 |---|---|---|
-| 1W-#, 2W-# | Stud walls | Port of StudCalc: take-down, ASD combinations, axial with C_P, combined NDS 3.9.2 with C&C wind, plate bearing (C_b), wind deflection with P-Δ, openings (headers / jacks / kings / cripples), stud and sole-plate connections, point-load stud packs |
+| 1W-#, 2W-#, 2BW# | Stud / bearing walls | Port of StudCalc: take-down, ASD combinations, axial with C_P, combined NDS 3.9.2 with C&C wind, plate bearing (C_b), wind deflection with P-Δ, openings (headers / jacks / kings / cripples), stud and sole-plate connections, point-load stud packs |
 | P-# | Posts | Axial with C_P (3.7.1), combined (3.9.2), end-grain bearing (3.10.1), bearing on plates / beams (3.10.2), built-up columns (NDS 15.3, K_f), cap and base hardware |
+| SP-# | Steel posts — HSS / pipe | AISC 360 Ch. E compression and Ch. H combined; base plate (concrete bearing per AISC 360 J8, plate bending per AISC Design Guide 1); anchor rods (ACI 318 Ch. 17); cap plate and bolts to the wood beam (NDS Ch. 12, steel side plate) |
 
 ### 8.6 Lateral
 
 | Mark | Item | Checks |
 |---|---|---|
-| LD | Story forces and distribution | Wind and seismic per level and direction; flexible-diaphragm tributary distribution to wall lines; wind / seismic envelope per line (ASCE 7 §12.3.1, §12.8.3, Ch. 28) |
+| LD | Story forces and distribution | Wind and seismic per level and direction; flexible-diaphragm tributary distribution to wall lines (default) or rigid-diaphragm distribution with torsion (option, to reproduce ETABS results); wind / seismic envelope per line (ASCE 7 §12.3.1, §12.8.3, Ch. 28) |
 | RD-# / FD-# | Diaphragms | Unit shear vs SDPWS Table 4.2A, ASD ÷ 2.0, aspect ratio, chord force and splice, collector force (Ω0 for SDC C–F, ASCE 7 §12.10.2.1) |
 | SW-# | Shear walls | Segmented and **FTAO** methods; SDPWS Table 4.3A with **automatic sheathing / nailing selection**; aspect-ratio limits and adjustment; one or two sides; overturning (0.6D); deflection Eq. 4.3-1 → δx = Cd δxe / Ie vs ASCE 7 Table 12.12-1 |
 | HD-# | Hold-downs | Catalogue capacity (with ESR number); anchor per ACI 318-19 Ch. 17 (steel, breakout, pullout, side-face blowout, §17.10 seismic) |
 | AB | Sill plate and anchor bolts | Bolt bearing in the sill (NDS 12.3), plate washers (SDPWS §4.3.6.4), concrete shear checks or the light-frame sill-plate provisions (ACI 318-19 §17.7, §17.10) |
-| ST | Shear-transfer nailing | Diaphragm to wall top plate, blocking / rim to plate, sole plate to framing below, plate splices |
+| ST | Shear transfer and splices | Diaphragm to wall top plate, blocking / rim to plate (A35-type clips), sole plate to framing below, top-plate splices and chord / collector straps (ST6224-type) checked against chord and collector forces |
 | UP | Uplift load path | Roof uplift → rafter / truss ties → stud / plate → floor-to-floor straps → sill anchorage |
 
 ### 8.7 Connections
@@ -259,10 +329,21 @@ Marks are user-editable and kept identical across sheets, schedules and notes. W
 
 | Mark | Item | Checks |
 |---|---|---|
-| F-# | Continuous footings | Service bearing (IBC 1806.2 or geotechnical value); plain concrete (ACI 318-19 Ch. 14, φ = 0.60) or reinforced (Ch. 13 / 22); embedment and frost (IBC 1809.4 / 1809.5); IBC Table 1809.7 minimums |
+| F-# | Continuous footings | Service bearing (IBC 1806.2 or geotechnical value); plain concrete (ACI 318-19 Ch. 14, φ = 0.60) or reinforced (Ch. 13 / 22) with bar layout (e.g. (3) #4 top and bottom, #4 @ 18″ transverse); embedment and frost (IBC 1809.4 / 1809.5); IBC Table 1809.7 minimums |
 | PF-# | Spread (pad) footings | Bearing, one-way shear (§22.5), two-way punching (§22.6), flexure (§22.2), As,min, bearing (§22.8), development |
-| SW-F | Stem walls | Bearing, reinforcement, anchor-bolt embedment and edge distance (ACI Ch. 17), sill-plate anchorage |
+| SW-F | Stem walls — concrete or CMU | Concrete (ACI 318) or CMU (TMS 402/602): bearing, out-of-plane load from retained soil, reinforcement and seismic minimums, anchor-bolt embedment and edge distance (ACI 318 Ch. 17 / TMS 402 anchor bolts), sill-plate anchorage |
+| SOG | Slab on grade | Notes (thickness, reinforcement, vapour retarder) and thickened-slab / pad check under posts and point loads |
 | — | Hold-down / shear-wall footings | Uplift resistance (0.6D) vs hold-down tension; anchor checks use the actual footing geometry; sliding and lateral bearing (IBC 1806.3) |
+
+### 8.9 Existing structures (additions, remodels, conversions)
+
+| Item | Content |
+|---|---|
+| Member status | Every member is New, Existing or Existing-modified. Existing members carry assumed properties (species / grade, size, condition), each tagged "field verify" until confirmed |
+| Existing-member checks | Existing joists, rafters, beams, walls and footings are re-checked for the new loads on the same calc sheets; each sheet states assumed vs verified values |
+| Reinforcement | Sistered members (load sharing and connecting fasteners per NDS Ch. 12), added blocking, new ties to existing framing |
+| Tie-ins to existing concrete | Drilled dowels and post-installed adhesive anchors (ACI 318 Ch. 17 with manufacturer ESR bond values) at new-to-existing footing joints and infill walls |
+| Field-verification notes | Generated per member and collected into the specific notes |
 
 ---
 
@@ -331,14 +412,14 @@ Marks are user-editable and kept identical across sheets, schedules and notes. W
 | Framing | # · Mark · Member · Size / species · Spacing · Span · Load case · Gov. D/C · Result |
 | Beam / header | Mark · Size / grade · Span · Bearing (L / R) · Jacks / kings · Hanger · Gov. D/C |
 | Post | Mark · Size / grade · Height · Cap / base · Footing · Gov. D/C |
-| Wall (1W-#, 2W-#) | Mark · Stud size / grade · Spacing · Plates · Sheathing · Height · Ties · Sole plate · Anchorage |
-| Shear wall | Mark · Sheathing · Edge / field nailing · Blocking · Sill plate · Anchor bolts · Hold-down · Plate-to-plate · Capacity |
+| Wall (1W-#, 2W-#, 2BW#) | Mark · Stud size / grade · Spacing · Plates · Sheathing · Gypsum / finish · Insulation · Height · Ties · Sole plate · Anchorage |
+| Shear wall (1SW1, SW1) | Mark · Studs · Sheathing · Edge / field nailing · Blocking · Gypsum / finish · Insulation · Sill plate · Anchor bolts · Hold-down · Plate-to-plate · Capacity |
 | Hold-down | Mark · Device · Fasteners · Anchor / embedment · Min. post · Capacity · Demand · D/C |
 | **Hardware (consolidated)** | Model · Quantity · Fasteners · Locations (marks) · Capacity · Catalogue / ESR report no. |
 | Footing | Mark · Width · Thickness · Reinforcement · Embedment · Bearing D/C |
 
 **Notes generator**
-- General notes: codes, design loads, materials, fastening, special inspection, deferred submittals (trusses).
+- General notes: codes, design loads, materials, fastening, special inspection, deferred submittals (trusses), and fire-rated assembly references (e.g. UL U465) — referenced only, not designed.
 - Specific notes: one or more per member, e.g. blocking at bearing, web stiffeners required, verify existing.
 
 **Judgement flags** — the tool flags these and does not decide them:
@@ -399,8 +480,8 @@ Marks are user-editable and kept identical across sheets, schedules and notes. W
 | 2 | Report format (BUILD_PLAN §9.5) | DOCX, PDF or both | **PDF from Phase 1** (browser print, identical to your Lovable apps); **DOCX export in Phase 4** if you want editable files |
 | 3 | Drawing-input timing | BUILD_PLAN §1 says "from the start", but §7 puts extraction in Phase 4 | **Phase 1:** PDF upload, viewer, source tagging and review-table mechanism (manual). **Phase 4:** AI extraction fills the same table |
 | 4 | Footing timing | Phase 2 exit is "roof → foundation", but the foundation module is in Phase 4 | **Phase 2:** port continuous and pad footings (the code exists in StudCalc). **Phase 4:** stem walls and shear-wall / hold-down footings |
-| 5 | Second code cycle | Both cycles at once lengthens the build (BUILD_PLAN §8) | **2025 cycle first**; 2022 cycle data set in Phase 5, unless current projects need it now |
-| 6 | Steel beams / posts (AISC 360) | Not steel trusses, so not excluded | Phase 5 optional |
+| 5 | Second code cycle | Both cycles at once lengthens the build (BUILD_PLAN §8) | **Resolved by the portfolio:** four of five projects use the 2022 CBC, so both cycles are populated in Phase 1 |
+| 6 | Steel (AISC 360) | Not steel trusses, so not excluded | **HSS / pipe posts in core scope** (Phase 2, Bluebird Lane). W-beams optional (Phase 5) |
 
 ---
 
@@ -409,11 +490,11 @@ Marks are user-editable and kept identical across sheets, schedules and notes. W
 | Phase | Work | Exit criterion |
 |---|---|---|
 | 0 | This merged spec; data-model schema; report layout (captured from your Lovable apps); code-cycle list; regression case list | Spec approved by you |
-| 1 | Scaffold and UI shell; input model with provenance; assumption log; data library (2025 cycle, tagged); combinations; beam solver; report engine (sheets, cover, TOC, summary); project / site / criteria / loads sheets; rafters, ceiling joists, floor joists, I-joists, headers, beams, ridge beams; max span / required spacing / required size; PDF viewer and manual review table (if #3 accepted) | Reproduces JoistCalc results and your sample joist / rafter reports within tolerance |
-| 2 | Stud walls, posts, load takedown service, truss reaction import (+ uplift), hangers, ties, post caps / bases; continuous and pad footings (if #4 accepted); framing / beam / post / wall / connector / footing schedules | Gravity load path roof → foundation on a test house |
-| 3 | Wind and seismic, distribution, diaphragms, shear walls (segmented + FTAO, automatic nailing selection), drift, hold-downs, anchors, sill plates, shear-transfer nailing, uplift path; shear-wall / hold-down / diaphragm schedules | Matches your hand-checked lateral calcs on two test houses |
-| 4 | Stem walls and hold-down footings; AI extraction into the review table; hardware schedule; general / specific notes generator; full house report; in-tool truss design (port TrussCalc); DOCX export (if #2 accepted) | Full report from drawings for one real past project |
-| 5 | Validation on past projects, fixes, locked versions; 2022 cycle (if #5 accepted); optional steel beams / posts | Sign-off checklist complete |
+| 1 | Scaffold and UI shell; input model with provenance, structures and mark templates; assumption log; data library (**2025 and 2022 cycles**, tagged); combinations; beam solver; report engine (sheets, cover, TOC, summary); project / site / criteria / loads sheets; rafters, ceiling joists, floor joists, I-joists, headers, beams (incl. multi-ply LVL), ridge beams; max span / required spacing / required size; PDF viewer and manual review table (if #3 accepted) | Reproduces JoistCalc results and your portfolio joist / rafter / beam sheets within tolerance |
+| 2 | Stud and bearing walls, wood posts, **steel HSS posts with base / cap plates**, load takedown service, truss reaction import (+ uplift), hangers, ties, post caps / bases; **new / existing status and existing-member checks**; continuous and pad footings (if #4 accepted); framing / beam / post / wall / connector / footing schedules | Gravity load path roof → foundation on a test house |
+| 3 | Wind and seismic, distribution (flexible + rigid option), diaphragms, shear walls (segmented + FTAO, automatic nailing selection), drift, hold-downs, anchors, sill plates, shear transfer and **top-plate splices / straps**, uplift path; shear-wall / hold-down / diaphragm schedules | Matches your hand-checked lateral calcs on two portfolio houses (e.g. Baily Ave ADU, La Presa) |
+| 4 | **Concrete and CMU stem walls**, reinforced footings, slab-on-grade notes, **tie-ins to existing concrete**, hold-down footings; AI extraction into the review table; hardware schedule; general / specific notes generator; full house report; in-tool truss design (port TrussCalc); DOCX export (if #2 accepted) | Full report from drawings for one real past project (e.g. San Miguel addition or Bluebird remodel) |
+| 5 | Validation on 5–10 past projects, fixes, locked versions; optional steel W-beams, decks, retaining walls | Sign-off checklist complete |
 
 Each phase ends with a pushed, working build that you can use.
 
@@ -435,11 +516,11 @@ Each phase ends with a pushed, working build that you can use.
 ## 16. Needed from you
 
 1. **Report layout:** confirm that the JoistCalc / StudCalc / TrussCalc sheet format is the target. If it is not, send sample Tedds reports.
-2. **Hand-checked calcs:** 2–3 past permit calcs for the Phase 1–3 regression, and 5–10 for Phase 5 validation.
+2. **Your portfolio calc files** from `D:\WORK SURESH\PORTFOLIO` (Tedds reports and hand-checked results). This cloud session cannot read your PC's drives: copy the folder into Google Drive, attach the PDFs here, or open a Claude session on your PC in that folder. 2–3 projects are needed for the Phase 1–3 regression, and 5–10 for Phase 5 validation.
 3. **Typical house types:** stories, slab-on-grade vs raised floor, roof types, typical spans and hardware.
 4. **Answers to the decisions in §13** — "accept recommendations" is enough.
 5. **Phase 4 only:** an Anthropic API key, entered by you directly in the hosting environment. Do not paste keys into chat.
 
 ## 17. Exclusions
 
-Steel trusses, cold-formed steel, masonry (TMS 402/602), slab-on-grade design, fire-resistance design, and drawing / detail production. Schedules and notes are formatted for transfer to drawings.
+Steel trusses, cold-formed steel, masonry above the foundation, structural slab design (slab on grade is covered by notes and thickened-slab checks), fire-resistance design (UL assemblies are referenced in notes only), and drawing / detail production. Schedules and notes are formatted for transfer to drawings.
