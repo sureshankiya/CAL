@@ -99,18 +99,6 @@
       font-size: 9pt;
       color: #000;
     }
-    @bottom-left {
-      content: var(--footer-left, "");
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 9pt;
-      color: #000;
-    }
-    @bottom-center {
-      content: var(--footer-center, "");
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 9pt;
-      color: #000;
-    }
   }
   .tedds-report {
     font-size: 10pt;
@@ -119,9 +107,12 @@
     display: table-header-group;
   }
   .tedds-report tr,
-  .tedds-report tbody,
   .tedds-report .avoid-break {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+  .tedds-report .keep-next {
+    break-after: avoid;
+    page-break-after: avoid;
   }
 }
