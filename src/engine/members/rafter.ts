@@ -174,7 +174,7 @@ function build(ctx: DesignContext, r: RafterInput): Built {
   const wVert = loadVector({});
   const ang = `${fmt(geom.thetaDeg, 2)}°`;
 
-  const dead = resolveDead(ctx, r.dead);
+  const dead = resolveDead(ctx, r.dead, "sloped");
   if (dead.psf) {
     const sloped = dead.basis !== "horizontal";
     const w = sloped ? dead.psf * trib * cos : dead.psf * trib * cos * cos;

@@ -52,6 +52,8 @@ export interface DeadRef {
   assemblyId?: string;
   /** direct psf, used when no assembly is referenced (flagged as user entry) */
   psf?: number;
+  /** area basis of a direct psf entry (assemblies carry their own basis) */
+  basis?: "sloped" | "horizontal";
 }
 
 export interface LiveRef {
@@ -59,9 +61,15 @@ export interface LiveRef {
   psf?: number;
 }
 
+/**
+ * Dead load of an assembly or a direct psf entry. A direct entry takes the
+ * basis it states, else the member's default: roof members default to the
+ * sloped surface, floors and ceilings to plan area.
+ */
 export function resolveDead(
   ctx: DesignContext,
   ref: DeadRef,
+  defaultBasis: "sloped" | "horizontal" = "horizontal",
 ): { psf: number; label: string; basis: "sloped" | "horizontal" | "wall"; ref: string } {
   if (ref.assemblyId) {
     const a = ctx.assemblies.find((x) => x.id === ref.assemblyId);
@@ -73,7 +81,13 @@ export function resolveDead(
       ref: "Loads sheet, ASCE 7 Table C3.1-1a",
     };
   }
-  return { psf: ref.psf ?? 0, label: "Dead load (entered)", basis: "horizontal", ref: "Entered by engineer" };
+  const basis = ref.basis ?? defaultBasis;
+  return {
+    psf: ref.psf ?? 0,
+    label: `Dead load (entered, per ft² of ${basis === "sloped" ? "roof surface" : "plan area"})`,
+    basis,
+    ref: "Entered by engineer",
+  };
 }
 
 export function resolveLive(

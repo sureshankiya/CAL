@@ -32,7 +32,11 @@ export const liveUseSchema = z.enum([
   "none",
 ]);
 
-export const deadRefSchema = z.object({ assemblyId: z.string().optional(), psf: nonneg.optional() });
+export const deadRefSchema = z.object({
+  assemblyId: z.string().optional(),
+  psf: nonneg.optional(),
+  basis: z.enum(["sloped", "horizontal"]).optional(),
+});
 export const liveRefSchema = z.object({ use: liveUseSchema.optional(), psf: nonneg.optional() });
 
 export const extraLoadSchema = z.object({

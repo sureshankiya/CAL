@@ -208,15 +208,19 @@ function DeadField({
   kinds,
   onChange,
   label = "Dead load",
+  roof,
 }: {
   p: Project;
-  value: { assemblyId?: string; psf?: number };
+  value: { assemblyId?: string; psf?: number; basis?: "sloped" | "horizontal" };
   kinds?: string[];
-  onChange: (v: { assemblyId?: string; psf?: number }) => void;
+  onChange: (v: { assemblyId?: string; psf?: number; basis?: "sloped" | "horizontal" }) => void;
   label?: string;
+  /** roof context: direct psf entries default to the sloped surface */
+  roof?: boolean;
 }) {
   const options = p.assemblies.filter((a) => !kinds || kinds.includes(a.kind));
   const sel = value.assemblyId ?? "__psf";
+  const basis = value.basis ?? (roof ? "sloped" : "horizontal");
   return (
     <>
       <Field label={label}>
@@ -226,13 +230,25 @@ function DeadField({
             ...options.map((a) => ({ value: a.id, label: `${a.id} — ${a.name}` })),
             { value: "__psf", label: "Enter psf directly" },
           ]}
-          onChange={(v) => onChange(v === "__psf" ? { psf: value.psf ?? 10 } : { assemblyId: v })}
+          onChange={(v) => onChange(v === "__psf" ? { psf: value.psf ?? 10, basis } : { assemblyId: v })}
         />
       </Field>
       {sel === "__psf" ? (
-        <Field label="Dead load (psf)">
-          <NumberInput value={value.psf ?? 0} min={0} onChange={(v) => onChange({ psf: v ?? 0 })} />
-        </Field>
+        <Grid>
+          <Field label="Dead load (psf)">
+            <NumberInput value={value.psf ?? 0} min={0} onChange={(v) => onChange({ psf: v ?? 0, basis })} />
+          </Field>
+          <Field label="Per ft² of">
+            <Select
+              value={basis}
+              options={[
+                { value: "sloped", label: "Roof surface (sloped)" },
+                { value: "horizontal", label: "Plan area" },
+              ]}
+              onChange={(b) => onChange({ psf: value.psf ?? 0, basis: b })}
+            />
+          </Field>
+        </Grid>
       ) : null}
     </>
   );
@@ -623,7 +639,7 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
             />
           </Section>
           <Section title="Loading">
-            <DeadField p={p} value={m.dead} kinds={["roof"]} onChange={(v) => upd({ dead: v })} />
+            <DeadField p={p} value={m.dead} kinds={["roof"]} roof onChange={(v) => upd({ dead: v })} />
             <Check checked={m.roofLive} onChange={(v) => upd({ roofLive: v })} label="Roof live load" />
             <Check checked={m.snow} onChange={(v) => upd({ snow: v })} label="Snow (site p_g)" />
             <Field
@@ -951,7 +967,7 @@ function BeamEditor({ p, m, upd }: { p: Project; m: BeamSpec; upd: Upd<BeamSpec>
                 <NumberInput value={a.x2} allowEmpty min={0} onChange={(v) => setArea(i, { x2: v })} />
               </Field>
             </Grid>
-            <DeadField p={p} value={a.dead ?? {}} onChange={(v) => setArea(i, { dead: v })} />
+            <DeadField p={p} value={a.dead ?? {}} roof={(a.rise ?? 0) > 0} onChange={(v) => setArea(i, { dead: v })} />
             <Field label="Floor live use">
               <Select
                 value={a.live?.use ?? "none"}

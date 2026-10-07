@@ -12,7 +12,9 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "print-check": "node scripts/print-check.mjs",
+    "verify:reference": "python3 -I verification/reference.py"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
@@ -48,6 +50,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
+    "playwright": "1.56.1",
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",

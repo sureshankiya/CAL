@@ -1,6 +1,6 @@
 # HouseCalc — Wood-Frame House Structural Calculator
 
-Merged build plan · Rev. E · 2026-10-07 · Phase 0 complete — decisions in §13 approved
+Merged build plan · Rev. F · 2026-10-07 · Phase 1 delivered — see Revision F; decisions in §13 approved
 
 Sources merged:
 - **Rev. A plan** — review of your Lovable apps JoistCalc, StudCalc and TrussCalc. STRUTURA (steel truss) is excluded.
@@ -10,6 +10,25 @@ Sources merged:
 Where the sources differ, the BUILD_PLAN decisions govern. Conflicts that need your decision are in §13.
 
 ---
+
+## Revision F — Phase 1 delivered
+
+| Item | Status |
+|---|---|
+| Code cycles | 2025 and 2022 CBC / CRC data sets; cycle stamped in the design-basis block and footer of every sheet |
+| Loads | Dead-load assemblies (C3.1-1a), IRC / IBC live loads, roof live reduction, ASCE 7-16 / 7-22 snow |
+| Members | FJ, R (ridge beam / ridge board), CJ (rafter tie), IJ, B / H / RB in sawn, built-up, glulam, SCL; FAIL alternatives (lightest size, max spacing, max span) |
+| Load path | Reactions carried between members by load type; rafter thrust to tie joists; design in load-path order |
+| Report | Cover / EOR block, contents and summary with package checks, criteria, loads, member sheets, schedules, notes, assumption log; per-sheet footers |
+| Drawings | PDF viewer, sheet tags, manual review table (confirm before apply) |
+| Verification | 52 tests: closed-form solver checks, JoistCalc parity, N Lugo Tedds beam, San Miguel rafter, Tedds post data / C_P, independent Python reference (verification/reference.py, 9 cases), print check (scripts/print-check.mjs) |
+
+**Findings while building Phase 1**
+- A dead load typed directly in psf on a pitched roof must state its basis. HouseCalc now defaults roof members to the sloped surface (load / cos θ on plan) and prints the basis on the sheet; the independent reference caught the difference (H-1 example: 707 vs 720 psi).
+- 1109 San Miguel rafter sheet: F'b omits C_r = 1.15 (conservative), deflection is computed on the horizontal span (HouseCalc uses the sloped length: δ_sloped = δ_horizontal / cos² θ), and the uplift case uses 0.6D + 1.0W with the strength-level ASCE 7-22 pressure — the ASD combination is 0.6D + 0.6W (§2.4.1 (7)). The sheet's result is conservative, not unsafe.
+- Default K_cr = 1.0 (IBC Table 1604.3 immediate D + L). Set 1.5 in the criteria for NDS 3.5.2 long-term creep (JoistCalc's default).
+
+**Needed from you before Phase 2** — confirm the VERIFY data: NDS-2024 Supplement values (carried from 2018), TJI properties, SCL values for the products you specify, and the typical (non-table) dead-load components.
 
 ## Revision B — changes from Rev. A
 

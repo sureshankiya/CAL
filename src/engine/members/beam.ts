@@ -114,7 +114,7 @@ function build(ctx: DesignContext, b: BeamInput) {
     const cos = Math.cos(Math.atan(rise / 12));
     const where = x1 > 0 || x2 < total ? ` (${fmt(x1, 2)}–${fmt(x2, 2)} ft)` : "";
     if (a.dead) {
-      const d = resolveDead(ctx, a.dead);
+      const d = resolveDead(ctx, a.dead, rise > 0 ? "sloped" : "horizontal");
       const sloped = d.basis === "sloped" && rise > 0;
       const w = (d.psf * a.trib) / (sloped ? cos : 1);
       if (w) {

@@ -17,3 +17,4 @@ coverage
 .idea
 .DS_Store
 __pycache__/
+print-check.pdf
