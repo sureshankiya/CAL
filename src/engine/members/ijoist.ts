@@ -13,7 +13,7 @@ import { asdCombinations, loadDurationFactor, relevantCombinations, type Combina
 import { fmt } from "../core/fmt";
 import { LOAD_TYPES, loadVector, type LoadType } from "../core/loads";
 import { fromDefault, type AssumptionEntry } from "../core/provenance";
-import type { Check } from "../design/wood";
+import { governingCheck, type Check } from "../design/wood";
 import { tjiProps, type TjiDepth, type TjiProps, type TjiSeries } from "../data/ijoist";
 import { tableStatusText } from "../data/library";
 import {
@@ -288,6 +288,7 @@ export function designIJoist(ctx: DesignContext, j: IJoistInput): IJoistResult {
     const need = end ? 1.75 : 3.5;
     checks.push({
       name: `Bearing length at support ${supportName(i)} (minimum ${need} in.)`,
+      category: "detailing",
       demand: need,
       capacity: lb,
       ratio: need / lb,
@@ -463,7 +464,7 @@ export function designIJoist(ctx: DesignContext, j: IJoistInput): IJoistResult {
         ]
       : []),
   ];
-  const governing = checks.reduce((x, c) => (c.ratio > x.ratio ? c : x));
+  const governing = governingCheck(checks);
   return {
     id: j.id,
     mark: j.mark,

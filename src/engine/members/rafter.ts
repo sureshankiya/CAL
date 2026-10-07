@@ -22,6 +22,7 @@ import {
   columnStabilityFactor,
   comboMomentAt,
   designWoodBeam,
+  governingCheck,
   type Check,
   type WoodBeamInput,
   type WoodBeamResult,
@@ -372,6 +373,7 @@ function evaluate(ctx: DesignContext, r: RafterInput, size = r.size) {
     const gc = rows.reduce((a, x) => (x.fc / x.FcPrime > a.fc / a.FcPrime ? x : a), rows[0]);
     checks.push({
       name: "Column slenderness l_e/d (NDS 3.7.1.4)",
+      category: "detailing",
       demand: leOverD,
       capacity: 50,
       ratio: leOverD / 50,
@@ -403,7 +405,7 @@ function evaluate(ctx: DesignContext, r: RafterInput, size = r.size) {
     thrust = { H, N, T, le, leOverD, rows, governing };
   }
 
-  const governing = checks.reduce((a, c) => (c.ratio > a.ratio ? c : a));
+  const governing = governingCheck(checks);
   const pass = checks.every((c) => c.pass);
   return { b, design, checks, vertical, thrust, governing, pass };
 }

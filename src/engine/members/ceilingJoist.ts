@@ -16,6 +16,7 @@ import {
   beamStabilityFactor,
   comboMomentEnvelope,
   designWoodBeam,
+  governingCheck,
   type Check,
   type WoodBeamResult,
 } from "../design/wood";
@@ -219,7 +220,7 @@ function evaluate(ctx: DesignContext, j: CeilingJoistInput, size = j.size) {
     }
     tension = { rows, governing, nail: nailOut };
   }
-  const governing = checks.reduce((a, c) => (c.ratio > a.ratio ? c : a));
+  const governing = governingCheck(checks);
   return { b, design, checks, tension, governing, pass: checks.every((c) => c.pass) };
 }
 

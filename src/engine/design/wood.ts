@@ -111,6 +111,8 @@ export interface WoodBeamInput {
 
 export interface Check {
   name: string;
+  /** detailing limits (slenderness, notch depth, minimum bearing) are not reported as the governing D/C unless they fail */
+  category?: "strength" | "serviceability" | "detailing";
   demand: number;
   capacity: number;
   ratio: number;
@@ -433,6 +435,13 @@ function transientLabel(f: Partial<Record<LoadType, number>>): string {
   return parts.length ? parts.join(" + ") : "—";
 }
 
+/** Governing check: highest D/C among strength and serviceability checks; a failing detailing check is reported too. */
+export function governingCheck(checks: Check[]): Check {
+  const pool = checks.filter((c) => c.category !== "detailing" || !c.pass);
+  const list = pool.length ? pool : checks;
+  return list.reduce((a, b) => (b.ratio > a.ratio ? b : a));
+}
+
 export function designWoodBeam(input: WoodBeamInput): WoodBeamResult {
   const mat = resolveWood(input.material, input.nds);
   const assumptions: AssumptionEntry[] = [];
@@ -680,7 +689,7 @@ export function designWoodBeam(input: WoodBeamInput): WoodBeamResult {
     CD: gb.CD,
     unit: "psi",
   };
-  const anyNeg = rows.some((r) => r.Mneg < -1e-6);
+  const anyNeg = rows.some((r) => r.Mneg < -Math.max(1e-3, 1e-6 * Math.abs(r.Mpos)));
   const gbn = govBy("fbRatioNeg");
   const bendingNeg: Check | undefined = anyNeg
     ? {
@@ -749,6 +758,7 @@ export function designWoodBeam(input: WoodBeamInput): WoodBeamResult {
           : "manufacturer — not permitted without approval";
     notchDepthCheck = {
       name: `End notch depth (${ref})`,
+      category: "detailing",
       demand: depth,
       capacity: limit,
       ratio: limit > 0 ? depth / limit : Infinity,
@@ -912,6 +922,7 @@ export function designWoodBeam(input: WoodBeamInput): WoodBeamResult {
   if (RBmax > 0)
     checks.push({
       name: "Beam slenderness R_B (NDS 3.3.3.7)",
+      category: "detailing",
       demand: RBmax,
       capacity: 50,
       ratio: RBmax / 50,
@@ -964,7 +975,7 @@ export function designWoodBeam(input: WoodBeamInput): WoodBeamResult {
       unit: "in",
     });
   });
-  const governing = checks.reduce((a, b) => (b.ratio > a.ratio ? b : a));
+  const governing = governingCheck(checks);
 
   // diagrams for the governing bending combination
   const gc = gb.combo;
