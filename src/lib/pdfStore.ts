@@ -69,11 +69,18 @@ export async function deletePdf(id: string): Promise<void> {
   }
 }
 
-/** Load pdf.js on demand (browser only) with its worker. */
+/**
+ * Load pdf.js on demand (browser only) with its worker. The legacy build is
+ * used because it carries the polyfills (e.g. Map.prototype.getOrInsertComputed)
+ * that current Safari / Firefox / Chromium releases do not all ship yet.
+ */
 export async function loadPdfJs() {
-  const pdfjs = await import("pdfjs-dist");
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+      "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+      import.meta.url,
+    ).toString();
   }
   return pdfjs;
 }

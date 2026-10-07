@@ -185,7 +185,8 @@ function Viewer({
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [scale, setScale] = useState(1.25);
-  const [state, setState] = useState<"loading" | "ok" | "missing">("loading");
+  const [state, setState] = useState<"loading" | "ok" | "missing" | "error">("loading");
+  const [renderError, setRenderError] = useState<string | undefined>();
   const d = p.drawings.find((x) => x.id === id);
   const [item, setItem] = useState("");
   const [value, setValue] = useState("");
@@ -211,7 +212,10 @@ function Viewer({
       c.height = vp.height;
       await pg.render({ canvas: c, canvasContext: c.getContext("2d")!, viewport: vp }).promise;
       if (!cancelled) setState("ok");
-    })().catch(() => setState("missing"));
+    })().catch((e: unknown) => {
+      setRenderError(e instanceof Error ? e.message : String(e));
+      setState("error");
+    });
     return () => {
       cancelled = true;
     };

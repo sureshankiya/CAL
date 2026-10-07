@@ -116,7 +116,7 @@ function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground print:min-h-0">
+    <div className="min-h-screen bg-background text-foreground print:min-h-0 print:bg-white">
       <header className="no-print border-b border-border bg-card">
         <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-3 px-6 py-4">
           <div>
