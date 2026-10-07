@@ -1,0 +1,7 @@
+dist
+.output
+.nitro
+node_modules
+src/routeTree.gen.ts
+PLAN.md
+bun.lock
