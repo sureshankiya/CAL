@@ -16,14 +16,38 @@ export interface RectSection {
 
 /** Dressed depth for dimension lumber 2–4 in. thick (Table 1A). */
 export function dressedDimensionWidth(nominal: number): number {
-  const map: Record<number, number> = { 2: 1.5, 3: 2.5, 4: 3.5, 5: 4.5, 6: 5.5, 8: 7.25, 10: 9.25, 12: 11.25, 14: 13.25, 16: 15.25 };
+  const map: Record<number, number> = {
+    2: 1.5,
+    3: 2.5,
+    4: 3.5,
+    5: 4.5,
+    6: 5.5,
+    8: 7.25,
+    10: 9.25,
+    12: 11.25,
+    14: 13.25,
+    16: 15.25,
+  };
   return map[nominal] ?? nominal - 0.75;
 }
 
 export const DIMENSION_SIZES = [
-  "2x4", "2x6", "2x8", "2x10", "2x12", "2x14",
-  "3x6", "3x8", "3x10", "3x12",
-  "4x4", "4x6", "4x8", "4x10", "4x12", "4x14",
+  "2x4",
+  "2x6",
+  "2x8",
+  "2x10",
+  "2x12",
+  "2x14",
+  "3x6",
+  "3x8",
+  "3x10",
+  "3x12",
+  "4x4",
+  "4x6",
+  "4x8",
+  "4x10",
+  "4x12",
+  "4x14",
 ] as const;
 export const TIMBER_SIZES = ["6x6", "6x8", "6x10", "6x12", "6x14", "8x8", "8x10", "8x12"] as const;
 export const SAWN_SIZES = [...DIMENSION_SIZES, ...TIMBER_SIZES] as const;

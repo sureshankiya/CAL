@@ -39,7 +39,9 @@ describe("beam solver — closed-form checks", () => {
   });
 
   it("overhang loaded only: backspan uplift, M at support = −wa²/2, tip δ = wa(4a²l + 3a³)/24EI", () => {
-    const a = analyseBeam({ spans: [10], rightCantilever: 3 }, EI, [{ type: "D", kind: "udl", x1: 10, x2: 13, w1: 100 }]);
+    const a = analyseBeam({ spans: [10], rightCantilever: 3 }, EI, [
+      { type: "D", kind: "udl", x1: 10, x2: 13, w1: 100 },
+    ]);
     const r = a.byType.D;
     expect(r.R[1]).toBeCloseTo((100 * 3 * (10 + 1.5)) / 10, 3);
     expect(r.R[0]).toBeCloseTo(-45, 3);
@@ -68,5 +70,16 @@ describe("beam solver — closed-form checks", () => {
     expect(r.R[0]).toBeCloseTo((300 * 12) / 6, 3);
     expect(r.R[1]).toBeCloseTo((300 * 12) / 3, 3);
     expect(max(r.M)).toBeCloseTo((300 * 144) / (9 * Math.sqrt(3)), 0);
+  });
+});
+
+describe("beam solver — mesh robustness", () => {
+  it("keeps supports on nodes when spans carry round-off (e.g. 16 ft + 2 × 1/12 ft)", () => {
+    for (const L of [16 + 1 / 12 + 1 / 12, 0.1 + 0.2, 14.000000000000002, 19 + 2 / 3]) {
+      const a = analyseBeam({ spans: [L] }, EI, [{ type: "D", kind: "udl", x1: 0, x2: L, w1: 100 }]);
+      expect(a.byType.D.R[0] + a.byType.D.R[1]).toBeCloseTo(100 * L, 3);
+      expect(a.x[a.x.length - 1]).toBe(L);
+      expect(a.byType.D.VR[a.x.length - 1]).toBeCloseTo(0, 3);
+    }
   });
 });

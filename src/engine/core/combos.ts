@@ -52,7 +52,13 @@ function asdSeismic(SDS: number): Combination[] {
   const r = (x: number) => Math.round(x * 1000) / 1000;
   return [
     C("A8", "ASD", `(1.0 + 0.14 SDS)D + 0.7E`, { D: r(1 + 0.14 * SDS), E: 0.7 }, "§2.4.5 (8)"),
-    C("A9", "ASD", `(1.0 + 0.105 SDS)D + 0.75L + 0.525E + 0.75S`, { D: r(1 + 0.105 * SDS), L: 0.75, E: 0.525, S: 0.75 }, "§2.4.5 (9)"),
+    C(
+      "A9",
+      "ASD",
+      `(1.0 + 0.105 SDS)D + 0.75L + 0.525E + 0.75S`,
+      { D: r(1 + 0.105 * SDS), L: 0.75, E: 0.525, S: 0.75 },
+      "§2.4.5 (9)",
+    ),
     C("A10", "ASD", `(0.6 − 0.14 SDS)D + 0.7E`, { D: r(0.6 - 0.14 * SDS), E: 0.7 }, "§2.4.5 (10)"),
   ];
 }
@@ -74,12 +80,20 @@ function lrfdBasic(): Combination[] {
 function lrfdSeismic(SDS: number): Combination[] {
   const r = (x: number) => Math.round(x * 1000) / 1000;
   return [
-    C("U6", "LRFD", "(1.2 + 0.2 SDS)D + 1.0E + 1.0L + 0.2S", { D: r(1.2 + 0.2 * SDS), E: 1, L: 1, S: 0.2 }, "§2.3.6 (6)"),
+    C(
+      "U6",
+      "LRFD",
+      "(1.2 + 0.2 SDS)D + 1.0E + 1.0L + 0.2S",
+      { D: r(1.2 + 0.2 * SDS), E: 1, L: 1, S: 0.2 },
+      "§2.3.6 (6)",
+    ),
     C("U7", "LRFD", "(0.9 − 0.2 SDS)D + 1.0E", { D: r(0.9 - 0.2 * SDS), E: 1 }, "§2.3.6 (7)"),
   ];
 }
 
-export function asdCombinations(opts: { SDS?: number; includeSeismic?: boolean; includeWind?: boolean } = {}): Combination[] {
+export function asdCombinations(
+  opts: { SDS?: number; includeSeismic?: boolean; includeWind?: boolean } = {},
+): Combination[] {
   const { SDS = 1.0, includeSeismic = false, includeWind = true } = opts;
   let list = asdBasic();
   if (!includeWind) list = list.filter((c) => !c.factors.W);
@@ -87,7 +101,9 @@ export function asdCombinations(opts: { SDS?: number; includeSeismic?: boolean; 
   return list;
 }
 
-export function strengthCombinations(opts: { SDS?: number; includeSeismic?: boolean; includeWind?: boolean } = {}): Combination[] {
+export function strengthCombinations(
+  opts: { SDS?: number; includeSeismic?: boolean; includeWind?: boolean } = {},
+): Combination[] {
   const { SDS = 1.0, includeSeismic = false, includeWind = true } = opts;
   let list = lrfdBasic();
   if (!includeWind) list = list.filter((c) => !c.factors.W);
@@ -112,7 +128,8 @@ export function loadDurationFactor(combo: Combination, present?: Partial<Record<
   return 0.9;
 }
 
-export const CD_TABLE_NOTE = "NDS Table 2.3.2: permanent 0.90, occupancy live 1.00, snow 1.15, construction / roof live 1.25, wind / earthquake 1.60";
+export const CD_TABLE_NOTE =
+  "NDS Table 2.3.2: permanent 0.90, occupancy live 1.00, snow 1.15, construction / roof live 1.25, wind / earthquake 1.60";
 
 /**
  * Keep only the combinations that matter for the loads present on a member:
@@ -120,7 +137,10 @@ export const CD_TABLE_NOTE = "NDS Table 2.3.2: permanent 0.90, occupancy live 1.
  * absent, and combinations that reduce to an identical set of factored loads
  * are listed once.
  */
-export function relevantCombinations(combos: Combination[], present: Partial<Record<LoadType, boolean>>): Combination[] {
+export function relevantCombinations(
+  combos: Combination[],
+  present: Partial<Record<LoadType, boolean>>,
+): Combination[] {
   const seen = new Set<string>();
   const out: Combination[] = [];
   for (const c of combos) {

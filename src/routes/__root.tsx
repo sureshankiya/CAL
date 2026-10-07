@@ -10,7 +10,10 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-5xl font-bold text-foreground">404</h1>
         <p className="mt-2 text-sm text-muted-foreground">This page doesn't exist.</p>
-        <Link to="/" className="mt-6 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+        <Link
+          to="/"
+          className="mt-6 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+        >
           Back to HouseCalc
         </Link>
       </div>
@@ -26,7 +29,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "HouseCalc — Full-House Structural Calculation Package" },
       {
         name: "description",
-        content: "Wood-frame house structural calculations to the CBC / CRC, ASCE 7, NDS, SDPWS and ACI 318, printed as Tedds-style calculation sheets.",
+        content:
+          "Wood-frame house structural calculations to the CBC / CRC, ASCE 7, NDS, SDPWS and ACI 318, printed as Tedds-style calculation sheets.",
       },
     ],
     links: [{ rel: "stylesheet", href: appCss }],

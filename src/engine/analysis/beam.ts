@@ -165,11 +165,17 @@ interface Mesh {
 }
 
 function buildMesh(total: number, supports: number[], loads: BeamLoad[], perSegment = 48): Mesh {
-  const pts = new Set<number>();
-  const add = (v: number) => pts.add(Math.round(v * 1e6) / 1e6);
+  // key points kept at their exact values (supports first) and merged only when they
+  // coincide to within round-off, so supports and load ends always fall on nodes
+  const tol = 1e-9 * Math.max(1, total);
+  const keys: number[] = [];
+  const add = (v: number) => {
+    const c = Math.min(Math.max(v, 0), total);
+    if (!keys.some((k) => Math.abs(k - c) <= tol)) keys.push(c);
+  };
+  supports.forEach(add);
   add(0);
   add(total);
-  supports.forEach(add);
   for (const ld of loads) {
     if (ld.kind === "point") add(ld.x ?? 0);
     else {
@@ -177,7 +183,7 @@ function buildMesh(total: number, supports: number[], loads: BeamLoad[], perSegm
       add(ld.x2 ?? 0);
     }
   }
-  const keys = [...pts].filter((v) => v >= -EPS && v <= total + EPS).sort((a, b) => a - b);
+  keys.sort((a, b) => a - b);
   const nodes: number[] = [];
   const maxLen = Math.max(total / (perSegment * Math.max(1, supports.length - 1 + 2)), 0.05);
   for (let i = 0; i < keys.length - 1; i++) {
@@ -390,7 +396,11 @@ export function analyseBeam(
 }
 
 /** Pattern envelope of one load type: [max, min] arrays for a result field. */
-export function patternEnvelope(a: BeamAnalysis, t: LoadType, field: "M" | "VL" | "VR" | "defl"): { max: number[]; min: number[] } {
+export function patternEnvelope(
+  a: BeamAnalysis,
+  t: LoadType,
+  field: "M" | "VL" | "VR" | "defl",
+): { max: number[]; min: number[] } {
   const pats = a.patterns[t];
   const full = a.byType[t][field];
   if (!pats) return { max: [...full], min: [...full] };

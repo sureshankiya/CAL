@@ -32,7 +32,15 @@ export const SPECIES_LABEL: Record<Species, string> = {
 /** Specific gravity, NDS Table 12.3.3A. */
 export const SPECIFIC_GRAVITY: Record<Species, number> = { "DF-L": 0.5, HF: 0.43, SPF: 0.42, SP: 0.55 };
 
-const v = (Fb: number, Ft: number, Fv: number, Fcperp: number, Fc: number, E: number, Emin: number): RefValues => ({ Fb, Ft, Fv, Fcperp, Fc, E, Emin });
+const v = (Fb: number, Ft: number, Fv: number, Fcperp: number, Fc: number, E: number, Emin: number): RefValues => ({
+  Fb,
+  Ft,
+  Fv,
+  Fcperp,
+  Fc,
+  E,
+  Emin,
+});
 
 /** Table 4A (2018). */
 const T4A: Partial<Record<Species, Partial<Record<Grade, RefValues>>>> = {
@@ -162,19 +170,28 @@ export const TIMBER_GRADES: Grade[] = ["Sel Str", "No.1", "No.2"];
  * Reference design data for a species / grade / nominal size.
  * Throws a descriptive error when the combination is not in the library.
  */
-export function lumberData(species: Species, grade: Grade, size: string, nds: "NDS-2018" | "NDS-2024"): LumberDesignData {
+export function lumberData(
+  species: Species,
+  grade: Grade,
+  size: string,
+  nds: "NDS-2018" | "NDS-2024",
+): LumberDesignData {
   const { t, w } = parseNominal(size);
   const ed = nds === "NDS-2024" ? "2024" : "2018";
   const G = SPECIFIC_GRAVITY[species];
   if (t >= 5) {
-    if (species !== "DF-L") throw new Error(`Timber values (Table 4D) are only in the library for DF-L — ${species} ${size} not available`);
+    if (species !== "DF-L")
+      throw new Error(`Timber values (Table 4D) are only in the library for DF-L — ${species} ${size} not available`);
     const cls = w > t + 2 ? "B&S" : "P&T";
     const ref = T4D[cls][grade];
     if (!ref) throw new Error(`${grade} is not a Table 4D grade (use Sel Str, No.1 or No.2)`);
     const d = w - 0.5;
     const CFb = d > 12 ? Math.pow(12 / d, 1 / 9) : 1.0;
     return {
-      species, grade, size, ref,
+      species,
+      grade,
+      size,
+      ref,
       CF: { Fb: CFb, Ft: 1, Fc: 1 },
       Cfu: 1,
       CM: CM_TIMBER,
@@ -193,7 +210,11 @@ export function lumberData(species: Species, grade: Grade, size: string, nds: "N
     if (t >= 4 && w >= 8) CF = { ...CF, Fb: 1.1 };
     if (w > 12) CF = { Fb: 0.9, Ft: 0.9, Fc: 0.9 };
     return {
-      species, grade, size, ref, CF,
+      species,
+      grade,
+      size,
+      ref,
+      CF,
       Cfu: cfu(t, w),
       CM: CM_DIMENSION,
       G,
@@ -205,7 +226,10 @@ export function lumberData(species: Species, grade: Grade, size: string, nds: "N
   const ref = T4A[species]?.[grade];
   if (!ref) throw new Error(`${SPECIES_LABEL[species]} ${grade} is not in Table 4A of the library`);
   return {
-    species, grade, size, ref,
+    species,
+    grade,
+    size,
+    ref,
     CF: cf4A(t, w, grade),
     Cfu: cfu(t, w),
     CM: CM_DIMENSION,
