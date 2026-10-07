@@ -4,6 +4,10 @@ import { CYCLE_LIST } from "@/engine/core/codes";
 import { fmt } from "@/engine/core/fmt";
 import { DEAD_COMPONENTS, assemblySum } from "@/engine/loads/dead";
 import { CE_TABLE } from "@/engine/loads/snow";
+import { SOIL_CLASSES, soilClass } from "@/engine/data/soil";
+import { HARDWARE_KIND_LABEL, defaultHardware, type HardwareKind } from "@/engine/data/hardware";
+import { SEISMIC_SYSTEMS } from "@/engine/loads/seismic";
+import { defaultLateral, generateWeights, type LateralSpec } from "@/engine/project";
 import {
   NEW_MEMBER_LABEL,
   newId,
@@ -148,7 +152,7 @@ export function CriteriaPanel({ p, set }: { p: Project; set: SetProject }) {
         {CE_TABLE.C.fully} / {CE_TABLE.C.partially} / {CE_TABLE.C.sheltered} (fully / partially / sheltered).
       </Hint>
       <div className="text-xs font-semibold text-muted-foreground">
-        Wind and seismic (recorded; lateral design in Phase 2)
+        Wind and seismic (lateral analysis in the Lateral panel)
       </div>
       <Grid cols={3}>
         <Field label="V (mph)">
@@ -197,6 +201,67 @@ export function CriteriaPanel({ p, set }: { p: Project; set: SetProject }) {
         </Field>
         <Field label="Soil source">
           <TextInput value={c.soil.source} onChange={(v) => crit({ soil: { ...c.soil, source: v } })} />
+        </Field>
+      </Grid>
+      <Grid cols={3}>
+        <Field label="Soil class (IBC 1806.2)">
+          <Select
+            value={c.soil.class ?? ""}
+            options={[
+              { value: "", label: "—" },
+              ...SOIL_CLASSES.map((x) => ({ value: x.id, label: `${x.id} — ${x.bearing} psf` })),
+            ]}
+            onChange={(v) =>
+              crit({
+                soil: v
+                  ? {
+                      ...c.soil,
+                      class: v as "1",
+                      bearing: soilClass(v).bearing,
+                      source: `Presumptive, CBC Table 1806.2, Class ${v} — verify soil class in the field`,
+                    }
+                  : { ...c.soil, class: undefined },
+              })
+            }
+          />
+        </Field>
+        <Field label="Soil weight (pcf)">
+          <NumberInput
+            value={c.soil.density}
+            min={80}
+            onChange={(v) => crit({ soil: { ...c.soil, density: v ?? 110 } })}
+          />
+        </Field>
+        <Field label="Frost depth (in)">
+          <NumberInput
+            value={c.soil.frostDepth}
+            allowEmpty
+            min={0}
+            onChange={(v) => crit({ soil: { ...c.soil, frostDepth: v } })}
+          />
+        </Field>
+      </Grid>
+      <Grid cols={3}>
+        <Field label="Concrete f'c (psi)">
+          <NumberInput
+            value={c.concrete.fc}
+            min={2500}
+            onChange={(v) => crit({ concrete: { ...c.concrete, fc: v ?? 2500 } })}
+          />
+        </Field>
+        <Field label="Rebar f_y (psi)">
+          <NumberInput
+            value={c.concrete.fy}
+            min={40000}
+            onChange={(v) => crit({ concrete: { ...c.concrete, fy: v ?? 60000 } })}
+          />
+        </Field>
+        <Field label="Cover (in)">
+          <NumberInput
+            value={c.concrete.cover}
+            min={1.5}
+            onChange={(v) => crit({ concrete: { ...c.concrete, cover: v ?? 3 } })}
+          />
         </Field>
       </Grid>
     </Collapsible>
@@ -515,5 +580,303 @@ export function MembersPanel({
         + Add member
       </AddButton>
     </Section>
+  );
+}
+
+export function HardwarePanel({ p, set }: { p: Project; set: SetProject }) {
+  const upd = (id: string, patch: Partial<Project["hardware"][number]>) =>
+    set((x) => ({ ...x, hardware: x.hardware.map((h) => (h.id === id ? { ...h, ...patch } : h)) }));
+  const used = new Set(
+    p.members.flatMap((m) =>
+      m.kind === "connector" ? [m.hardwareId] : m.kind === "shearWall" && m.holdownId ? [m.holdownId] : [],
+    ),
+  );
+  return (
+    <Collapsible
+      title={`Hardware list (${p.hardware.length}; ${p.hardware.filter((h) => !h.checked).length} to verify)`}
+    >
+      <Hint>
+        Allowable loads (DF-L / SP) from the manufacturer catalogue. Enter or correct values and tick Checked once
+        confirmed against the current catalogue / ICC-ES report; unchecked items print as VERIFY.
+      </Hint>
+      {p.hardware.map((h) => (
+        <div
+          key={h.id}
+          className={`space-y-2 rounded-md border p-2 text-xs ${used.has(h.id) ? "border-primary/50" : "border-border"}`}
+        >
+          <div className="flex items-center gap-2">
+            <b className="flex-1">
+              {h.model} <span className="font-normal text-muted-foreground">{HARDWARE_KIND_LABEL[h.kind]}</span>
+            </b>
+            <Check checked={h.checked} onChange={(v) => upd(h.id, { checked: v })} label="Checked" />
+            {!used.has(h.id) ? (
+              <SmallButton
+                tone="danger"
+                title="Remove"
+                onClick={() => set((x) => ({ ...x, hardware: x.hardware.filter((y) => y.id !== h.id) }))}
+              >
+                ✕
+              </SmallButton>
+            ) : null}
+          </div>
+          <Grid>
+            <Field label="Fasteners">
+              <TextInput value={h.fasteners} onChange={(v) => upd(h.id, { fasteners: v })} />
+            </Field>
+            <Field label="Report">
+              <TextInput value={h.report} onChange={(v) => upd(h.id, { report: v })} />
+            </Field>
+          </Grid>
+          {h.kind === "holdown" || h.kind === "strap" ? (
+            <Grid cols={3}>
+              <Field label="Tension (lb, 160)">
+                <NumberInput value={h.tension} allowEmpty min={0} onChange={(v) => upd(h.id, { tension: v })} />
+              </Field>
+              <Field label="Deflection (in)">
+                <NumberInput value={h.deflection} allowEmpty min={0} onChange={(v) => upd(h.id, { deflection: v })} />
+              </Field>
+              <Field label="Min. post (in)">
+                <NumberInput value={h.minPost} allowEmpty min={0} onChange={(v) => upd(h.id, { minPost: v })} />
+              </Field>
+            </Grid>
+          ) : (
+            <Grid cols={4}>
+              {(["100", "115", "125", "160"] as const).map((k) => (
+                <Field key={k} label={`Down ${k}`}>
+                  <NumberInput
+                    value={h.down?.[k]}
+                    allowEmpty
+                    min={0}
+                    onChange={(v) => upd(h.id, { down: { ...(h.down ?? {}), [k]: v } })}
+                  />
+                </Field>
+              ))}
+              <Field label="Uplift 160">
+                <NumberInput value={h.uplift} allowEmpty min={0} onChange={(v) => upd(h.id, { uplift: v })} />
+              </Field>
+              <Field label="F1">
+                <NumberInput value={h.F1} allowEmpty min={0} onChange={(v) => upd(h.id, { F1: v })} />
+              </Field>
+              <Field label="F2">
+                <NumberInput value={h.F2} allowEmpty min={0} onChange={(v) => upd(h.id, { F2: v })} />
+              </Field>
+            </Grid>
+          )}
+        </div>
+      ))}
+      <Grid>
+        <AddButton
+          onClick={() =>
+            set((x) => ({
+              ...x,
+              hardware: [
+                ...x.hardware,
+                {
+                  id: newId("hw"),
+                  model: "NEW",
+                  kind: "hanger" as HardwareKind,
+                  manufacturer: "Simpson Strong-Tie",
+                  description: "New connector",
+                  fasteners: "",
+                  report: "",
+                  checked: false,
+                  source: "entered by engineer",
+                },
+              ],
+            }))
+          }
+        >
+          + Add item
+        </AddButton>
+        <AddButton
+          onClick={() => {
+            const have = new Set(p.hardware.map((h) => h.id));
+            set((x) => ({ ...x, hardware: [...x.hardware, ...defaultHardware().filter((h) => !have.has(h.id))] }));
+          }}
+        >
+          + Restore default items
+        </AddButton>
+      </Grid>
+    </Collapsible>
+  );
+}
+
+export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
+  const lat: LateralSpec = p.lateral ?? defaultLateral(p);
+  const upd = (patch: Partial<LateralSpec>) =>
+    set((x) => ({ ...x, lateral: { ...(x.lateral ?? defaultLateral(x)), ...patch } }));
+  const setStory = (i: number, patch: Partial<LateralSpec["stories"][number]>) =>
+    upd({ stories: lat.stories.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
+  const setLine = (i: number, patch: Partial<LateralSpec["lines"][number]>) =>
+    upd({ lines: lat.lines.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
+  return (
+    <Collapsible title={`Lateral — seismic, wind, wall lines (${lat.enabled ? "on" : "off"})`}>
+      <Check
+        checked={lat.enabled}
+        onChange={(v) => upd({ enabled: v })}
+        label="Run the lateral analysis (shear walls need it)"
+      />
+      <Field label="Seismic force-resisting system">
+        <Select
+          value={lat.system}
+          options={SEISMIC_SYSTEMS.map((s) => ({ value: s.id, label: `R ${s.R} — ${s.label}` }))}
+          onChange={(v) => upd({ system: v })}
+        />
+      </Field>
+      <Grid cols={3}>
+        <Field label="ρ (§12.3.4)">
+          <Select value={String(lat.rho)} options={["1", "1.3"]} onChange={(v) => upd({ rho: Number(v) })} />
+        </Field>
+        <Field label="T_L (s)">
+          <NumberInput value={lat.TL} min={4} onChange={(v) => upd({ TL: v ?? 8 })} />
+        </Field>
+        <Field label="S1 (optional)">
+          <NumberInput value={lat.S1} allowEmpty min={0} onChange={(v) => upd({ S1: v })} />
+        </Field>
+      </Grid>
+      <Check
+        checked={lat.driftLowRise}
+        onChange={(v) => upd({ driftLowRise: v })}
+        label="Drift limit 0.025 h_sx (≤ 4 stories, systems accommodate drift, Table 12.12-1)"
+      />
+      <div className="text-xs font-semibold text-muted-foreground">Building geometry</div>
+      <Grid cols={3}>
+        <Field label="L_x (ft)">
+          <NumberInput value={lat.Lx} min={1} onChange={(v) => upd({ Lx: v ?? lat.Lx })} />
+        </Field>
+        <Field label="L_y (ft)">
+          <NumberInput value={lat.Ly} min={1} onChange={(v) => upd({ Ly: v ?? lat.Ly })} />
+        </Field>
+        <Field label="Ridge along">
+          <Select value={lat.ridge} options={["X", "Y"] as const} onChange={(v) => upd({ ridge: v })} />
+        </Field>
+      </Grid>
+      <Grid cols={3}>
+        <Field label="Pitch (in 12)">
+          <NumberInput value={lat.pitch} min={0} onChange={(v) => upd({ pitch: v ?? 4 })} />
+        </Field>
+        <Field label="Roof rise (ft)">
+          <NumberInput value={lat.roofRise} min={0} onChange={(v) => upd({ roofRise: v ?? 0 })} />
+        </Field>
+        <Field label="K_e">
+          <NumberInput value={lat.Ke} min={0.5} onChange={(v) => upd({ Ke: v ?? 1 })} />
+        </Field>
+      </Grid>
+      <div className="text-xs font-semibold text-muted-foreground">Stories (bottom → top) and seismic weight</div>
+      {lat.stories.map((st, i) => (
+        <div key={st.id} className="space-y-2 rounded-md border border-border p-2 text-xs">
+          <Grid cols={3}>
+            <Field label="Name">
+              <TextInput value={st.name} onChange={(v) => setStory(i, { name: v })} />
+            </Field>
+            <Field label="Height (ft)">
+              <NumberInput value={st.height} min={1} onChange={(v) => setStory(i, { height: v ?? st.height })} />
+            </Field>
+            <SmallButton
+              title="Regenerate weights from the geometry"
+              onClick={() => setStory(i, { items: generateWeights(p, lat, i) })}
+            >
+              ↻ weights
+            </SmallButton>
+          </Grid>
+          {st.items.map((it, k) => (
+            <Grid key={k} cols={4}>
+              <TextInput
+                value={it.label}
+                onChange={(v) => setStory(i, { items: st.items.map((y, j) => (j === k ? { ...y, label: v } : y)) })}
+              />
+              <NumberInput
+                value={it.kind === "lump" ? it.W : it.qty}
+                min={0}
+                onChange={(v) =>
+                  setStory(i, {
+                    items: st.items.map((y, j) =>
+                      j === k ? (y.kind === "lump" ? { ...y, W: v ?? 0 } : { ...y, qty: v ?? 0 }) : y,
+                    ),
+                  })
+                }
+              />
+              <span className="self-center text-muted-foreground">
+                {it.kind === "area" ? "ft²" : it.kind === "wall" ? `ft × ${it.height ?? 0} ft` : "lb"}{" "}
+                {it.assemblyId ?? (it.psf !== undefined ? `${it.psf} psf` : "")}
+              </span>
+              <SmallButton
+                tone="danger"
+                title="Remove"
+                onClick={() => setStory(i, { items: st.items.filter((_, j) => j !== k) })}
+              >
+                ✕
+              </SmallButton>
+            </Grid>
+          ))}
+          <AddButton
+            onClick={() =>
+              setStory(i, { items: [...st.items, { label: "Additional weight", kind: "lump", qty: 0, W: 1000 }] })
+            }
+          >
+            + Add weight item
+          </AddButton>
+        </div>
+      ))}
+      <Grid>
+        <AddButton
+          onClick={() =>
+            upd({
+              stories: [
+                ...lat.stories,
+                { id: newId("st"), name: `Story ${lat.stories.length + 1}`, height: 9, items: [] },
+              ],
+            })
+          }
+        >
+          + Add story
+        </AddButton>
+        {lat.stories.length > 1 ? (
+          <AddButton onClick={() => upd({ stories: lat.stories.slice(0, -1) })}>− Remove top story</AddButton>
+        ) : (
+          <span />
+        )}
+      </Grid>
+      <div className="text-xs font-semibold text-muted-foreground">
+        Wall lines (tributary width, flexible diaphragm)
+      </div>
+      {lat.lines.map((l, i) => (
+        <Grid key={l.id} cols={4}>
+          <TextInput value={l.name} onChange={(v) => setLine(i, { name: v })} />
+          <Select
+            value={l.storyId}
+            options={lat.stories.map((s) => ({ value: s.id, label: s.name }))}
+            onChange={(v) => setLine(i, { storyId: v })}
+          />
+          <Select value={l.dir} options={["X", "Y"] as const} onChange={(v) => setLine(i, { dir: v })} />
+          <div className="flex gap-1">
+            <NumberInput value={l.trib} min={0.5} onChange={(v) => setLine(i, { trib: v ?? l.trib })} />
+            <SmallButton
+              tone="danger"
+              title="Remove"
+              onClick={() => upd({ lines: lat.lines.filter((_, j) => j !== i) })}
+            >
+              ✕
+            </SmallButton>
+          </div>
+        </Grid>
+      ))}
+      <AddButton
+        onClick={() =>
+          upd({
+            lines: [
+              ...lat.lines,
+              { id: newId("ln"), name: `Line ${lat.lines.length + 1}`, storyId: lat.stories[0].id, dir: "X", trib: 10 },
+            ],
+          })
+        }
+      >
+        + Add wall line
+      </AddButton>
+      <Hint>
+        Name · story · direction (forces along X or Y) · tributary diaphragm width (ft). Σ widths per story and
+        direction should equal the building depth.
+      </Hint>
+    </Collapsible>
   );
 }

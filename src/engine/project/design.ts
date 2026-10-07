@@ -13,6 +13,7 @@
 import { getCycle } from "../core/codes";
 import { LOAD_TYPES, zeroLoads, type LoadType, type LoadVector } from "../core/loads";
 import { fromDefault } from "../core/provenance";
+import { soilClass } from "../data/soil";
 import { analyseLateral, type LateralResult } from "../lateral/analysis";
 import { driftLimitFactor } from "../loads/seismic";
 import { velocityPressure } from "../loads/wind";
@@ -83,7 +84,15 @@ export function buildingHeight(p: Project): { h: number; thetaDeg: number } {
 export function contextOf(p: Project): DesignContext {
   const cycle = getCycle(p.cycleId);
   const { h, thetaDeg } = buildingHeight(p);
-  const vp = velocityPressure(cycle.asce7, p.criteria.wind.V, h, p.criteria.wind.exposure, p.criteria.wind.Kzt, p.lateral?.Ke ?? 1, false);
+  const vp = velocityPressure(
+    cycle.asce7,
+    p.criteria.wind.V,
+    h,
+    p.criteria.wind.exposure,
+    p.criteria.wind.Kzt,
+    p.lateral?.Ke ?? 1,
+    false,
+  );
   return {
     cycleId: p.cycleId,
     liveBasis: p.criteria.liveBasis,
@@ -195,7 +204,9 @@ function shearWallDemand(
   outcomes: Map<string, DesignOutcome>,
 ): ShearWallDemand {
   if (!p.lateral?.enabled || !lateral)
-    throw new Error("Shear walls need the lateral analysis — enable it under Lateral and assign the wall to a wall line");
+    throw new Error(
+      "Shear walls need the lateral analysis — enable it under Lateral and assign the wall to a wall line",
+    );
   const lf = lateral.lines.find((x) => x.line.id === s.lineId);
   if (!lf) throw new Error("Wall line not found — assign the shear wall to a wall line");
   const inLine = p.members.filter((m): m is ShearWallSpec => m.kind === "shearWall" && m.lineId === s.lineId);
@@ -292,16 +303,27 @@ function designOne(
         cover: p.criteria.concrete.cover,
         qa: m.qaOverride ?? p.criteria.soil.bearing,
         qaSource: m.qaOverride ? "entered on the footing" : p.criteria.soil.source,
+        qaVerify: qaNeedsVerify(p, m.qaOverride ?? p.criteria.soil.bearing, !!m.qaOverride),
         soilDensity: p.criteria.soil.density,
         frostDepth: p.criteria.soil.frostDepth,
       });
     case "shearWall":
-      return designShearWall(
-        ctx,
-        { ...m, top: shearWallTop(m, linked) },
-        shearWallDemand(p, m, lateral, outcomes),
-      );
+      return designShearWall(ctx, { ...m, top: shearWallTop(m, linked) }, shearWallDemand(p, m, lateral, outcomes));
   }
+}
+
+/**
+ * Allowable soil pressure check (plan §2B Q4): a presumptive value (IBC Table
+ * 1806.2) is accepted when it does not exceed the value for the stated soil
+ * class; any other value needs a geotechnical report reference.
+ */
+export function qaNeedsVerify(p: Project, qa: number, entered: boolean): boolean {
+  const src = p.criteria.soil.source;
+  if (!entered && /presumptive|1806\.2/i.test(src)) {
+    const cls = p.criteria.soil.class ? soilClass(p.criteria.soil.class) : undefined;
+    return !cls || qa > cls.bearing;
+  }
+  return !/geotechnical report|soils report|geotech/i.test(src) || entered;
 }
 
 /** Existing / modified members: assumptions to field-verify and a sheet flag. */

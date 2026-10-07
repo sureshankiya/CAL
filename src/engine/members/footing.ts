@@ -16,13 +16,7 @@
  *  - Minimum size (IBC Table 1809.7, IBC 1809.8 plain footings) and depth (IBC 1809.4, frost)
  */
 
-import {
-  asdCombinations,
-  combine,
-  relevantCombinations,
-  strengthCombinations,
-  type Combination,
-} from "../core/combos";
+import { asdCombinations, combine, relevantCombinations, strengthCombinations, type Combination } from "../core/combos";
 import { fmt } from "../core/fmt";
 import { LOAD_TYPES, addLoads, loadVector, zeroLoads, type LoadType, type LoadVector } from "../core/loads";
 import { fromDefault, type AssumptionEntry } from "../core/provenance";
@@ -78,6 +72,8 @@ export interface FootingInput {
   /** allowable soil pressure, psf, and its basis */
   qa: number;
   qaSource: string;
+  /** allowable value needs confirmation (presumptive value above the soil class, or no report) */
+  qaVerify?: boolean;
   soilDensity: number;
   frostDepth?: number;
   stories: number;
@@ -92,6 +88,8 @@ export interface FootingRow {
 
 export interface FootingResult extends MemberResultBase {
   kind: "footing";
+  /** strip footings: governing segment along the footing, ft */
+  segment?: { x1: number; x2: number };
   input: FootingInput;
   /** applied loads: per ft (strip, plf) or total (pad, lb) by type */
   applied: LoadVector;
@@ -118,21 +116,65 @@ export interface FootingResult extends MemberResultBase {
   };
 }
 
-function totalsByType(extra: ExtraLoad[], type: "strip" | "pad"): { v: LoadVector; lines: LoadLine[] } {
+/**
+ * Loads on the footing. Pad: point loads summed. Strip: line loads placed over
+ * their extent along the footing and point loads (stud packs, posts) spread over
+ * the bearing width plus a 45° spread through the footing depth, l = 1 ft + 2h;
+ * the footing is designed for the governing segment (largest D + L + max(Lr, S)).
+ */
+function totalsByType(
+  extra: ExtraLoad[],
+  type: "strip" | "pad",
+  h: number,
+): { v: LoadVector; lines: LoadLine[]; at?: { x1: number; x2: number }; spread?: number } {
   const v = zeroLoads();
   const lines: LoadLine[] = [];
-  for (const e of extra) {
-    if (type === "strip") {
-      if (e.kind !== "line") throw new Error(`${e.label}: continuous footings take line loads (plf) — use a line link`);
-      v[e.type] += e.w ?? 0;
-      lines.push({ type: e.type, label: e.label, expr: `${fmt(e.w ?? 0, 1)} plf`, value: e.w ?? 0, unit: "plf" });
-    } else {
+  if (type === "pad") {
+    for (const e of extra) {
       if (e.kind !== "point") throw new Error(`${e.label}: pad footings take point loads — use a point link`);
       v[e.type] += e.P ?? 0;
       lines.push({ type: e.type, label: e.label, expr: `${fmt(e.P ?? 0, 0)} lb`, value: e.P ?? 0, unit: "lb" });
     }
+    return { v, lines };
   }
-  return { v, lines };
+  const spread = 1 + (2 * h) / 12;
+  const segs: Array<{ x1: number; x2: number; type: LoadType; w: number }> = [];
+  const BIG = 1e6;
+  for (const e of extra) {
+    if (e.kind === "line") {
+      const x1 = e.x1 ?? 0;
+      const x2 = e.x2 ?? BIG;
+      segs.push({ x1, x2, type: e.type, w: e.w ?? 0 });
+      lines.push({
+        type: e.type,
+        label: e.label,
+        expr: `${fmt(e.w ?? 0, 1)} plf${e.x1 !== undefined || e.x2 !== undefined ? ` from ${fmt(x1, 2)} to ${e.x2 !== undefined ? fmt(x2, 2) : "end"} ft` : ""}`,
+        value: e.w ?? 0,
+        unit: "plf",
+      });
+    } else {
+      const x = e.x ?? 0;
+      const w = (e.P ?? 0) / spread;
+      segs.push({ x1: x - spread / 2, x2: x + spread / 2, type: e.type, w });
+      lines.push({
+        type: e.type,
+        label: `${e.label} (point load spread over ${fmt(spread, 2)} ft)`,
+        expr: `${fmt(e.P ?? 0, 0)} lb / ${fmt(spread, 2)} ft at x = ${fmt(x, 2)} ft`,
+        value: w,
+        unit: "plf",
+      });
+    }
+  }
+  const xs = [...new Set(segs.flatMap((s) => [s.x1, s.x2]))].sort((a, b) => a - b);
+  let best: { v: LoadVector; x1: number; x2: number } | undefined;
+  const tot = (q: LoadVector) => q.D + q.L + Math.max(q.Lr, q.S);
+  for (let i = 1; i < xs.length; i++) {
+    const mid = (xs[i - 1] + xs[i]) / 2;
+    const q = zeroLoads();
+    for (const s of segs) if (mid >= s.x1 && mid <= s.x2) q[s.type] += s.w;
+    if (!best || tot(q) > tot(best.v)) best = { v: q, x1: xs[i - 1], x2: xs[i] };
+  }
+  return { v: best?.v ?? v, lines, at: best ? { x1: best.x1, x2: Math.min(best.x2, BIG) } : undefined, spread };
 }
 
 export function designFooting(ctx: DesignContext, f: FootingInput): FootingResult {
@@ -140,7 +182,7 @@ export function designFooting(ctx: DesignContext, f: FootingInput): FootingResul
   const B = f.B;
   const L = strip ? 1 : (f.L ?? f.B);
   const area = B * L;
-  const { v: applied, lines } = totalsByType(f.extra, f.type);
+  const { v: applied, lines, at: govSeg, spread } = totalsByType(f.extra, f.type, f.h);
   const soilOver = f.soilOver ?? Math.max(0, f.depth - f.h - (f.stem ? f.stem.height : 0));
   const wFooting = 150 * (f.h / 12) * area;
   const wStem = f.stem ? 150 * (f.stem.width / 12) * (f.stem.height / 12) * L : 0;
@@ -174,7 +216,10 @@ export function designFooting(ctx: DesignContext, f: FootingInput): FootingResul
   const total = addLoads(applied, loadVector({ D: weights.total }));
   const present: Partial<Record<LoadType, boolean>> = { D: true };
   for (const t of LOAD_TYPES) if (Math.abs(applied[t]) > 1e-9) present[t] = true;
-  const asd = relevantCombinations(asdCombinations({ SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }), present);
+  const asd = relevantCombinations(
+    asdCombinations({ SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
+    present,
+  );
   const service: FootingRow[] = asd.map((combo) => {
     const P = combine(total, combo);
     const q = P / area;
@@ -185,7 +230,10 @@ export function designFooting(ctx: DesignContext, f: FootingInput): FootingResul
   const uplift = minRow.P < 0 ? { P: minRow.P, combo: minRow.combo.label } : undefined;
 
   // strength design on net factored pressure (footing and soil weight excluded)
-  const lrfd = relevantCombinations(strengthCombinations({ SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }), present);
+  const lrfd = relevantCombinations(
+    strengthCombinations({ SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
+    present,
+  );
   const strength = lrfd.map((combo) => {
     const Pu = Math.max(0, combine(applied, combo));
     return { combo, Pu, qu: Pu / area };
@@ -196,14 +244,23 @@ export function designFooting(ctx: DesignContext, f: FootingInput): FootingResul
   const hEff = plain ? f.h - 2 : f.h;
   const fc = f.fc;
   const checks: Check[] = [];
-  const assumptions: AssumptionEntry[] = [
-    fromDefault("Allowable soil pressure", `${fmt(f.qa, 0)} psf — ${f.qaSource}`, f.qaSource, !/geotech|report|soils/i.test(f.qaSource)),
+  const assumptions: AssumptionEntry[] = [];
+  if (strip && govSeg)
+    assumptions.push(
+      fromDefault(
+        "Governing segment",
+        `Line loads placed over their extent; point loads spread over 1 ft + 2h = ${fmt(spread ?? 0, 2)} ft; governing segment ${fmt(govSeg.x1, 2)}–${govSeg.x2 > 1e5 ? "end" : fmt(govSeg.x2, 2)} ft`,
+        "load spread through the footing (45°)",
+      ),
+    );
+  assumptions.push(
+    fromDefault("Allowable soil pressure", `${fmt(f.qa, 0)} psf — ${f.qaSource}`, f.qaSource, f.qaVerify ?? true),
     fromDefault(
       "Soil pressure",
       "Uniform pressure under concentric load; gross pressure (footing, stem and soil weight included) compared with the allowable value; no one-third increase taken",
       "IBC 1806.1",
     ),
-  ];
+  );
 
   checks.push({
     name: "Soil bearing pressure (service)",
@@ -261,7 +318,19 @@ export function designFooting(ctx: DesignContext, f: FootingInput): FootingResul
     const at = d;
     const Vu = Math.max(0, quIn * Lin * (cant - at));
     const ow = oneWayShear(Lin, d, As, fc);
-    concrete = { plain, hEff, d, cantilever: cant, Mu, phiMn: flex.phiMn, flex, As, AsMin, sMax, oneWay: { Vu, phiVn: ow.phiVc, at } };
+    concrete = {
+      plain,
+      hEff,
+      d,
+      cantilever: cant,
+      Mu,
+      phiMn: flex.phiMn,
+      flex,
+      As,
+      AsMin,
+      sMax,
+      oneWay: { Vu, phiVn: ow.phiVc, at },
+    };
     checks.push({
       name: "Minimum reinforcement A_s,min = 0.0018 A_g (ACI 318 7.6.1.1)",
       category: "detailing",
@@ -380,9 +449,17 @@ export function designFooting(ctx: DesignContext, f: FootingInput): FootingResul
 
   const flags: string[] = [];
   if (f.longitudinal)
-    flags.push(`Longitudinal reinforcement: (${f.longitudinal.top}) ${f.longitudinal.size} top and (${f.longitudinal.bottom}) ${f.longitudinal.size} bottom, continuous, lap splices per ACI 318 25.5`);
-  if (!plain) flags.push(`Reinforcing bars ASTM A615 Grade ${fmt(f.fy / 1000, 0)}; ${fmt(f.cover, 1)} in. clear cover cast against earth (ACI 318 20.5.1.3)`);
-  if (/presumptive|1806/i.test(f.qaSource)) flags.push("Allowable soil pressure is a presumptive value — confirm soil class in the field or by a geotechnical report");
+    flags.push(
+      `Longitudinal reinforcement: (${f.longitudinal.top}) ${f.longitudinal.size} top and (${f.longitudinal.bottom}) ${f.longitudinal.size} bottom, continuous, lap splices per ACI 318 25.5`,
+    );
+  if (!plain)
+    flags.push(
+      `Reinforcing bars ASTM A615 Grade ${fmt(f.fy / 1000, 0)}; ${fmt(f.cover, 1)} in. clear cover cast against earth (ACI 318 20.5.1.3)`,
+    );
+  if (/presumptive|1806/i.test(f.qaSource))
+    flags.push(
+      "Allowable soil pressure is a presumptive value — confirm soil class in the field or by a geotechnical report",
+    );
   const callout = strip
     ? `${fmt(Bin, 0)} in. W × ${fmt(f.h, 0)} in. D continuous footing${f.rebar ? `, ${f.rebar.size} @ ${fmt(f.rebar.spacing ?? 12, 0)} in. transverse` : ", plain"}${f.longitudinal ? `, (${f.longitudinal.top}) ${f.longitudinal.size} T & (${f.longitudinal.bottom}) B` : ""}`
     : `${fmt(Bin, 0)} × ${fmt(Lin, 0)} × ${fmt(f.h, 0)} in. pad footing${f.rebar ? `, (${f.rebar.count ?? 2}) ${f.rebar.size} each way` : ", plain"}`;
@@ -400,6 +477,7 @@ export function designFooting(ctx: DesignContext, f: FootingInput): FootingResul
     assumptions,
     flags,
     input: f,
+    segment: govSeg,
     applied,
     weights,
     area,

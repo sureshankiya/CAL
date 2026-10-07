@@ -61,21 +61,29 @@ export function designConnector(ctx: DesignContext, c: ConnectorInput): Connecto
     const R = combine(c.R, combo);
     const CD = loadDurationFactor(combo, present);
     if (R > 1e-6) {
+      // ties, straps, angles and hold-downs carry uplift / tension only; gravity by direct bearing
+      if (["tie", "strap", "holdown"].includes(item.kind)) continue;
       const cap1 = downCapacity(item, CD);
       if (cap1 === undefined)
-        throw new Error(`${item.model}: allowable downward load not entered in the hardware list (needed for ${combo.label})`);
+        throw new Error(
+          `${item.model}: allowable downward load not entered in the hardware list (needed for ${combo.label})`,
+        );
       rows.push({ combo: combo.label, CD, R, capacity: cap1 * n, ratio: R / (cap1 * n), direction: "down" });
     } else if (R < -1e-6) {
       const up = item.uplift ?? item.tension;
       if (up === undefined)
-        throw new Error(`${item.model}: allowable uplift not entered in the hardware list (net uplift ${fmt(-R, 0)} lb, ${combo.label})`);
+        throw new Error(
+          `${item.model}: allowable uplift not entered in the hardware list (net uplift ${fmt(-R, 0)} lb, ${combo.label})`,
+        );
       const cap1 = up * Math.min(1, CD / 1.6);
       rows.push({ combo: combo.label, CD, R: -R, capacity: cap1 * n, ratio: -R / (cap1 * n), direction: "uplift" });
     }
   }
   const checks: Check[] = [];
   const worst = (dir: "down" | "uplift") =>
-    rows.filter((r) => r.direction === dir).reduce<ConnectorRow | undefined>((a, b) => (!a || b.ratio > a.ratio ? b : a), undefined);
+    rows
+      .filter((r) => r.direction === dir)
+      .reduce<ConnectorRow | undefined>((a, b) => (!a || b.ratio > a.ratio ? b : a), undefined);
   const down = worst("down");
   const up = worst("uplift");
   if (down)
@@ -115,7 +123,16 @@ export function designConnector(ctx: DesignContext, c: ConnectorInput): Connecto
     });
   }
   if (!checks.length)
-    checks.push({ name: "No net load at the connection", demand: 0, capacity: 1, ratio: 0, pass: true, combo: "—", CD: 1, unit: "lb" });
+    checks.push({
+      name: "No net load at the connection",
+      demand: 0,
+      capacity: 1,
+      ratio: 0,
+      pass: true,
+      combo: "—",
+      CD: 1,
+      unit: "lb",
+    });
   const lines: LoadLine[] = LOAD_TYPES.filter((t) => Math.abs(c.R[t]) > 1e-9).map((t) => ({
     type: t,
     label: `${c.sourceMark} reaction ${c.supportName}`,

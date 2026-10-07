@@ -114,8 +114,8 @@ function BearingPlateRows({ sc }: { sc: StudCheck }) {
         desc="Bearing stress / adjusted F_c⊥'"
         expr={
           <>
-            f<sub>c⊥</sub> = P / (b × d) = {f0(b.P)} / ({f3(sc.mat.b)} × {f3(sc.mat.d)}) = {f1(b.fcperp)} lb/in² ; F<sub>c⊥</sub>' = F
-            <sub>c⊥</sub> × C<sub>M</sub> × C<sub>t</sub> × C<sub>b</sub>
+            f<sub>c⊥</sub> = P / (b × d) = {f0(b.P)} / ({f3(sc.mat.b)} × {f3(sc.mat.d)}) = {f1(b.fcperp)} lb/in² ; F
+            <sub>c⊥</sub>' = F<sub>c⊥</sub> × C<sub>M</sub> × C<sub>t</sub> × C<sub>b</sub>
             {eq(psi(b.Fprime))}
           </>
         }
@@ -153,7 +153,14 @@ function StudBlock({ r, sc, title }: { r: WallResult; sc: StudCheck; title: stri
         />
       ) : null}
       <ColumnComboTable col={col} caption={`${sc.label} — ASD combinations (ASCE 7 §2.4)`} />
-      <AxialRows m={sc.mat} col={col} row={col.axialGov} le1={r.le1} le2={r.le2} title="Axial compression — NDS 3.6, 3.7" />
+      <AxialRows
+        m={sc.mat}
+        col={col}
+        row={col.axialGov}
+        le1={r.le1}
+        le2={r.le2}
+        title="Axial compression — NDS 3.6, 3.7"
+      />
       {col.governing.fb > 0 ? (
         <CombinedRows m={sc.mat} col={col} row={col.governing} title="Combined axial and bending — NDS 3.9.2" />
       ) : null}
@@ -170,9 +177,17 @@ export function WallSheet({ m, r, index, total, received, connections }: SheetPr
       m={m}
       r={r}
       title={`Wood stud bearing wall design (${m.cycle.nds})`}
-      subtitle={<>In accordance with ANSI/AWC {m.cycle.nds} using the ASD method — member {index} of {total}: {r.mark}</>}
+      subtitle={
+        <>
+          In accordance with ANSI/AWC {m.cycle.nds} using the ASD method — member {index} of {total}: {r.mark}
+        </>
+      }
     >
-      <DesignBasis m={m} material={<>ANSI/AWC {m.cycle.nds} and Supplement</>} tables={[r.typical.mat.tableId, "ibc-1604.3", "asce7-30.3-1"]} />
+      <DesignBasis
+        m={m}
+        material={<>ANSI/AWC {m.cycle.nds} and Supplement</>}
+        tables={[r.typical.mat.tableId, "ibc-1604.3", "asce7-30.3-1"]}
+      />
       <SectionHead title="Configuration & geometry" />
       <TR desc="Member" expr={<B>{`${r.mark} — ${r.title}`}</B>} />
       {w.description ? <TR desc="Description" expr={<>{w.description}</>} /> : null}
@@ -225,14 +240,7 @@ export function WallSheet({ m, r, index, total, received, connections }: SheetPr
         <>
           <SectionHead title="Out-of-plane wind — components and cladding" />
           <TR desc="Source" expr={<>{r.wind.source}</>} />
-          <TR
-            desc="Effective wind area"
-            expr={
-              <>
-                A = l × max(s, l / 3){eq(`${f1(r.wind.A)} ft²`)}
-              </>
-            }
-          />
+          <TR desc="Effective wind area" expr={<>A = l × max(s, l / 3){eq(`${f1(r.wind.A)} ft²`)}</>} />
           {r.wind.GCp ? (
             <TR
               desc={`GCp, zone ${r.wind.zone} (Fig. 30.3-1)`}
@@ -243,23 +251,25 @@ export function WallSheet({ m, r, index, total, received, connections }: SheetPr
               }
             />
           ) : null}
-          <TR
-            desc="Design pressure (strength level)"
-            expr={
-              <>
-                p{eq(`${f2(r.wind.p)} psf`)}
-              </>
-            }
-          />
+          <TR desc="Design pressure (strength level)" expr={<>p{eq(`${f2(r.wind.p)} psf`)}</>} />
         </>
       ) : (
         <TextRow italic>No out-of-plane wind on this wall (interior wall or wind not applied).</TextRow>
       )}
       <LoadPathRows received={received} />
-      <ReactionTable reactions={r.reactions} perFoot title="Reactions delivered at the base (unfactored, by load type)" />
+      <ReactionTable
+        reactions={r.reactions}
+        perFoot
+        title="Reactions delivered at the base (unfactored, by load type)"
+      />
       <StudBlock r={r} sc={r.typical} title={`${r.typical.label} — ${r.typical.mat.label}`} />
       {r.packs.map((p) => (
-        <StudBlock key={p.label} r={r} sc={p} title={`${p.label} — (${p.n}) ${r.input.size} stud pack, ${p.mat.label}`} />
+        <StudBlock
+          key={p.label}
+          r={r}
+          sc={p}
+          title={`${p.label} — (${p.n}) ${r.input.size} stud pack, ${p.mat.label}`}
+        />
       ))}
       {r.kings.map((p) => (
         <StudBlock key={p.label} r={r} sc={p} title={`${p.label} — wind from half the opening`} />
@@ -269,11 +279,7 @@ export function WallSheet({ m, r, index, total, received, connections }: SheetPr
           <SectionHead title="Out-of-plane deflection — IBC Table 1604.3" />
           <TR
             desc="Service wind on the stud (0.42 × C&C)"
-            expr={
-              <>
-                w = 0.42 × p × s{eq(`${f2(r.deflection.w)} lb/ft`)}
-              </>
-            }
+            expr={<>w = 0.42 × p × s{eq(`${f2(r.deflection.w)} lb/ft`)}</>}
           />
           <TR
             desc="First-order deflection"
@@ -287,8 +293,8 @@ export function WallSheet({ m, r, index, total, received, connections }: SheetPr
             desc="P-Δ amplification"
             expr={
               <>
-                1 / (1 − P / P<sub>cr</sub>) with P = {f0(r.deflection.P)} lb, P<sub>cr</sub> = π² E' I / l<sub>e</sub>² ={" "}
-                {f0(r.deflection.Pcr)} lb{eq(f3(r.deflection.amp))}
+                1 / (1 − P / P<sub>cr</sub>) with P = {f0(r.deflection.P)} lb, P<sub>cr</sub> = π² E' I / l<sub>e</sub>²
+                = {f0(r.deflection.Pcr)} lb{eq(f3(r.deflection.amp))}
               </>
             }
           />
@@ -309,12 +315,29 @@ export function WallSheet({ m, r, index, total, received, connections }: SheetPr
       <FinalSummary
         rows={[
           ["Selected wall", <b key="s">{`${r.mark}: ${r.callout}`}</b>],
-          ["Plates", `(${w.bottomPlates}) bottom, (${w.topPlates}) top plates, ${w.size} ${w.species}; lap top plates 48 in. min.`],
-          ["Stud packs", r.packs.length ? r.packs.map((p) => `(${p.n}) ${w.size} at ${fmtFtIn(p.x ?? 0)}`).join("; ") : "None"],
-          ["Openings", w.openings.length ? w.openings.map((o) => `${o.label}: (${o.kings}) king studs each side`).join("; ") : "None"],
-          ["Governing check", `${r.governing.name} — D/C ${f3(r.governing.ratio)} ${r.pass ? "PASS" : "FAIL"} (${r.governing.combo})`],
+          [
+            "Plates",
+            `(${w.bottomPlates}) bottom, (${w.topPlates}) top plates, ${w.size} ${w.species}; lap top plates 48 in. min.`,
+          ],
+          [
+            "Stud packs",
+            r.packs.length ? r.packs.map((p) => `(${p.n}) ${w.size} at ${fmtFtIn(p.x ?? 0)}`).join("; ") : "None",
+          ],
+          [
+            "Openings",
+            w.openings.length
+              ? w.openings.map((o) => `${o.label}: (${o.kings}) king studs each side`).join("; ")
+              : "None",
+          ],
+          [
+            "Governing check",
+            `${r.governing.name} — D/C ${f3(r.governing.ratio)} ${r.pass ? "PASS" : "FAIL"} (${r.governing.combo})`,
+          ],
           ["Base load to foundation", `${f0(r.reactions[0].maxDown)} lb/ft max (${r.reactions[0].maxDownCombo})`],
-          ["Connections", connections?.length ? connections.join("; ") : "Stud-to-plate nailing per CBC Table 2304.10.2"],
+          [
+            "Connections",
+            connections?.length ? connections.join("; ") : "Stud-to-plate nailing per CBC Table 2304.10.2",
+          ],
           ["Field verification", verifyText(r)],
         ]}
       />
@@ -339,7 +362,11 @@ export function PostSheet({ m, r, index, total, received, connections }: SheetPr
       m={m}
       r={r}
       title={`Wood post design (${m.cycle.nds})`}
-      subtitle={<>In accordance with ANSI/AWC {m.cycle.nds} using the ASD method — member {index} of {total}: {r.mark}</>}
+      subtitle={
+        <>
+          In accordance with ANSI/AWC {m.cycle.nds} using the ASD method — member {index} of {total}: {r.mark}
+        </>
+      }
     >
       <DesignBasis m={m} material={<>ANSI/AWC {m.cycle.nds} and Supplement</>} tables={[r.mat.tableId]} />
       <SectionHead title="Configuration & geometry" />
@@ -350,11 +377,14 @@ export function PostSheet({ m, r, index, total, received, connections }: SheetPr
         desc="Effective lengths (K_e)"
         expr={
           <>
-            K<sub>e</sub> = {f2(p.Ke)}; l<sub>e1</sub> = {f1(r.le1)} in (about d); l<sub>e2</sub> = {f1(r.le2)} in (about b)
+            K<sub>e</sub> = {f2(p.Ke)}; l<sub>e1</sub> = {f1(r.le1)} in (about d); l<sub>e2</sub> = {f1(r.le2)} in
+            (about b)
           </>
         }
       />
-      {p.eccentricity ? <TR desc="Load eccentricity (strong axis)" expr={<>e{eq(`${f2(p.eccentricity)} in`)}</>} /> : null}
+      {p.eccentricity ? (
+        <TR desc="Load eccentricity (strong axis)" expr={<>e{eq(`${f2(p.eccentricity)} in`)}</>} />
+      ) : null}
       {p.wind ? (
         <TR
           desc="Wind on exposed post (strength level)"
@@ -373,34 +403,44 @@ export function PostSheet({ m, r, index, total, received, connections }: SheetPr
       <SectionHead title="Compression member — NDS 3.6, 3.7" />
       <ColumnComboTable col={col} caption="ASD load combinations (ASCE 7 §2.4)" />
       <AxialRows m={r.mat} col={col} row={col.axialGov} le1={r.le1} le2={r.le2} title="Axial compression" />
-      {col.governing.fb > 0 ? <CombinedRows m={r.mat} col={col} row={col.governing} title="Combined bending and axial compression" /> : null}
+      {col.governing.fb > 0 ? (
+        <CombinedRows m={r.mat} col={col} row={col.governing} title="Combined bending and axial compression" />
+      ) : null}
       <SectionHead title="Bearing — NDS 3.10" />
       <TR
         desc="End-grain bearing — NDS 3.10.1"
         expr={
           <>
-            f<sub>c</sub> = {f1(r.endGrain.fc)} lb/in² ≤ F<sub>c</sub>* = {f1(r.endGrain.FcStar)} lb/in² ({r.endGrain.combo})
+            f<sub>c</sub> = {f1(r.endGrain.fc)} lb/in² ≤ F<sub>c</sub>* = {f1(r.endGrain.FcStar)} lb/in² (
+            {r.endGrain.combo})
           </>
         }
         pass={r.endGrain.ratio <= 1}
       />
       <TR
         desc="Steel bearing plate (NDS 3.10.1.3)"
-        expr={<>{r.endGrain.plateRequired ? <Flag>Required — f_c &gt; 0.75 F_c*</Flag> : "Not required (f_c ≤ 0.75 F_c*)"}</>}
+        expr={
+          <>
+            {r.endGrain.plateRequired ? <Flag>Required — f_c &gt; 0.75 F_c*</Flag> : "Not required (f_c ≤ 0.75 F_c*)"}
+          </>
+        }
       />
       {r.bearingPerp ? (
         <TR
           desc={`Bearing on ${r.bearingPerp.support} — NDS 3.10.2`}
           expr={
             <>
-              f<sub>c⊥</sub> = P / A = {f1(r.bearingPerp.fcperp)} lb/in²; F<sub>c⊥</sub>' = {f0(r.bearingPerp.Fcperp)} × C<sub>b</sub>{" "}
-              {f3(r.bearingPerp.Cb)} = {f1(r.bearingPerp.Fprime)} lb/in²
+              f<sub>c⊥</sub> = P / A = {f1(r.bearingPerp.fcperp)} lb/in²; F<sub>c⊥</sub>' = {f0(r.bearingPerp.Fcperp)} ×
+              C<sub>b</sub> {f3(r.bearingPerp.Cb)} = {f1(r.bearingPerp.Fprime)} lb/in²
             </>
           }
           pass={r.bearingPerp.ratio <= 1}
         />
       ) : (
-        <TR desc="Bearing below" expr={<>{p.bearing.on === "concrete" ? "Post base on concrete (connector schedule)" : "Steel bearing"}</>} />
+        <TR
+          desc="Bearing below"
+          expr={<>{p.bearing.on === "concrete" ? "Post base on concrete (connector schedule)" : "Steel bearing"}</>}
+        />
       )}
       <ChecksSummary checks={r.checks} />
       <MemberResult r={r} />
@@ -409,8 +449,14 @@ export function PostSheet({ m, r, index, total, received, connections }: SheetPr
         rows={[
           ["Selected post", <b key="s">{`${r.mark}: ${r.callout}`}</b>],
           ["Material", r.mat.speciesLabel],
-          ["Governing check", `${r.governing.name} — D/C ${f3(r.governing.ratio)} ${r.pass ? "PASS" : "FAIL"} (${r.governing.combo})`],
-          ["Base reaction (max down / min net)", `${f0(r.reactions[0].maxDown)} lb (${r.reactions[0].maxDownCombo}) / ${f0(r.reactions[0].minNet)} lb`],
+          [
+            "Governing check",
+            `${r.governing.name} — D/C ${f3(r.governing.ratio)} ${r.pass ? "PASS" : "FAIL"} (${r.governing.combo})`,
+          ],
+          [
+            "Base reaction (max down / min net)",
+            `${f0(r.reactions[0].maxDown)} lb (${r.reactions[0].maxDownCombo}) / ${f0(r.reactions[0].minNet)} lb`,
+          ],
           ["Cap / base hardware", connections?.length ? connections.join("; ") : "Per connector schedule"],
           ["Field verification", verifyText(r)],
         ]}
@@ -429,17 +475,28 @@ export function TrussSheet({ m, r, index, total, connections }: SheetProps<Truss
       m={m}
       r={r}
       title="Prefabricated wood truss — imported reactions"
-      subtitle={<>Deferred submittal; reactions from the truss design drawings — member {index} of {total}: {r.mark}</>}
+      subtitle={
+        <>
+          Deferred submittal; reactions from the truss design drawings — member {index} of {total}: {r.mark}
+        </>
+      }
     >
       <DesignBasis m={m} material={<>ANSI/TPI 1; ANSI/AWC {m.cycle.nds} (bearing)</>} />
       <SectionHead title="Truss data" />
       <TR desc="Member" expr={<B>{`${r.mark} — ${r.title}`}</B>} />
       {t.description ? <TR desc="Description" expr={<>{t.description}</>} /> : null}
       <TR desc="Span" expr={<>{fmtFtIn(t.span)}</>} />
-      <TR desc={t.girder ? "Girder plies" : "Spacing"} expr={<>{t.girder ? `${t.plies}-ply girder` : `${fmt(t.spacing, 0)} in. o.c.`}</>} />
+      <TR
+        desc={t.girder ? "Girder plies" : "Spacing"}
+        expr={<>{t.girder ? `${t.plies}-ply girder` : `${fmt(t.spacing, 0)} in. o.c.`}</>}
+      />
       <TR desc="Truss design reference" expr={t.designRef ? <>{t.designRef}</> : <Flag>Not entered — VERIFY</Flag>} />
       <LoadLines lines={r.loadLines} title="Reactions per truss (truss design drawings)" />
-      <ReactionTable reactions={r.reactions} perFoot={!t.girder} title="Reactions delivered (unfactored, by load type)" />
+      <ReactionTable
+        reactions={r.reactions}
+        perFoot={!t.girder}
+        title="Reactions delivered (unfactored, by load type)"
+      />
       <SectionHead title="Bearing on the wall plate — NDS 3.10.2" />
       {r.bearingChecks.map((b) => (
         <TR
@@ -447,7 +504,8 @@ export function TrussSheet({ m, r, index, total, connections }: SheetProps<Truss
           desc={`Bearing ${b.name}: R = ${f0(b.R)} lb (${b.combo})`}
           expr={
             <>
-              f<sub>c⊥</sub> = R / ({f2(b.lb)} × plate width) = {f1(b.fcperp)} lb/in² ≤ F<sub>c⊥</sub> × C<sub>b</sub> = {f1(b.Fprime)} lb/in²
+              f<sub>c⊥</sub> = R / ({f2(b.lb)} × plate width) = {f1(b.fcperp)} lb/in² ≤ F<sub>c⊥</sub> × C<sub>b</sub> ={" "}
+              {f1(b.Fprime)} lb/in²
             </>
           }
           pass={b.ratio <= 1}
@@ -458,7 +516,12 @@ export function TrussSheet({ m, r, index, total, connections }: SheetProps<Truss
       <FinalSummary
         rows={[
           ["Truss", <b key="s">{`${r.mark}: ${r.callout}`}</b>],
-          ["Uplift", r.reactions.some((x) => x.minNet < -1) ? `Net uplift up to ${f0(-Math.min(...r.reactions.map((x) => x.minNet)))} lb per truss` : "None"],
+          [
+            "Uplift",
+            r.reactions.some((x) => x.minNet < -1)
+              ? `Net uplift up to ${f0(-Math.min(...r.reactions.map((x) => x.minNet)))} lb per truss`
+              : "None",
+          ],
           ["Connections", connections?.length ? connections.join("; ") : "Truss-to-plate ties per connector schedule"],
           ["Field verification", verifyText(r)],
         ]}
@@ -477,12 +540,23 @@ export function ConnectorSheet({ m, r, index, total }: SheetProps<ConnectorResul
       m={m}
       r={r}
       title="Connector design — catalogue allowable loads"
-      subtitle={<>Checked for every ASD combination with its load-duration column — member {index} of {total}: {r.mark}</>}
+      subtitle={
+        <>
+          Checked for every ASD combination with its load-duration column — member {index} of {total}: {r.mark}
+        </>
+      }
     >
       <DesignBasis m={m} material={<>Manufacturer catalogue / ICC-ES evaluation report</>} tables={["hardware"]} />
       <SectionHead title="Connector" />
       <TR desc="Mark / location" expr={<B>{`${r.mark} — ${r.callout}`}</B>} />
-      <TR desc="Product" expr={<>{hardwareLabel(h)} — {h.description}</>} />
+      <TR
+        desc="Product"
+        expr={
+          <>
+            {hardwareLabel(h)} — {h.description}
+          </>
+        }
+      />
       <TR desc="Fasteners" expr={<>{h.fasteners}</>} />
       <TR desc="Evaluation report" expr={<>{h.report || <Flag>Not entered</Flag>}</>} />
       <TR
@@ -513,7 +587,11 @@ export function ConnectorSheet({ m, r, index, total }: SheetProps<ConnectorResul
       <MemberResult r={r} />
       <AssumptionRows items={r.assumptions} />
       <SpecificNotes flags={r.flags} />
-      <LimitationNotes notes={["Catalogue values apply only with all specified fasteners installed and the framing sizes listed by the manufacturer."]} />
+      <LimitationNotes
+        notes={[
+          "Catalogue values apply only with all specified fasteners installed and the framing sizes listed by the manufacturer.",
+        ]}
+      />
     </Frame>
   );
 }
@@ -529,9 +607,22 @@ export function FootingSheet({ m, r, index, total, received }: SheetProps<Footin
       m={m}
       r={r}
       title={`Foundation analysis & design (${m.cycle.aci318})`}
-      subtitle={<>{strip ? "Continuous footing, analysed per foot of wall" : "Pad footing"} — member {index} of {total}: {r.mark}</>}
+      subtitle={
+        <>
+          {strip ? "Continuous footing, analysed per foot of wall" : "Pad footing"} — member {index} of {total}:{" "}
+          {r.mark}
+        </>
+      }
     >
-      <DesignBasis m={m} material={<>{m.cycle.aci318}; {m.cycle.building} Chapter 18</>} tables={["ibc-1806.2", "ibc-1809.7"]} />
+      <DesignBasis
+        m={m}
+        material={
+          <>
+            {m.cycle.aci318}; {m.cycle.building} Chapter 18
+          </>
+        }
+        tables={["ibc-1806.2", "ibc-1809.7"]}
+      />
       <SectionHead title="Footing geometry" />
       <TR desc="Member" expr={<B>{`${r.mark} — ${r.title}`}</B>} />
       {f.description ? <TR desc="Description" expr={<>{f.description}</>} /> : null}
@@ -539,24 +630,46 @@ export function FootingSheet({ m, r, index, total, received }: SheetProps<Footin
         desc={strip ? "Width × thickness" : "B × L × thickness"}
         expr={
           <>
-            {strip ? `${f1(f.B * 12)} in × ${f1(f.h)} in` : `${f1(f.B * 12)} in × ${f1((f.L ?? f.B) * 12)} in × ${f1(f.h)} in`}; area{eq(`${f3(r.area)} ft²${per}`)}
+            {strip
+              ? `${f1(f.B * 12)} in × ${f1(f.h)} in`
+              : `${f1(f.B * 12)} in × ${f1((f.L ?? f.B) * 12)} in × ${f1(f.h)} in`}
+            ; area{eq(`${f3(r.area)} ft²${per}`)}
           </>
         }
       />
       <TR desc="Depth of bottom below grade" expr={<>{f1(f.depth)} in</>} />
       <TR
         desc={strip ? (f.stem ? "Stem wall (width × height)" : "Wall bearing width") : "Post base / pier"}
-        expr={<>{f.stem ? `${f1(f.stem.width)} in × ${f1(f.stem.height)} in` : strip ? `${f1(f.c1)} in` : `${f1(f.c1)} in × ${f1(f.c2 ?? f.c1)} in`}</>}
+        expr={
+          <>
+            {f.stem
+              ? `${f1(f.stem.width)} in × ${f1(f.stem.height)} in`
+              : strip
+                ? `${f1(f.c1)} in`
+                : `${f1(f.c1)} in × ${f1(f.c2 ?? f.c1)} in`}
+          </>
+        }
       />
       <TR
         desc="Concrete / reinforcement"
         expr={
           <>
-            f'<sub>c</sub> = {f0(f.fc)} psi; {f.rebar ? `${f.rebar.size} ${strip ? `@ ${f1(f.rebar.spacing ?? 12)} in. transverse` : `(${f.rebar.count}) each way`}, f_y = ${f0(f.fy)} psi, cover ${f1(f.cover)} in` : "plain concrete (ACI 318 Ch. 14)"}
+            f'<sub>c</sub> = {f0(f.fc)} psi;{" "}
+            {f.rebar
+              ? `${f.rebar.size} ${strip ? `@ ${f1(f.rebar.spacing ?? 12)} in. transverse` : `(${f.rebar.count}) each way`}, f_y = ${f0(f.fy)} psi, cover ${f1(f.cover)} in`
+              : "plain concrete (ACI 318 Ch. 14)"}
           </>
         }
       />
-      <TR desc="Allowable soil pressure" expr={<>q<sub>a</sub>{eq(`${f0(f.qa)} psf`)} — {f.qaSource}</>} />
+      <TR
+        desc="Allowable soil pressure"
+        expr={
+          <>
+            q<sub>a</sub>
+            {eq(`${f0(f.qa)} psf`)} — {f.qaSource}
+          </>
+        }
+      />
       <LoadLines lines={r.loadLines} title={`Loads on the footing (${strip ? "per ft" : "total"})`} />
       <LoadPathRows received={received} />
       <SectionHead title="Soil bearing — service loads (ASCE 7 §2.4)" />
@@ -577,8 +690,14 @@ export function FootingSheet({ m, r, index, total, received }: SheetProps<Footin
         }
         pass={r.serviceGov.ratio <= 1}
       />
-      {r.uplift ? <TR desc="Net uplift" expr={<Flag>{`${f0(-r.uplift.P)} ${u} (${r.uplift.combo})`}</Flag>} pass={false} /> : <TR desc="Uplift" expr={<>No net uplift (minimum P ≥ 0)</>} pass />}
-      <SectionHead title={`Concrete design — strength (ASCE 7 §2.3), ${c.plain ? "plain concrete, ACI 318 Ch. 14" : "ACI 318 Ch. 13, 22"}`} />
+      {r.uplift ? (
+        <TR desc="Net uplift" expr={<Flag>{`${f0(-r.uplift.P)} ${u} (${r.uplift.combo})`}</Flag>} pass={false} />
+      ) : (
+        <TR desc="Uplift" expr={<>No net uplift (minimum P ≥ 0)</>} pass />
+      )}
+      <SectionHead
+        title={`Concrete design — strength (ASCE 7 §2.3), ${c.plain ? "plain concrete, ACI 318 Ch. 14" : "ACI 318 Ch. 13, 22"}`}
+      />
       <DataTable
         caption="Net factored soil pressure (footing and soil weight excluded)"
         head={["Combination", `P_u (${u})`, "q_u (psf)"]}
@@ -586,16 +705,33 @@ export function FootingSheet({ m, r, index, total, received }: SheetProps<Footin
         small
         rows={r.strength.map((x) => [x.combo.label, f0(x.Pu), f0(x.qu)])}
       />
-      <TR desc="Governing" expr={<>q<sub>u</sub>{eq(`${f0(r.quGov.qu)} psf`)} ({r.quGov.combo.label})</>} />
+      <TR
+        desc="Governing"
+        expr={
+          <>
+            q<sub>u</sub>
+            {eq(`${f0(r.quGov.qu)} psf`)} ({r.quGov.combo.label})
+          </>
+        }
+      />
       <TR desc="Cantilever from the face" expr={<>c{eq(`${f2(c.cantilever)} in`)}</>} />
       <SubHead title="Flexure" />
-      <TR desc={`Ultimate moment at the face${per}`} expr={<>M<sub>u</sub> = q<sub>u</sub> × c² / 2{strip ? "" : " × L"}{eq(`${f1(c.Mu / 12)} lb-ft`)}</>} />
+      <TR
+        desc={`Ultimate moment at the face${per}`}
+        expr={
+          <>
+            M<sub>u</sub> = q<sub>u</sub> × c² / 2{strip ? "" : " × L"}
+            {eq(`${f1(c.Mu / 12)} lb-ft`)}
+          </>
+        }
+      />
       {c.plain ? (
         <TR
           desc="Plain concrete — Eq. 14.5.2.1a (h reduced 2 in., 14.5.1.7)"
           expr={
             <>
-              φM<sub>n</sub> = 0.60 × 5 √f'<sub>c</sub> S<sub>m</sub>, S<sub>m</sub> = b h<sub>eff</sub>² / 6, h<sub>eff</sub> = {f1(c.hEff)} in
+              φM<sub>n</sub> = 0.60 × 5 √f'<sub>c</sub> S<sub>m</sub>, S<sub>m</sub> = b h<sub>eff</sub>² / 6, h
+              <sub>eff</sub> = {f1(c.hEff)} in
               {eq(`${f1(c.phiMn / 12)} lb-ft`)}
             </>
           }
@@ -615,7 +751,8 @@ export function FootingSheet({ m, r, index, total, received }: SheetProps<Footin
             desc="Compression block / strain"
             expr={
               <>
-                a = A<sub>s</sub> f<sub>y</sub> / (0.85 f'<sub>c</sub> b) = {f3(c.flex!.a)} in; ε<sub>t</sub> = {fmt(c.flex!.epsT, 5)}; φ = {f2(c.flex!.phi)}
+                a = A<sub>s</sub> f<sub>y</sub> / (0.85 f'<sub>c</sub> b) = {f3(c.flex!.a)} in; ε<sub>t</sub> ={" "}
+                {fmt(c.flex!.epsT, 5)}; φ = {f2(c.flex!.phi)}
               </>
             }
           />
@@ -628,7 +765,15 @@ export function FootingSheet({ m, r, index, total, received }: SheetProps<Footin
             }
             pass={c.Mu <= c.phiMn}
           />
-          <TR desc="Minimum reinforcement (ACI 318 7.6.1.1)" expr={<>A<sub>s,min</sub> = 0.0018 b h = {f3(c.AsMin!)} in² ≤ {f3(c.As!)} in²</>} pass={c.As! >= c.AsMin!} />
+          <TR
+            desc="Minimum reinforcement (ACI 318 7.6.1.1)"
+            expr={
+              <>
+                A<sub>s,min</sub> = 0.0018 b h = {f3(c.AsMin!)} in² ≤ {f3(c.As!)} in²
+              </>
+            }
+            pass={c.As! >= c.AsMin!}
+          />
         </>
       )}
       <SubHead title="One-way shear" />
@@ -649,7 +794,8 @@ export function FootingSheet({ m, r, index, total, received }: SheetProps<Footin
             desc={`Critical perimeter at ${c.plain ? "h" : "d"} / 2`}
             expr={
               <>
-                b<sub>o</sub> = {f1(c.twoWay.bo)} in; V<sub>u</sub> = {f0(c.twoWay.Vu)} lb ≤ φV = {f0(c.twoWay.phiVn)} lb
+                b<sub>o</sub> = {f1(c.twoWay.bo)} in; V<sub>u</sub> = {f0(c.twoWay.Vu)} lb ≤ φV = {f0(c.twoWay.phiVn)}{" "}
+                lb
                 {c.twoWay.vc ? ` (v_c = ${f1(c.twoWay.vc)} psi)` : ""}
               </>
             }
@@ -670,7 +816,12 @@ export function FootingSheet({ m, r, index, total, received }: SheetProps<Footin
       />
       <AssumptionRows items={r.assumptions} />
       <SpecificNotes flags={r.flags} />
-      <LimitationNotes notes={["Concentric loading; footing, stem and soil weight included for bearing only.", "Lateral and overturning effects of shear walls are checked on the shear wall sheets."]} />
+      <LimitationNotes
+        notes={[
+          "Concentric loading; footing, stem and soil weight included for bearing only.",
+          "Lateral and overturning effects of shear walls are checked on the shear wall sheets.",
+        ]}
+      />
     </Frame>
   );
 }
@@ -684,15 +835,52 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
       m={m}
       r={r}
       title={`Wood shear wall design (${m.cycle.sdpws})`}
-      subtitle={<>In accordance with {m.cycle.sdpws}, ANSI/AWC {m.cycle.nds} (ASD) and the segmented shear wall method — member {index} of {total}: {r.mark}</>}
+      subtitle={
+        <>
+          In accordance with {m.cycle.sdpws}, ANSI/AWC {m.cycle.nds} (ASD) and the segmented shear wall method — member{" "}
+          {index} of {total}: {r.mark}
+        </>
+      }
     >
-      <DesignBasis m={m} material={<>{m.cycle.sdpws}; ANSI/AWC {m.cycle.nds}; {m.cycle.aci318} Ch. 17</>} tables={[r.sides[0].row.table === "4.3A" ? "sdpws-4.3A" : "sdpws-4.3C", r.post.tableId, "hardware"]} />
+      <DesignBasis
+        m={m}
+        material={
+          <>
+            {m.cycle.sdpws}; ANSI/AWC {m.cycle.nds}; {m.cycle.aci318} Ch. 17
+          </>
+        }
+        tables={[r.sides[0].row.table === "4.3A" ? "sdpws-4.3A" : "sdpws-4.3C", r.post.tableId, "hardware"]}
+      />
       <SectionHead title="Panel details" />
       <TR desc="Member" expr={<B>{`${r.mark} — ${r.title}`}</B>} />
       {s.description ? <TR desc="Description" expr={<>{s.description}</>} /> : null}
-      <TR desc="Wall line" expr={<>{d.lineName} — share of the line force {f1(d.share * 100)} %</>} />
-      <TR desc="Panel height / length" expr={<>h = {f2(s.h)} ft; b<sub>s</sub> = {f3(s.b)} ft; h / b<sub>s</sub> = {f3(r.aspect)} (max {f1(r.maxAspect)})</>} pass={r.aspect <= r.maxAspect} />
-      <TR desc="Studs / end posts" expr={<>{s.stud.size} {s.stud.species} {s.stud.grade} @ {s.stud.spacing} in.; end posts ({s.endPost.plies}) {s.endPost.size}, A = {f2(r.post.A)} in², net A<sub>en</sub> = {f2(r.Aen)} in² ({fmtInFraction(s.endPost.holeDia)} in. hole)</>} />
+      <TR
+        desc="Wall line"
+        expr={
+          <>
+            {d.lineName} — share of the line force {f1(d.share * 100)} %
+          </>
+        }
+      />
+      <TR
+        desc="Panel height / length"
+        expr={
+          <>
+            h = {f2(s.h)} ft; b<sub>s</sub> = {f3(s.b)} ft; h / b<sub>s</sub> = {f3(r.aspect)} (max {f1(r.maxAspect)})
+          </>
+        }
+        pass={r.aspect <= r.maxAspect}
+      />
+      <TR
+        desc="Studs / end posts"
+        expr={
+          <>
+            {s.stud.size} {s.stud.species} {s.stud.grade} @ {s.stud.spacing} in.; end posts ({s.endPost.plies}){" "}
+            {s.endPost.size}, A = {f2(r.post.A)} in², net A<sub>en</sub> = {f2(r.Aen)} in² (
+            {fmtInFraction(s.endPost.holeDia)} in. hole)
+          </>
+        }
+      />
       <SectionHead title="Sheathing — nominal unit shear capacities" />
       {r.sides.map((x, i) => (
         <TR
@@ -700,7 +888,8 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
           desc={`Side ${i + 1}: ${x.row.label}, ${x.row.nail} @ ${x.spacing} in. edges`}
           expr={
             <>
-              SDPWS Table {x.row.table}: v<sub>s</sub> = {f0(x.vs)} plf; v<sub>w</sub> = {f0(x.vw)} plf; G<sub>a</sub> = {f1(x.Ga)} kips/in
+              SDPWS Table {x.row.table}: v<sub>s</sub> = {f0(x.vs)} plf; v<sub>w</sub> = {f0(x.vw)} plf; G<sub>a</sub> ={" "}
+              {f1(x.Ga)} kips/in
               {x.override ? <Flag> (entered — VERIFY)</Flag> : null}
             </>
           }
@@ -716,11 +905,7 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
       />
       <TR
         desc="Aspect ratio factor (SDPWS 4.3.4.2)"
-        expr={
-          <>
-            {r.aspect <= 2 ? "h / b_s ≤ 2: 1.00" : `1.25 − 0.125 h / b_s = ${f3(r.Car)}`}
-          </>
-        }
+        expr={<>{r.aspect <= 2 ? "h / b_s ≤ 2: 1.00" : `1.25 − 0.125 h / b_s = ${f3(r.Car)}`}</>}
       />
       <LoadLines lines={r.loadLines} title="Loading on the wall" />
       <SectionHead title="Unit shear — ASD (SDPWS 4.3.3, nominal / 2.0)" />
@@ -728,7 +913,8 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         desc="Seismic"
         expr={
           <>
-            v = 0.7 E<sub>h</sub> / b<sub>s</sub> = 0.7 × {f0(d.Eh)} / {f3(s.b)} = {f1(r.vS)} plf ≤ v<sub>sc</sub> C<sub>ar</sub> / 2 = {f1(r.vAllowS)} plf
+            v = 0.7 E<sub>h</sub> / b<sub>s</sub> = 0.7 × {f0(d.Eh)} / {f3(s.b)} = {f1(r.vS)} plf ≤ v<sub>sc</sub> C
+            <sub>ar</sub> / 2 = {f1(r.vAllowS)} plf
           </>
         }
         pass={r.vS <= r.vAllowS}
@@ -737,7 +923,8 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         desc="Wind"
         expr={
           <>
-            v = 0.6 W / b<sub>s</sub> = 0.6 × {f0(d.W)} / {f3(s.b)} = {f1(r.vW)} plf ≤ v<sub>wc</sub> C<sub>ar</sub> / 2 = {f1(r.vAllowW)} plf
+            v = 0.6 W / b<sub>s</sub> = 0.6 × {f0(d.W)} / {f3(s.b)} = {f1(r.vW)} plf ≤ v<sub>wc</sub> C<sub>ar</sub> / 2
+            = {f1(r.vAllowW)} plf
           </>
         }
         pass={r.vW <= r.vAllowW}
@@ -765,12 +952,20 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         desc="End post tension, net section — NDS 3.8"
         expr={
           <>
-            f<sub>t</sub> = T / A<sub>en</sub> = {f0(r.tension.T)} / {f2(r.Aen)} = {f1(r.tension.ft)} lb/in² ≤ F<sub>t</sub>' = F<sub>t</sub> × 1.6 × C<sub>F</sub> = {f0(r.tension.Ft)} lb/in²
+            f<sub>t</sub> = T / A<sub>en</sub> = {f0(r.tension.T)} / {f2(r.Aen)} = {f1(r.tension.ft)} lb/in² ≤ F
+            <sub>t</sub>' = F<sub>t</sub> × 1.6 × C<sub>F</sub> = {f0(r.tension.Ft)} lb/in²
           </>
         }
         pass={r.tension.ratio <= 1}
       />
-      <AxialRows m={r.post} col={col} row={col.governing} le1={s.h * 12} le2={0} title="End post compression (in-plane braced; l_e = h)" />
+      <AxialRows
+        m={r.post}
+        col={col}
+        row={col.governing}
+        le1={s.h * 12}
+        le2={0}
+        title="End post compression (in-plane braced; l_e = h)"
+      />
       {r.holdown ? (
         <>
           <SectionHead title="Hold-down" />
@@ -778,32 +973,89 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
             desc={`${hardwareLabel(r.holdown.item)} (${r.holdown.item.report})`}
             expr={
               <>
-                T = {f0(r.holdown.T)} lb ≤ {f0(r.holdown.item.tension ?? 0)} lb allowable{r.holdown.item.checked ? "" : <Flag> — VERIFY</Flag>}
+                T = {f0(r.holdown.T)} lb ≤ {f0(r.holdown.item.tension ?? 0)} lb allowable
+                {r.holdown.item.checked ? "" : <Flag> — VERIFY</Flag>}
               </>
             }
             pass={r.holdown.ratio <= 1}
           />
-          {d.stacked ? <TR desc="Uplift from wall above" expr={<>{d.stacked.mark}: seismic {f0(d.stacked.Ts)} lb, wind {f0(d.stacked.Tw)} lb (included)</>} /> : null}
+          {d.stacked ? (
+            <TR
+              desc="Uplift from wall above"
+              expr={
+                <>
+                  {d.stacked.mark}: seismic {f0(d.stacked.Ts)} lb, wind {f0(d.stacked.Tw)} lb (included)
+                </>
+              }
+            />
+          ) : null}
         </>
       ) : null}
       {r.hdAnchor ? (
         <>
           <SectionHead title="Hold-down anchor — ACI 318-19 Ch. 17 (strength level)" />
-          <TR desc="Factored tension" expr={<>T<sub>u</sub>{eq(`${f0(r.hdAnchor.Tu)} lb`)} — {r.hdAnchor.basis}</>} />
-          <TR desc="Steel — 17.6.1" expr={<>φN<sub>sa</sub> = 0.75 × A<sub>se</sub> f<sub>uta</sub> = 0.75 × {f3(r.hdAnchor.t.Ase)} × {f0(r.hdAnchor.t.futa)}{eq(`${f0(r.hdAnchor.t.phiNsa)} lb`)}</>} />
+          <TR
+            desc="Factored tension"
+            expr={
+              <>
+                T<sub>u</sub>
+                {eq(`${f0(r.hdAnchor.Tu)} lb`)} — {r.hdAnchor.basis}
+              </>
+            }
+          />
+          <TR
+            desc="Steel — 17.6.1"
+            expr={
+              <>
+                φN<sub>sa</sub> = 0.75 × A<sub>se</sub> f<sub>uta</sub> = 0.75 × {f3(r.hdAnchor.t.Ase)} ×{" "}
+                {f0(r.hdAnchor.t.futa)}
+                {eq(`${f0(r.hdAnchor.t.phiNsa)} lb`)}
+              </>
+            }
+          />
           <TR
             desc="Concrete breakout — 17.6.2"
             expr={
               <>
-                N<sub>b</sub> = 24 √f'<sub>c</sub> h<sub>ef</sub><sup>1.5</sup> = {f0(r.hdAnchor.t.Nb)} lb; A<sub>Nc</sub>/A<sub>Nco</sub> = {f0(r.hdAnchor.t.ANc)}/{f0(r.hdAnchor.t.ANco)}; ψ<sub>ed,N</sub> = {f3(r.hdAnchor.t.psiEd)};
-                ψ<sub>c,N</sub> = {f2(r.hdAnchor.t.psiC)}; φN<sub>cb</sub>{eq(`${f0(r.hdAnchor.t.phiNcb)} lb`)}
+                N<sub>b</sub> = 24 √f'<sub>c</sub> h<sub>ef</sub>
+                <sup>1.5</sup> = {f0(r.hdAnchor.t.Nb)} lb; A<sub>Nc</sub>/A<sub>Nco</sub> = {f0(r.hdAnchor.t.ANc)}/
+                {f0(r.hdAnchor.t.ANco)}; ψ<sub>ed,N</sub> = {f3(r.hdAnchor.t.psiEd)}; ψ<sub>c,N</sub> ={" "}
+                {f2(r.hdAnchor.t.psiC)}; φN<sub>cb</sub>
+                {eq(`${f0(r.hdAnchor.t.phiNcb)} lb`)}
                 {r.hdAnchor.t.seismicFactor < 1 ? " (× 0.75, 17.10.5.4)" : ""}
               </>
             }
           />
-          <TR desc="Pullout — 17.6.3" expr={<>φN<sub>pn</sub> = 0.70 ψ<sub>c,P</sub> 8 A<sub>brg</sub> f'<sub>c</sub>{eq(`${f0(r.hdAnchor.t.phiNpn)} lb`)}</>} />
-          {r.hdAnchor.t.phiNsb !== undefined ? <TR desc="Side-face blowout — 17.6.4" expr={<>φN<sub>sb</sub>{eq(`${f0(r.hdAnchor.t.phiNsb)} lb`)}</>} /> : null}
-          <TR desc={`Governing: ${r.hdAnchor.t.governs}`} expr={<>T<sub>u</sub> / φN<sub>n</sub>{eq(f3(r.hdAnchor.ratio))}</>} pass={r.hdAnchor.ratio <= 1} />
+          <TR
+            desc="Pullout — 17.6.3"
+            expr={
+              <>
+                φN<sub>pn</sub> = 0.70 ψ<sub>c,P</sub> 8 A<sub>brg</sub> f'<sub>c</sub>
+                {eq(`${f0(r.hdAnchor.t.phiNpn)} lb`)}
+              </>
+            }
+          />
+          {r.hdAnchor.t.phiNsb !== undefined ? (
+            <TR
+              desc="Side-face blowout — 17.6.4"
+              expr={
+                <>
+                  φN<sub>sb</sub>
+                  {eq(`${f0(r.hdAnchor.t.phiNsb)} lb`)}
+                </>
+              }
+            />
+          ) : null}
+          <TR
+            desc={`Governing: ${r.hdAnchor.t.governs}`}
+            expr={
+              <>
+                T<sub>u</sub> / φN<sub>n</sub>
+                {eq(f3(r.hdAnchor.ratio))}
+              </>
+            }
+            pass={r.hdAnchor.ratio <= 1}
+          />
         </>
       ) : null}
       <SectionHead title="Sill anchorage" />
@@ -811,7 +1063,8 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         desc={`Shear per anchor at ${f0(s.sill.spacing)} in. o.c.`}
         expr={
           <>
-            V = v<sub>max</sub> × s = {f1(Math.max(r.vS, r.vW))} × {f2(s.sill.spacing / 12)}{eq(`${f0(r.sill.perBolt)} lb`)}
+            V = v<sub>max</sub> × s = {f1(Math.max(r.vS, r.vW))} × {f2(s.sill.spacing / 12)}
+            {eq(`${f0(r.sill.perBolt)} lb`)}
           </>
         }
       />
@@ -826,27 +1079,49 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
           pass={r.sill.ratio <= 1}
         />
       ) : (
-        <TR desc={`${s.sill.label ?? "Post-installed anchor"} (ESR)`} expr={<>{f0(r.sill.Zprime)} lb allowable</>} pass={r.sill.ratio <= 1} />
+        <TR
+          desc={`${s.sill.label ?? "Post-installed anchor"} (ESR)`}
+          expr={<>{f0(r.sill.Zprime)} lb allowable</>}
+          pass={r.sill.ratio <= 1}
+        />
       )}
       {r.sill.concrete ? (
         <TR
           desc="Concrete, parallel to edge (strength) — ACI 318 17.7"
           expr={
             <>
-              V<sub>u</sub> = {f0(r.sill.concrete.Vu)} lb ≤ φV<sub>n</sub> = {f0(r.sill.concrete.phiVn)} lb ({r.sill.concrete.governs})
+              V<sub>u</sub> = {f0(r.sill.concrete.Vu)} lb ≤ φV<sub>n</sub> = {f0(r.sill.concrete.phiVn)} lb (
+              {r.sill.concrete.governs})
             </>
           }
           pass={r.sill.concrete.ratio <= 1}
         />
       ) : null}
       <SectionHead title="Seismic drift — SDPWS Eq. 4.3-1, ASCE 7 §12.8.6" />
-      <TR desc="Strength-level unit shear (ρ = 1.0, §12.12.1)" expr={<>v = Q<sub>E</sub> / b<sub>s</sub>{eq(`${f2(r.drift.v)} plf`)}</>} />
-      <TR desc="Anchor tension / slip" expr={<>T<sub>δ</sub> = {f0(r.drift.Td)} lb; k<sub>a</sub> = {f0(r.drift.ka)} lb/in; Δ<sub>a</sub> = T<sub>δ</sub> / k<sub>a</sub> = {fmt(r.drift.da, 4)} in</>} />
+      <TR
+        desc="Strength-level unit shear (ρ = 1.0, §12.12.1)"
+        expr={
+          <>
+            v = Q<sub>E</sub> / b<sub>s</sub>
+            {eq(`${f2(r.drift.v)} plf`)}
+          </>
+        }
+      />
+      <TR
+        desc="Anchor tension / slip"
+        expr={
+          <>
+            T<sub>δ</sub> = {f0(r.drift.Td)} lb; k<sub>a</sub> = {f0(r.drift.ka)} lb/in; Δ<sub>a</sub> = T<sub>δ</sub> /
+            k<sub>a</sub> = {fmt(r.drift.da, 4)} in
+          </>
+        }
+      />
       <TR
         desc="Shear wall deflection"
         expr={
           <>
-            δ<sub>sw</sub> = 8 v h³/(E A b) + v h/(1000 G<sub>a</sub>) + h Δ<sub>a</sub>/b = {fmt(r.drift.bend, 4)} + {fmt(r.drift.shear, 4)} + {fmt(r.drift.slip, 4)}
+            δ<sub>sw</sub> = 8 v h³/(E A b) + v h/(1000 G<sub>a</sub>) + h Δ<sub>a</sub>/b = {fmt(r.drift.bend, 4)} +{" "}
+            {fmt(r.drift.shear, 4)} + {fmt(r.drift.slip, 4)}
             {eq(`${fmt(r.drift.dxe, 4)} in`)}
           </>
         }
@@ -855,7 +1130,9 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         desc="Amplified deflection — Eq. 12.8-15"
         expr={
           <>
-            δ<sub>x</sub> = C<sub>d</sub> δ<sub>xe</sub> / I<sub>e</sub> = {f1(d.Cd)} × {fmt(r.drift.dxe, 4)} / {f2(d.Ie)} = {fmt(r.drift.dx, 4)} in ≤ Δ<sub>a</sub> = {f3(d.driftFactor)} h<sub>sx</sub> = {f2(r.drift.allow)} in
+            δ<sub>x</sub> = C<sub>d</sub> δ<sub>xe</sub> / I<sub>e</sub> = {f1(d.Cd)} × {fmt(r.drift.dxe, 4)} /{" "}
+            {f2(d.Ie)} = {fmt(r.drift.dx, 4)} in ≤ Δ<sub>a</sub> = {f3(d.driftFactor)} h<sub>sx</sub> ={" "}
+            {f2(r.drift.allow)} in
           </>
         }
         pass={r.drift.ratio <= 1}
@@ -875,9 +1152,15 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
       <FinalSummary
         rows={[
           ["Shear wall", <b key="s">{`${r.mark}: ${r.callout}`}</b>],
-          ["Sheathing / nailing", r.sides.map((x) => `${x.row.label}; ${x.row.nail} @ ${x.spacing} in. edges, 12 in. field`).join(" + ")],
+          [
+            "Sheathing / nailing",
+            r.sides.map((x) => `${x.row.label}; ${x.row.nail} @ ${x.spacing} in. edges, 12 in. field`).join(" + "),
+          ],
           ["Hold-down", r.holdown ? `${r.holdown.item.model} each end, T = ${f0(r.holdown.T)} lb` : "None required"],
-          ["Sill anchors", `${s.sill.type === "cast-in" ? `${fmtInFraction(s.sill.d)} in. dia. anchor bolts, ${f0(s.sill.embed)} in. embedment` : (s.sill.label ?? "post-installed")} @ ${f0(s.sill.spacing)} in. o.c.`],
+          [
+            "Sill anchors",
+            `${s.sill.type === "cast-in" ? `${fmtInFraction(s.sill.d)} in. dia. anchor bolts, ${f0(s.sill.embed)} in. embedment` : (s.sill.label ?? "post-installed")} @ ${f0(s.sill.spacing)} in. o.c.`,
+          ],
           ["Governing check", `${r.governing.name} — D/C ${f3(r.governing.ratio)} ${r.pass ? "PASS" : "FAIL"}`],
           ["Field verification", verifyText(r)],
         ]}

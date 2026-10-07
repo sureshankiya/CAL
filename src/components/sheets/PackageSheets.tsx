@@ -327,7 +327,8 @@ export function CriteriaSheet({ m, design }: { m: SheetMeta; design: ProjectDesi
         desc="Soil unit weight / frost depth"
         expr={
           <>
-            γ = {f0(cr.soil.density)} pcf; frost depth {cr.soil.frostDepth ? `${f0(cr.soil.frostDepth)} in` : "— (not applicable)"}
+            γ = {f0(cr.soil.density)} pcf; frost depth{" "}
+            {cr.soil.frostDepth ? `${f0(cr.soil.frostDepth)} in` : "— (not applicable)"}
           </>
         }
       />
@@ -335,7 +336,8 @@ export function CriteriaSheet({ m, design }: { m: SheetMeta; design: ProjectDesi
         desc="Concrete / reinforcement"
         expr={
           <>
-            f'<sub>c</sub> = {f0(cr.concrete.fc)} psi (28 day); f<sub>y</sub> = {f0(cr.concrete.fy)} psi; cover {f1(cr.concrete.cover)} in. cast against earth
+            f'<sub>c</sub> = {f0(cr.concrete.fc)} psi (28 day); f<sub>y</sub> = {f0(cr.concrete.fy)} psi; cover{" "}
+            {f1(cr.concrete.cover)} in. cast against earth
           </>
         }
       />
@@ -572,7 +574,10 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
   const sws = of("shearWall");
   const cns = of("connector");
   const ftgs = of("footing");
-  const usedHw = new Set<string>([...cns.map((c) => c.item.id), ...sws.flatMap((x) => (x.holdown ? [x.holdown.item.id] : []))]);
+  const usedHw = new Set<string>([
+    ...cns.map((c) => c.item.id),
+    ...sws.flatMap((x) => (x.holdown ? [x.holdown.item.id] : [])),
+  ]);
   return (
     <Sheet f={titleFields(m)} footerLeft={ft.left} footerCenter={ft.center} first={m.first} id="sheet-schedules">
       <SheetTitle
@@ -582,7 +587,16 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
       {framing.length ? (
         <DataTable
           caption="Framing schedule (repetitive members)"
-          head={["Mark", "Member", "Size / species / grade", "Spacing", "Span", "Bearing / connection", "Gov. D/C", "Result"]}
+          head={[
+            "Mark",
+            "Member",
+            "Size / species / grade",
+            "Spacing",
+            "Span",
+            "Bearing / connection",
+            "Gov. D/C",
+            "Result",
+          ]}
           small
           rows={framing.map((r) => [
             r.mark,
@@ -619,7 +633,16 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
       {beams.length ? (
         <DataTable
           caption="Beam / header schedule"
-          head={["Mark", "Type", "Size / grade", "Span", "Bearing (in.)", "Reactions, max down (lb)", "Gov. D/C", "Result"]}
+          head={[
+            "Mark",
+            "Type",
+            "Size / grade",
+            "Span",
+            "Bearing (in.)",
+            "Reactions, max down (lb)",
+            "Gov. D/C",
+            "Result",
+          ]}
           small
           rows={beams.map((r) => [
             r.mark,
@@ -636,7 +659,17 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
       {walls.length ? (
         <DataTable
           caption="Wall schedule (bearing walls)"
-          head={["Wall type", "Stud size", "Spacing", "Species / grade", "Top plate", "Bottom plate", "Stud packs / openings", "Gov. D/C", "Result"]}
+          head={[
+            "Wall type",
+            "Stud size",
+            "Spacing",
+            "Species / grade",
+            "Top plate",
+            "Bottom plate",
+            "Stud packs / openings",
+            "Gov. D/C",
+            "Result",
+          ]}
           small
           rows={walls.map((r) => [
             r.mark,
@@ -657,7 +690,16 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
       {posts.length ? (
         <DataTable
           caption="Post schedule"
-          head={["Mark", "Size / grade", "Height", "Base reaction max (lb)", "Uplift (lb)", "Cap / base", "Gov. D/C", "Result"]}
+          head={[
+            "Mark",
+            "Size / grade",
+            "Height",
+            "Base reaction max (lb)",
+            "Uplift (lb)",
+            "Cap / base",
+            "Gov. D/C",
+            "Result",
+          ]}
           small
           rows={posts.map((r) => [
             r.mark,
@@ -665,7 +707,10 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
             fmtFtIn(r.input.height),
             f0(r.reactions[0].maxDown),
             r.reactions[0].minNet < 0 ? f0(-r.reactions[0].minNet) : "—",
-            cns.filter((c) => c.input.sourceMark === r.mark).map((c) => c.item.model).join(", ") || "per schedule",
+            cns
+              .filter((c) => c.input.sourceMark === r.mark)
+              .map((c) => c.item.model)
+              .join(", ") || "per schedule",
             f3(r.governing.ratio),
             pf(r),
           ])}
@@ -674,7 +719,17 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
       {sws.length ? (
         <DataTable
           caption="Shear wall schedule"
-          head={["Mark", "Line", "Length × height", "Sheathing", "Edge / field nailing", "v (plf) / allow.", "Hold-down", "Sill anchor", "Result"]}
+          head={[
+            "Mark",
+            "Line",
+            "Length × height",
+            "Sheathing",
+            "Edge / field nailing",
+            "v (plf) / allow.",
+            "Hold-down",
+            "Sill anchor",
+            "Result",
+          ]}
           small
           rows={sws.map((r) => [
             r.mark,
@@ -764,7 +819,11 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
               h.description,
               h.fasteners,
               [
-                h.down ? `down ${Object.entries(h.down).map(([k, v]) => `${v} (${k})`).join(", ")}` : "",
+                h.down
+                  ? `down ${Object.entries(h.down)
+                      .map(([k, v]) => `${v} (${k})`)
+                      .join(", ")}`
+                  : "",
                 h.uplift !== undefined ? `uplift ${h.uplift}` : "",
                 h.tension !== undefined ? `tension ${h.tension}` : "",
                 h.F1 !== undefined ? `F1 ${h.F1}` : "",
@@ -777,7 +836,8 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
         />
       ) : null}
       <TextRow italic>
-        Wall-to-wall, top-plate splice, diaphragm and collector connections are scheduled with the Phase 3 lateral design.
+        Wall-to-wall, top-plate splice, diaphragm and collector connections are scheduled with the Phase 3 lateral
+        design.
       </TextRow>
     </Sheet>
   );

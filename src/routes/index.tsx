@@ -6,6 +6,8 @@ import { MemberEditor } from "@/components/editors/MemberEditor";
 import {
   AssembliesPanel,
   CriteriaPanel,
+  HardwarePanel,
+  LateralPanel,
   LevelsPanel,
   MembersPanel,
   ProjectInfoPanel,
@@ -192,6 +194,8 @@ function Index() {
           <CriteriaPanel p={project} set={set} />
           <AssembliesPanel p={project} set={set} />
           <LevelsPanel p={project} set={set} />
+          <LateralPanel p={project} set={set} />
+          <HardwarePanel p={project} set={set} />
           <MembersPanel
             p={project}
             design={design}
@@ -216,6 +220,7 @@ function Index() {
                     ...m,
                     links: m.links.filter((l) => l.sourceId !== id),
                     ...(m.kind === "ceilingJoist" && m.tensionFrom === id ? { tensionFrom: undefined } : {}),
+                    ...(m.kind === "shearWall" && m.upliftFrom === id ? { upliftFrom: undefined } : {}),
                   })) as MemberSpec[],
               }));
               if (activeId === id) setActiveId(undefined);

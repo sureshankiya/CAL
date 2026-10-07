@@ -115,7 +115,13 @@ function SheetBody({
         );
       }
       const r = o.result;
-      const common = { m: meta, index, total: members.length, received, connections: connectionsOf(project, design, r.id) };
+      const common = {
+        m: meta,
+        index,
+        total: members.length,
+        received,
+        connections: connectionsOf(project, design, r.id),
+      };
       switch (r.kind) {
         case "ijoist":
           return <IJoistSheet m={meta} r={r} index={index} total={members.length} received={received} />;

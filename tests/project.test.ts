@@ -33,11 +33,14 @@ describe("project model", () => {
     expect(circular).toEqual([]);
     expect(order.indexOf("m-r1")).toBeLessThan(order.indexOf("m-cj1"));
     expect(order.indexOf("m-cj1")).toBeLessThan(order.indexOf("m-h1"));
-    expect(order.indexOf("m-fj1")).toBeLessThan(order.indexOf("m-b1"));
+    expect(order.indexOf("m-ij1")).toBeLessThan(order.indexOf("m-b1"));
+    expect(order.indexOf("m-b1")).toBeLessThan(order.indexOf("m-p1"));
+    expect(order.indexOf("m-p1")).toBeLessThan(order.indexOf("m-pf1"));
+    expect(order.indexOf("m-w1")).toBeLessThan(order.indexOf("m-f1"));
     const loop = structuredClone(p);
-    const fj = loop.members.find((m) => m.id === "m-fj1")!;
-    fj.links = [{ id: "x", kind: "point", sourceId: "m-b1", support: 0, label: "", x: 1, factor: 1 }];
-    expect(designOrder(loop.members).circular.sort()).toEqual(["m-b1", "m-fj1"]);
+    const ij = loop.members.find((m) => m.id === "m-ij1")!;
+    ij.links = [{ id: "x", kind: "point", sourceId: "m-b1", support: 0, label: "", x: 1, factor: 1 }];
+    expect(designOrder(loop.members).circular).toEqual(expect.arrayContaining(["m-b1", "m-ij1"]));
     expect(designProject(loop).outcomes.get("m-b1")!.error).toMatch(/Circular/);
   });
 
@@ -46,10 +49,33 @@ describe("project model", () => {
     const d = designProject(p);
     for (const [, o] of d.outcomes) expect(o.error).toBeUndefined();
     const fj = d.outcomes.get("m-fj1")!.result!;
+    const ij = d.outcomes.get("m-ij1")!.result!;
     const b1 = d.outcomes.get("m-b1")!;
-    // girder line load = 2 × joist reaction per foot (joists both sides)
-    const wL = b1.linked.find((l) => l.type === "L")!.w!;
-    expect(wL).toBeCloseTo(2 * fj.reactions[1].perFoot!.L, 6);
+    // girder line load = I-joist reaction per foot
+    expect(b1.linked.find((l) => l.type === "L")!.w!).toBeCloseTo(ij.reactions[1].perFoot!.L, 6);
+    // interior footing: joists from both sides (factor 2) plus the bearing wall
+    const f2 = d.outcomes.get("m-f2")!;
+    expect(f2.linked.find((l) => l.type === "L" && l.label.includes("FJ-1"))!.w!).toBeCloseTo(
+      2 * fj.reactions[1].perFoot!.L,
+      6,
+    );
+    // stud pack under the header carries the header reaction to the footing
+    const h1r = d.outcomes.get("m-h1")!.result!;
+    const w1 = d.outcomes.get("m-w1")!.result!;
+    expect(w1.reactions[1].byType.D).toBeCloseTo(h1r.reactions[0].byType.D, 6);
+    // post → pad
+    const p1 = d.outcomes.get("m-p1")!.result!;
+    const b1r = b1.result!;
+    expect(p1.reactions[0].byType.L).toBeCloseTo(b1r.reactions[0].byType.L, 6);
+    // lateral: every shear wall has a demand from its wall line
+    expect(d.lateral).toBeDefined();
+    const sws = [...d.outcomes.values()].filter((o) => o.spec.kind === "shearWall");
+    expect(sws.length).toBe(5);
+    const line1 = d.lateral!.lines.find((l) => l.line.id === "LN1")!;
+    const sumE = sws
+      .filter((o) => o.spec.kind === "shearWall" && o.spec.lineId === "LN1")
+      .reduce((s, o) => s + (o.result!.kind === "shearWall" ? o.result!.demand.Eh : 0), 0);
+    expect(sumE).toBeCloseTo(line1.Eh, 6);
     // header carries the rafter plate reaction per foot
     const r1 = d.outcomes.get("m-r1")!.result!;
     const h1 = d.outcomes.get("m-h1")!;

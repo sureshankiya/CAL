@@ -158,7 +158,8 @@ function present(v: LoadVector, wind: boolean): Partial<Record<LoadType, boolean
 /** Piecewise-constant line load along the wall from uniform line loads. */
 function segmentsOf(loads: ReturnType<typeof extraToBeamLoads>["loads"], length: number): WallSegment[] {
   const xs = new Set<number>([0, length]);
-  for (const l of loads) if (l.kind !== "point") [l.x1 ?? 0, l.x2 ?? length].forEach((x) => xs.add(Math.min(Math.max(x, 0), length)));
+  for (const l of loads)
+    if (l.kind !== "point") [l.x1 ?? 0, l.x2 ?? length].forEach((x) => xs.add(Math.min(Math.max(x, 0), length)));
   const pts = [...xs].sort((a, b) => a - b).filter((x, i, a) => i === 0 || x - a[i - 1] > 1e-6);
   const segs: WallSegment[] = [];
   for (let i = 1; i < pts.length; i++) {
@@ -236,10 +237,17 @@ function evaluate(ctx: DesignContext, wl: WallInput, size = wl.size, spacing = w
   const envelope = zeroLoads();
   // envelope over the segments: largest downward load, most negative wind (uplift)
   for (const sg of segments)
-    for (const t of LOAD_TYPES) envelope[t] = t === "W" ? Math.min(envelope[t], sg.w[t]) : Math.max(envelope[t], sg.w[t]);
+    for (const t of LOAD_TYPES)
+      envelope[t] = t === "W" ? Math.min(envelope[t], sg.w[t]) : Math.max(envelope[t], sg.w[t]);
   const basePerFoot = addLoads(envelope, selfVec);
 
-  const allPresent = present(addLoads(basePerFoot, points.reduce((a, p) => addLoads(a, loadVector({ [p.type]: p.P ?? 0 })), zeroLoads())), hasWind);
+  const allPresent = present(
+    addLoads(
+      basePerFoot,
+      points.reduce((a, p) => addLoads(a, loadVector({ [p.type]: p.P ?? 0 })), zeroLoads()),
+    ),
+    hasWind,
+  );
   const combos = relevantCombinations(
     asdCombinations({ SDS: ctx.SDS, includeWind: !!allPresent.W, includeSeismic: false }),
     allPresent,
@@ -346,7 +354,14 @@ function evaluate(ctx: DesignContext, wl: WallInput, size = wl.size, spacing = w
     const Ppt = assigned.get(i) ?? zeroLoads();
     const atEnd = k.x <= 0.25 || k.x >= wl.length - 0.25;
     return {
-      check: studCheck(k.label || `Stud pack at ${fmtFtIn(k.x)}`, k.studs, addLoads(Ppt, studLoad(segAt(k.x).w)), s, atEnd, k.x),
+      check: studCheck(
+        k.label || `Stud pack at ${fmtFtIn(k.x)}`,
+        k.studs,
+        addLoads(Ppt, studLoad(segAt(k.x).w)),
+        s,
+        atEnd,
+        k.x,
+      ),
       point: Ppt,
     };
   });
@@ -354,7 +369,14 @@ function evaluate(ctx: DesignContext, wl: WallInput, size = wl.size, spacing = w
   // king studs at openings: wind from half the opening plus half a stud space
   const kings = wl.openings.map((o) => {
     const trib = (o.x2 - o.x1) / 2 + s / 2;
-    return studCheck(`King studs, ${o.label}`, Math.max(1, o.kings), scaleLoads(addLoads(segAt(o.x1).w, selfVec), s / 2), trib, false, o.x1);
+    return studCheck(
+      `King studs, ${o.label}`,
+      Math.max(1, o.kings),
+      scaleLoads(addLoads(segAt(o.x1).w, selfVec), s / 2),
+      trib,
+      false,
+      o.x1,
+    );
   });
 
   // out-of-plane deflection of the typical stud (service wind with P-Δ)
@@ -496,9 +518,13 @@ export function designWall(ctx: DesignContext, wl: WallInput): WallResult {
       `Net uplift ${fmt(ev.typical.uplift.T, 0)} lb per stud (${ev.typical.uplift.combo}) — tie studs to plates; see connector schedule`,
     );
   if (wl.packs.some((k) => k.studs > 1))
-    flags.push("Built-up stud packs: plies nailed together per NDS 15.3.3; full-height packs bearing on solid blocking / squash blocks to the foundation");
+    flags.push(
+      "Built-up stud packs: plies nailed together per NDS 15.3.3; full-height packs bearing on solid blocking / squash blocks to the foundation",
+    );
   for (const o of wl.openings)
-    flags.push(`${o.label}: header bears on jack studs; header and jack-stud loads carried as point loads to stud packs`);
+    flags.push(
+      `${o.label}: header bears on jack studs; header and jack-stud loads carried as point loads to stud packs`,
+    );
 
   let alternatives: WallResult["alternatives"];
   if (!pass) {

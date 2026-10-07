@@ -16,7 +16,14 @@ export function generateWeights(p: Pick<Project, "assemblies">, lat: LateralSpec
   if (top) {
     const roof = p.assemblies.find((a) => a.kind === "roof");
     const ceil = p.assemblies.find((a) => a.kind === "ceiling");
-    if (roof) items.push({ label: `Roof (${roof.id}), plan area`, kind: "area", qty: area, assemblyId: roof.id, sloped: roof.basis === "sloped" });
+    if (roof)
+      items.push({
+        label: `Roof (${roof.id}), plan area`,
+        kind: "area",
+        qty: area,
+        assemblyId: roof.id,
+        sloped: roof.basis === "sloped",
+      });
     if (ceil) items.push({ label: `Ceiling (${ceil.id})`, kind: "area", qty: area, assemblyId: ceil.id });
   } else {
     const floor = p.assemblies.find((a) => a.kind === "floor");
@@ -26,9 +33,21 @@ export function generateWeights(p: Pick<Project, "assemblies">, lat: LateralSpec
   const below = lat.stories[index].height / 2;
   const above = top ? 0 : lat.stories[index + 1].height / 2;
   if (has("WD1"))
-    items.push({ label: "Exterior walls, half story above and below", kind: "wall", qty: perim, height: below + above, assemblyId: "WD1" });
+    items.push({
+      label: "Exterior walls, half story above and below",
+      kind: "wall",
+      qty: perim,
+      height: below + above,
+      assemblyId: "WD1",
+    });
   if (has("WD2"))
-    items.push({ label: "Interior walls (estimated length = half the perimeter)", kind: "wall", qty: perim / 2, height: below + above, assemblyId: "WD2" });
+    items.push({
+      label: "Interior walls (estimated length = half the perimeter)",
+      kind: "wall",
+      qty: perim / 2,
+      height: below + above,
+      assemblyId: "WD2",
+    });
   return items;
 }
 

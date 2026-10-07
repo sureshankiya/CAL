@@ -236,16 +236,58 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   const g: LoadVector = loadVector({ D: s.top.D + selfPlf, L: s.top.L, Lr: s.top.Lr, S: s.top.S });
   const lines: LoadLine[] = [
     { type: "D", label: "Dead load on top of wall", expr: "entered / from load path", value: s.top.D, unit: "plf" },
-    { type: "D", label: `Wall self weight — ${self.label}`, expr: `${fmt(self.psf, 1)} psf × ${fmt(s.h, 2)} ft`, value: selfPlf, unit: "plf" },
+    {
+      type: "D",
+      label: `Wall self weight — ${self.label}`,
+      expr: `${fmt(self.psf, 1)} psf × ${fmt(s.h, 2)} ft`,
+      value: selfPlf,
+      unit: "plf",
+    },
   ];
-  if (s.top.L) lines.push({ type: "L", label: "Floor live load on top of wall", expr: "entered / from load path", value: s.top.L, unit: "plf" });
-  if (s.top.Lr) lines.push({ type: "Lr", label: "Roof live load on top of wall", expr: "entered / from load path", value: s.top.Lr, unit: "plf" });
-  if (s.top.S) lines.push({ type: "S", label: "Snow load on top of wall", expr: "entered / from load path", value: s.top.S, unit: "plf" });
-  lines.push({ type: "E", label: `Seismic — ${dem.lineName} share ${fmt(dem.share * 100, 1)} % (E_h = ρ Q_E)`, expr: `${fmt(dem.rho, 2)} × ${fmt(dem.QE, 0)} lb`, value: dem.Eh, unit: "lb" });
-  lines.push({ type: "W", label: `Wind — ${dem.lineName} share ${fmt(dem.share * 100, 1)} %`, expr: "MWFRS story shear × line share", value: dem.W, unit: "lb" });
+  if (s.top.L)
+    lines.push({
+      type: "L",
+      label: "Floor live load on top of wall",
+      expr: "entered / from load path",
+      value: s.top.L,
+      unit: "plf",
+    });
+  if (s.top.Lr)
+    lines.push({
+      type: "Lr",
+      label: "Roof live load on top of wall",
+      expr: "entered / from load path",
+      value: s.top.Lr,
+      unit: "plf",
+    });
+  if (s.top.S)
+    lines.push({
+      type: "S",
+      label: "Snow load on top of wall",
+      expr: "entered / from load path",
+      value: s.top.S,
+      unit: "plf",
+    });
+  lines.push({
+    type: "E",
+    label: `Seismic — ${dem.lineName} share ${fmt(dem.share * 100, 1)} % (E_h = ρ Q_E)`,
+    expr: `${fmt(dem.rho, 2)} × ${fmt(dem.QE, 0)} lb`,
+    value: dem.Eh,
+    unit: "lb",
+  });
+  lines.push({
+    type: "W",
+    label: `Wind — ${dem.lineName} share ${fmt(dem.share * 100, 1)} %`,
+    expr: "MWFRS story shear × line share",
+    value: dem.W,
+    unit: "lb",
+  });
 
   // chord forces, ASD lateral combinations
-  const post = resolveWood({ kind: "sawn", species: s.stud.species, grade: s.stud.grade, size: s.endPost.size, plies: s.endPost.plies }, nds);
+  const post = resolveWood(
+    { kind: "sawn", species: s.stud.species, grade: s.stud.grade, size: s.endPost.size, plies: s.endPost.plies },
+    nds,
+  );
   const arm = s.overturning === "full" ? s.b - post.b / 12 : s.b;
   const tribEnd = s.stud.spacing / 12 / 2;
   const combos = asdCombinations({ SDS: dem.SDS, includeWind: true, includeSeismic: true }).filter(
@@ -254,9 +296,13 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   const chord: ChordRow[] = combos.map((c: Combination) => {
     const kind = (c.factors.E ?? 0) !== 0 ? "seismic" : "wind";
     const V = kind === "seismic" ? (c.factors.E ?? 0) * dem.Eh : (c.factors.W ?? 0) * dem.W;
-    const wG = (c.factors.D ?? 0) * g.D + (c.factors.L ?? 0) * g.L + (c.factors.Lr ?? 0) * g.Lr + (c.factors.S ?? 0) * g.S;
+    const wG =
+      (c.factors.D ?? 0) * g.D + (c.factors.L ?? 0) * g.L + (c.factors.Lr ?? 0) * g.Lr + (c.factors.S ?? 0) * g.S;
     const wD = (c.factors.D ?? 0) * g.D;
-    const stackedT = dem.stacked ? (kind === "seismic" ? dem.stacked.Ts : dem.stacked.Tw) * Math.min(1, (c.factors.E ?? c.factors.W ?? 0) / (kind === "seismic" ? 0.7 : 0.6)) : 0;
+    const stackedT = dem.stacked
+      ? (kind === "seismic" ? dem.stacked.Ts : dem.stacked.Tw) *
+        Math.min(1, (c.factors.E ?? c.factors.W ?? 0) / (kind === "seismic" ? 0.7 : 0.6))
+      : 0;
     const T =
       s.overturning === "full"
         ? (V * s.h - (wD * s.b * s.b) / 2) / arm + stackedT
@@ -284,7 +330,9 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     le2: 0,
     builtUp: s.endPost.plies > 1 ? "nailed" : undefined,
     P: loadVector({ D: cRow.C }),
-    combos: [{ ...comboC, factors: { D: 1, ...(comboC.factors.E ? { E: comboC.factors.E } : { W: comboC.factors.W }) } }],
+    combos: [
+      { ...comboC, factors: { D: 1, ...(comboC.factors.E ? { E: comboC.factors.E } : { W: comboC.factors.W }) } },
+    ],
     present: { D: true, E: !!comboC.factors.E, W: !!comboC.factors.W },
   });
 
@@ -348,7 +396,8 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   if (s.holdownId) {
     const item = ctx.hardware?.find((x) => x.id === s.holdownId);
     if (!item) throw new Error(`Hold-down ${s.holdownId} not in the project hardware list`);
-    if (item.tension === undefined) throw new Error(`${item.model}: allowable tension not entered in the hardware list`);
+    if (item.tension === undefined)
+      throw new Error(`${item.model}: allowable tension not entered in the hardware list`);
     holdown = { item, T: Tmax, ratio: Tmax / item.tension };
     checks.push({
       name: `Hold-down ${item.model} (catalogue allowable, C_D = 1.6)`,
@@ -361,9 +410,13 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
       unit: "lb",
     });
     if (item.minPost && post.b < item.minPost - 1e-6)
-      flags.push(`${item.model} requires an end post at least ${fmt(item.minPost, 2)} in. thick — provided ${fmt(post.b, 2)} in.`);
+      flags.push(
+        `${item.model} requires an end post at least ${fmt(item.minPost, 2)} in. thick — provided ${fmt(post.b, 2)} in.`,
+      );
     if (!item.checked)
-      assumptions.push(fromDefault("Hold-down capacity", `${item.model} ${fmt(item.tension, 0)} lb`, item.source, true));
+      assumptions.push(
+        fromDefault("Hold-down capacity", `${item.model} ${fmt(item.tension, 0)} lb`, item.source, true),
+      );
   } else if (Tmax > 0) {
     checks.push({
       name: "Net overturning tension — hold-down required",
@@ -388,10 +441,12 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     const QEh = a.omega ? dem.Omega0 * dem.QE : dem.Eh;
     const Tu_s =
       s.overturning === "full" ? (QEh * s.h - (wDs * s.b * s.b) / 2) / arm : (QEh * s.h) / arm - wDs * tribEnd;
-    const Tu_w = s.overturning === "full" ? (dem.W * s.h - (wD9 * s.b * s.b) / 2) / arm : (dem.W * s.h) / arm - wD9 * tribEnd;
+    const Tu_w =
+      s.overturning === "full" ? (dem.W * s.h - (wD9 * s.b * s.b) / 2) / arm : (dem.W * s.h) / arm - wD9 * tribEnd;
     const stackedU = dem.stacked?.Tu ?? 0;
     const Tu = Math.max(Tu_s, Tu_w, 0) + stackedU;
-    const basis = Tu_s >= Tu_w ? `(0.9 − 0.2S_DS)D + ${a.omega ? "Ω0 Q_E (ACI 318 17.10.5.3d)" : "ρ Q_E"}` : "0.9D + 1.0W";
+    const basis =
+      Tu_s >= Tu_w ? `(0.9 − 0.2S_DS)D + ${a.omega ? "Ω0 Q_E (ACI 318 17.10.5.3d)" : "ρ Q_E"}` : "0.9D + 1.0W";
     const t = anchorTension({
       d: a.d,
       steel,
@@ -484,7 +539,8 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
       "Plate washers 3 in. × 3 in. × 0.229 in. at each sill anchor (SDPWS 4.3.6.4.3); anchors within 12 in. of each end of each sill piece",
     );
   } else {
-    if (!s.sill.allowShear) throw new Error("Post-installed sill anchor: enter the allowable shear from the anchor's ESR");
+    if (!s.sill.allowShear)
+      throw new Error("Post-installed sill anchor: enter the allowable shear from the anchor's ESR");
     sill = { perBolt, Zprime: s.sill.allowShear, ratio: perBolt / s.sill.allowShear };
     checks.push({
       name: `Sill anchor ${s.sill.label ?? "post-installed"} @ ${fmt(s.sill.spacing, 0)} in. (ESR allowable)`,
@@ -496,7 +552,14 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
       CD: 1.6,
       unit: "lb",
     });
-    assumptions.push(fromDefault("Post-installed anchor", `${s.sill.label ?? "anchor"}: ${fmt(s.sill.allowShear, 0)} lb allowable shear`, "ICC-ES ESR (entered)", true));
+    assumptions.push(
+      fromDefault(
+        "Post-installed anchor",
+        `${s.sill.label ?? "anchor"}: ${fmt(s.sill.allowShear, 0)} lb allowable shear`,
+        "ICC-ES ESR (entered)",
+        true,
+      ),
+    );
   }
 
   // seismic drift (strength level, ρ = 1.0, §12.12.1)
@@ -505,7 +568,9 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   const hdItem = holdown?.item;
   const ka = hdItem?.tension && hdItem.deflection ? hdItem.tension / hdItem.deflection : (s.ka ?? 30000);
   if (!hdItem?.deflection)
-    assumptions.push(fromDefault("Anchor stiffness", `k_a = ${fmt(ka, 0)} lb/in`, s.ka ? "entered" : "default (Tedds default)", !s.ka));
+    assumptions.push(
+      fromDefault("Anchor stiffness", `k_a = ${fmt(ka, 0)} lb/in`, s.ka ? "entered" : "default (Tedds default)", !s.ka),
+    );
   const vd = dem.QE / s.b;
   const wDd = (0.6 - 0.2 * dem.SDS) * g.D;
   const Td =
@@ -531,7 +596,12 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     unit: "in",
   });
   const vwd = (s.windService.factor * dem.W) / s.b;
-  const Tw0 = Math.max(0, s.overturning === "full" ? (s.windService.factor * dem.W * s.h - (0.6 * g.D * s.b * s.b) / 2) / arm : vwd * s.h - 0.6 * g.D * tribEnd);
+  const Tw0 = Math.max(
+    0,
+    s.overturning === "full"
+      ? (s.windService.factor * dem.W * s.h - (0.6 * g.D * s.b * s.b) / 2) / arm
+      : vwd * s.h - 0.6 * g.D * tribEnd,
+  );
   const dw = (8 * vwd * s.h ** 3) / (E * A * s.b) + (vwd * s.h) / (1000 * Gac) + (s.h * (Tw0 / ka)) / s.b;
   const allowW = (s.h * 12) / s.windService.limitN;
   checks.push({
@@ -547,8 +617,12 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   });
 
   if (sides.some((x) => x.spacing <= 2))
-    flags.push("Edge nailing at 2 in. o.c.: 3x nominal framing at adjoining panel edges and staggered nails (SDPWS 4.3.7.1)");
-  flags.push(`Blocked panels; edge nailing at all panel edges, ${sides.map((x) => `${x.row.nail} @ ${x.spacing} in. edge / 12 in. field`).join("; ")}`);
+    flags.push(
+      "Edge nailing at 2 in. o.c.: 3x nominal framing at adjoining panel edges and staggered nails (SDPWS 4.3.7.1)",
+    );
+  flags.push(
+    `Blocked panels; edge nailing at all panel edges, ${sides.map((x) => `${x.row.nail} @ ${x.spacing} in. edge / 12 in. field`).join("; ")}`,
+  );
   if (dem.stacked) flags.push(`Uplift from ${dem.stacked.mark} above added to the hold-down force`);
   assumptions.push(
     fromDefault(

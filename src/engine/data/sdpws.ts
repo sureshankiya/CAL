@@ -62,20 +62,105 @@ const wsp = (
 });
 
 export const SHEATHING: SheathingRow[] = [
-  wsp("SI-5/16-6d", "5/16 in. Structural I OSB", "6d common", 1.25, 0.3125, [400, 600, 780, 1020], [13, 18, 23, 35], [4]),
+  wsp(
+    "SI-5/16-6d",
+    "5/16 in. Structural I OSB",
+    "6d common",
+    1.25,
+    0.3125,
+    [400, 600, 780, 1020],
+    [13, 18, 23, 35],
+    [4],
+  ),
   wsp("SI-3/8-8d", "3/8 in. Structural I OSB", "8d common", 1.375, 0.375, [460, 720, 920, 1220], [19, 24, 30, 43]),
-  wsp("SI-7/16-8d", "7/16 in. Structural I OSB", "8d common", 1.375, 0.4375, [510, 790, 1010, 1340], [16, 21, 27, 40], undefined,
-    "Portfolio Tedds sheets print v_s = 860 plf at 4 in. for this panel (15/32 in. values) — confirm the adopted SDPWS row"),
-  wsp("SI-15/32-8d", "15/32 in. Structural I OSB", "8d common", 1.375, 0.46875, [560, 860, 1100, 1460], [14, 20, 26, 38]),
-  wsp("SI-15/32-10d", "15/32 in. Structural I OSB", "10d common", 1.5, 0.46875, [680, 1020, 1330, 1740], [22, 29, 36, 51]),
-  wsp("SH-3/8-6d", "3/8 in. rated sheathing OSB", "6d common", 1.25, 0.375, [400, 600, 780, 1020], [11, 15, 19, 26], [6]),
+  wsp(
+    "SI-7/16-8d",
+    "7/16 in. Structural I OSB",
+    "8d common",
+    1.375,
+    0.4375,
+    [510, 790, 1010, 1340],
+    [16, 21, 27, 40],
+    undefined,
+    "Portfolio Tedds sheets print v_s = 860 plf at 4 in. for this panel (15/32 in. values) — confirm the adopted SDPWS row",
+  ),
+  wsp(
+    "SI-15/32-8d",
+    "15/32 in. Structural I OSB",
+    "8d common",
+    1.375,
+    0.46875,
+    [560, 860, 1100, 1460],
+    [14, 20, 26, 38],
+  ),
+  wsp(
+    "SI-15/32-10d",
+    "15/32 in. Structural I OSB",
+    "10d common",
+    1.5,
+    0.46875,
+    [680, 1020, 1330, 1740],
+    [22, 29, 36, 51],
+  ),
+  wsp(
+    "SH-3/8-6d",
+    "3/8 in. rated sheathing OSB",
+    "6d common",
+    1.25,
+    0.375,
+    [400, 600, 780, 1020],
+    [11, 15, 19, 26],
+    [6],
+  ),
   wsp("SH-3/8-8d", "3/8 in. rated sheathing OSB", "8d common", 1.375, 0.375, [440, 640, 820, 1060], [14, 20, 25, 34]),
-  wsp("SH-7/16-8d", "7/16 in. rated sheathing OSB", "8d common", 1.375, 0.4375, [480, 700, 900, 1170], [15, 21, 26, 36]),
-  wsp("SH-7/16-8d-across", "7/16 in. rated sheathing OSB, long dimension across studs", "8d common", 1.375, 0.4375,
-    [520, 760, 980, 1280], [16, 22, 27, 37], [4], "SDPWS Table 4.3A note: 15/32 in. values for 3/8 and 7/16 in. panels applied across studs"),
-  wsp("SH-15/32-8d", "15/32 in. rated sheathing OSB", "8d common", 1.375, 0.46875, [520, 760, 980, 1280], [16, 22, 27, 37], [4]),
-  wsp("SH-15/32-10d", "15/32 in. rated sheathing OSB", "10d common", 1.5, 0.46875, [620, 920, 1200, 1540], [20, 26, 33, 46]),
-  wsp("SH-19/32-10d", "19/32 in. rated sheathing OSB", "10d common", 1.5, 0.59375, [680, 1020, 1330, 1740], [22, 29, 36, 51]),
+  wsp(
+    "SH-7/16-8d",
+    "7/16 in. rated sheathing OSB",
+    "8d common",
+    1.375,
+    0.4375,
+    [480, 700, 900, 1170],
+    [15, 21, 26, 36],
+  ),
+  wsp(
+    "SH-7/16-8d-across",
+    "7/16 in. rated sheathing OSB, long dimension across studs",
+    "8d common",
+    1.375,
+    0.4375,
+    [520, 760, 980, 1280],
+    [16, 22, 27, 37],
+    [4],
+    "SDPWS Table 4.3A note: 15/32 in. values for 3/8 and 7/16 in. panels applied across studs",
+  ),
+  wsp(
+    "SH-15/32-8d",
+    "15/32 in. rated sheathing OSB",
+    "8d common",
+    1.375,
+    0.46875,
+    [520, 760, 980, 1280],
+    [16, 22, 27, 37],
+    [4],
+  ),
+  wsp(
+    "SH-15/32-10d",
+    "15/32 in. rated sheathing OSB",
+    "10d common",
+    1.5,
+    0.46875,
+    [620, 920, 1200, 1540],
+    [20, 26, 33, 46],
+  ),
+  wsp(
+    "SH-19/32-10d",
+    "19/32 in. rated sheathing OSB",
+    "10d common",
+    1.5,
+    0.59375,
+    [680, 1020, 1330, 1740],
+    [22, 29, 36, 51],
+  ),
   {
     key: "PS-3/8-8dcasing",
     family: "wsp",
@@ -136,8 +221,7 @@ export const sheathingRow = (key: string): SheathingRow => {
   return r;
 };
 
-export const edgeSpacings = (r: SheathingRow) =>
-  ([6, 4, 3, 2] as const).filter((s) => r.vs[s] !== undefined);
+export const edgeSpacings = (r: SheathingRow) => ([6, 4, 3, 2] as const).filter((s) => r.vs[s] !== undefined);
 
 /** Nominal unit shears and stiffness for a side; throws when the spacing is not tabulated. */
 export function sideValues(key: string, spacing: number): { vs: number; vw: number; Ga: number; row: SheathingRow } {

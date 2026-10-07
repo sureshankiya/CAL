@@ -1,6 +1,6 @@
 # HouseCalc — Wood-Frame House Structural Calculator
 
-Merged build plan · Rev. F · 2026-10-07 · Phase 1 delivered — see Revision F; decisions in §13 approved
+Merged build plan · Rev. G · 2026-10-07 · Phase 2 delivered — see Revision G; decisions in §13 approved
 
 Sources merged:
 - **Rev. A plan** — review of your Lovable apps JoistCalc, StudCalc and TrussCalc. STRUTURA (steel truss) is excluded.
@@ -10,6 +10,34 @@ Sources merged:
 Where the sources differ, the BUILD_PLAN decisions govern. Conflicts that need your decision are in §13.
 
 ---
+
+## Revision G — Phase 2 delivered
+
+| Item | Status |
+|---|---|
+| Walls / posts | W stud bearing walls (typical stud per load segment, stud packs, king studs, C&C wind, plate bearing with C_b, P-Δ wind deflection); P posts (C_P both axes, built-up K_f, end-grain and perpendicular bearing) |
+| Load takedown | Wall base line loads and stud-pack / post point loads carried to footings by link; load-path summary sheet; package checks for uncarried reactions and untied uplift |
+| Trusses / connectors | Truss reaction import with uplift; connectors checked per combination and load-duration column, uplift on the 160 column; project hardware list (editable, VERIFY until checked) |
+| Existing members | New / existing / modified status with field-verify assumptions on every sheet |
+| Footings | Continuous and pad footings, plain or reinforced (ACI 318-19), service bearing and uplift, IBC 1809 minimums, presumptive soil rule (§2B Q4) |
+| Lateral | ELF (§12.8) and Ch. 28 envelope wind story forces; wall lines by tributary width; segmented SDPWS shear walls with chord forces, hold-downs, stacked uplift, ACI 318 Ch. 17 hold-down anchor, sill bolts, drift (§2B Q1, Q2) |
+| Schedules | Framing, truss, beam, wall, post, shear wall, hold-down, connector, foundation, hardware data |
+| Verification | 67 tests. Tedds parity: 1002 3rd St SW1 (Fc* 2,484, FcE 501, C_P 0.19, Fc' 478 psi, C 344 lb, T −64 lb, drift), 215 Paden POST 1 (C_P 0.842, Fc' 758, Eq. 3.9-3 0.984), San Miguel footing flexure (d 6.75 in., a 0.784 in., φM_n 11.444 kip-ft). Independent Python reference for Phase 2 (verification/reference_p2.py: stud wall, built-up column, shear wall, plain and reinforced footings, ELF and wind, ACI anchor, NDS bolt) — all within 0.1 %. Print check: example house 29 sheets, 139 pages |
+
+**Example house** now runs roof → foundation: rafters / ceiling joists → bearing walls (with header stud packs) → continuous footings; I-joists → girder → post → pad; H2.5A ties for rafter uplift; five shear walls on four wall lines with HDU2 hold-downs.
+
+**Findings while building Phase 2**
+- StudCalc plate bearing used l_b = stud depth for C_b; the bearing length along the plate grain is the stud thickness (C_b = 1.25 for a single 2x stud). Corrected.
+- StudCalc wind deflection used 0.6W; IBC Table 1604.3 note f permits 0.42 × C&C. HouseCalc uses 0.42 and prints the basis.
+- The 1002 3rd St Tedds sheets print v_s = 860 plf at 4 in. for 7/16 in. Structural I OSB (the 15/32 in. value); the table in the HouseCalc library lists 790 plf for 7/16 in. — **confirm against the adopted SDPWS** (the parity test enters 860 as a flagged override).
+- 1109 San Miguel footing: the Tedds soil weight over the footing (0.726 kip/ft) could not be reproduced from the printed inputs; flexure reproduces exactly. HouseCalc excludes the wall width from the soil weight and prints the calculation.
+- Drift: HouseCalc follows the Tedds convention (0.6 − 0.2 S_DS)D against strength-level Q_E for the hold-down slip term (conservative); the strength-level counterpart would be (0.9 − 0.2 S_DS)D.
+
+**Needed from you (Phase 2 data, all print VERIFY)**
+1. SDPWS Table 4.3A / 4.3C cells not shown on your Tedds sheets (especially G_a values).
+2. Connector hardware: hold-down, H2.5A and CS16 values were entered from the Simpson catalogue and must be checked; hangers, post caps / bases, A35 and H1 are listed without values — enter them from the current catalogue.
+3. ASCE 7-22 Kz constants (7-16 constants used for both cycles) and Table 12.2-1 Ω0 for the 7-22 cycle.
+4. Concrete dowel bearing strength for sill bolts (7,500 psi used) and whether you design sill-anchor concrete shear with the ACI 17.10.6 light-frame provisions.
 
 ## Revision F — Phase 1 delivered
 

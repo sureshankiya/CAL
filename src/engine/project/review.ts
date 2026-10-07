@@ -131,7 +131,12 @@ export function applyReviewItem(p: Project, item: ReviewItem): Project {
   const def = targetFields(m).find((f) => f.field === item.target!.field);
   if (!def) throw new Error("Field not editable from the review table");
   const value = def.numeric ? parseDrawingNumber(item.value) : item.value.trim();
-  if (def.numeric && (value === undefined || !Number.isFinite(value as number) || (!/\.(D|L|Lr|S|W)$/.test(def.field) && (value as number) < 0)))
+  if (
+    def.numeric &&
+    (value === undefined ||
+      !Number.isFinite(value as number) ||
+      (!/\.(D|L|Lr|S|W)$/.test(def.field) && (value as number) < 0))
+  )
     throw new Error(`"${item.value}" is not a valid number`);
   const copy = structuredClone(m) as unknown as Record<string, unknown>;
   setPath(copy, def.field, value);

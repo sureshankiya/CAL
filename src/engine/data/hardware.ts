@@ -76,7 +76,13 @@ const hd = (
   source: CAT,
 });
 
-const blank = (model: string, kind: HardwareKind, description: string, fasteners: string, report = ""): HardwareItem => ({
+const blank = (
+  model: string,
+  kind: HardwareKind,
+  description: string,
+  fasteners: string,
+  report = "",
+): HardwareItem => ({
   id: model,
   model,
   kind,

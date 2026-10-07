@@ -235,9 +235,17 @@ export const beamSpecSchema = z.object({
   crOverride: pos.optional(),
 });
 
-
-export const studPackSchema = z.object({ x: nonneg, studs: z.number().int().min(1).max(6), label: z.string().optional() });
-export const wallOpeningSchema = z.object({ label: z.string(), x1: nonneg, x2: nonneg, kings: z.number().int().min(1).max(4) });
+export const studPackSchema = z.object({
+  x: nonneg,
+  studs: z.number().int().min(1).max(6),
+  label: z.string().optional(),
+});
+export const wallOpeningSchema = z.object({
+  label: z.string(),
+  x1: nonneg,
+  x2: nonneg,
+  kings: z.number().int().min(1).max(4),
+});
 
 export const wallSpecSchema = z.object({
   kind: z.literal("wall"),
@@ -301,9 +309,7 @@ export const trussSpecSchema = z.object({
   plies: z.number().int().min(1).max(4),
   span: pos,
   designRef: z.string().default(""),
-  bearings: z.array(
-    z.object({ name: z.string(), x: nonneg, D: num, L: num, Lr: num, S: num, W: num, width: pos }),
-  ),
+  bearings: z.array(z.object({ name: z.string(), x: nonneg, D: num, L: num, Lr: num, S: num, W: num, width: pos })),
   plate: z.object({ species: speciesSchema, grade: gradeSchema, size: z.string() }),
 });
 
@@ -330,7 +336,9 @@ export const footingSpecSchema = z.object({
   c2: pos.optional(),
   stem: z.object({ width: pos, height: pos }).optional(),
   rebar: z.object({ size: z.string(), spacing: pos.optional(), count: z.number().int().min(2).optional() }).optional(),
-  longitudinal: z.object({ size: z.string(), top: z.number().int().min(0), bottom: z.number().int().min(0) }).optional(),
+  longitudinal: z
+    .object({ size: z.string(), top: z.number().int().min(0), bottom: z.number().int().min(0) })
+    .optional(),
   extra: z.array(extraLoadSchema).default([]),
   qaOverride: pos.optional(),
   stories: z.number().int().min(1).max(3),
@@ -391,7 +399,6 @@ export const memberSpecSchema = z.discriminatedUnion("kind", [
   footingSpecSchema,
   shearWallSpecSchema,
 ]);
-
 
 export const hardwareItemSchema = z.object({
   id: z.string(),

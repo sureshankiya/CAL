@@ -20,7 +20,8 @@ export interface SeismicSystem {
 export const SEISMIC_SYSTEMS: SeismicSystem[] = [
   {
     id: "wsp",
-    label: "Bearing wall system — light-frame (wood) walls sheathed with wood structural panels rated for shear resistance",
+    label:
+      "Bearing wall system — light-frame (wood) walls sheathed with wood structural panels rated for shear resistance",
     R: 6.5,
     Omega0: 3,
     Cd: 4,

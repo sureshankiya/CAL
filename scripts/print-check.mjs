@@ -16,7 +16,9 @@ import fs from "node:fs";
 const url = process.argv[2] ?? "http://127.0.0.1:8080/";
 const out = process.argv[3] ?? "print-check.pdf";
 
-const browser = await chromium.launch(process.env.PLAYWRIGHT_BROWSERS_PATH ? {} : { executablePath: "/opt/pw-browsers/chromium" });
+const browser = await chromium.launch(
+  process.env.PLAYWRIGHT_BROWSERS_PATH ? {} : { executablePath: "/opt/pw-browsers/chromium" },
+);
 const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e)));
@@ -37,7 +39,8 @@ for (let i = 1; i <= doc.numPages; i++) {
   const p = await doc.getPage(i);
   const text = (await p.getTextContent()).items.map((t) => t.str).join(" ");
   if (text.replace(/\s+/g, "").length < 120) problems.push(`page ${i}: blank or nearly blank`);
-  if (!text.includes(`Page ${i} of ${doc.numPages}`)) problems.push(`page ${i}: missing "Page ${i} of ${doc.numPages}"`);
+  if (!text.includes(`Page ${i} of ${doc.numPages}`))
+    problems.push(`page ${i}: missing "Page ${i} of ${doc.numPages}"`);
   if (!text.includes("Example Residence —")) problems.push(`page ${i}: missing project footer`);
   if (i === 1 && !/STRUCTURAL CALCULATIONS/.test(text)) problems.push("page 1: cover not first");
   const m = text.match(/Sheet no\.\/rev\.\s+(\d+)\s*\/\s*\S+/);

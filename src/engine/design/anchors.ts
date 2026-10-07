@@ -18,7 +18,15 @@
  */
 
 /** UNC threads per inch. */
-const THREADS: Record<string, number> = { "0.5": 13, "0.625": 11, "0.75": 10, "0.875": 9, "1": 8, "1.125": 7, "1.25": 7 };
+const THREADS: Record<string, number> = {
+  "0.5": 13,
+  "0.625": 11,
+  "0.75": 10,
+  "0.875": 9,
+  "1": 8,
+  "1.125": 7,
+  "1.25": 7,
+};
 
 /** Effective tensile stress area A_se = π/4 (d − 0.9743 / n_t)². */
 export function effectiveArea(d: number): number {
@@ -177,7 +185,24 @@ export function anchorShearParallel(i: ShearParallelInput) {
     ["pryout (17.7.3)", phiVcp],
   ];
   const gov = cands.reduce((a, b) => (b[1] < a[1] ? b : a));
-  return { Ase, Vsa, phiVsa, le, Vb, AVc, AVco, psiH, psiC, Vcb, VcbPar, phiVcb, Vcp, phiVcp, phiVn: gov[1], governs: gov[0] };
+  return {
+    Ase,
+    Vsa,
+    phiVsa,
+    le,
+    Vb,
+    AVc,
+    AVco,
+    psiH,
+    psiC,
+    Vcb,
+    VcbPar,
+    phiVcb,
+    Vcp,
+    phiVcp,
+    phiVn: gov[1],
+    governs: gov[0],
+  };
 }
 
 /**

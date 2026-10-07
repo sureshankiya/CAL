@@ -73,7 +73,8 @@ export function twoWayShearStress(fc: number, d: number, bo: number, beta: numbe
 export const plainFlexure = (fc: number, Sm: number, lambda = 1) => 0.6 * 5 * lambda * Math.sqrt(fc) * Sm;
 
 /** Plain concrete one-way shear φV_n = 0.60 × (4/3) λ √f'c b h (Eq. 14.5.5.1a), lb. */
-export const plainOneWayShear = (fc: number, b: number, h: number, lambda = 1) => 0.6 * (4 / 3) * lambda * Math.sqrt(fc) * b * h;
+export const plainOneWayShear = (fc: number, b: number, h: number, lambda = 1) =>
+  0.6 * (4 / 3) * lambda * Math.sqrt(fc) * b * h;
 
 /** Plain concrete two-way shear φV_n = 0.60 × [4/3 + 8/(3β)] λ √f'c b_o h ≤ 0.60 × 2.66 λ √f'c b_o h (Eq. 14.5.5.1b), lb. */
 export const plainTwoWayShear = (fc: number, bo: number, h: number, beta: number, lambda = 1) =>

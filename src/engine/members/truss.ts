@@ -67,7 +67,8 @@ export function designTruss(ctx: DesignContext, t: TrussInput): TrussResult {
   if (!t.bearings.length) throw new Error("Enter at least one truss bearing reaction");
   const nds = ndsOf(ctx);
   const plate = lumberData(t.plate.species, t.plate.grade, t.plate.size, nds);
-  const plateWidth = Number(t.plate.size.split("x")[1]) <= 4 ? 3.5 : Number(t.plate.size.split("x")[1]) === 6 ? 5.5 : 7.25;
+  const plateWidth =
+    Number(t.plate.size.split("x")[1]) <= 4 ? 3.5 : Number(t.plate.size.split("x")[1]) === 6 ? 5.5 : 7.25;
   const vec = (b: TrussBearing): LoadVector => loadVector({ D: b.D, L: b.L, Lr: b.Lr, S: b.S, W: b.W });
   const present: Partial<Record<LoadType, boolean>> = { D: true };
   for (const b of t.bearings) for (const k of LOAD_TYPES) if (Math.abs(vec(b)[k]) > 1e-9) present[k] = true;
@@ -106,7 +107,17 @@ export function designTruss(ctx: DesignContext, t: TrussInput): TrussResult {
     const A = lb * plateWidth;
     const fcperp = maxDown / A;
     const Fprime = plate.ref.Fcperp * Cb;
-    bearingChecks.push({ name: b.name, R: maxDown, combo: maxDownCombo, lb, Cb, A, fcperp, Fprime, ratio: fcperp / Fprime });
+    bearingChecks.push({
+      name: b.name,
+      R: maxDown,
+      combo: maxDownCombo,
+      lb,
+      Cb,
+      A,
+      fcperp,
+      Fprime,
+      ratio: fcperp / Fprime,
+    });
     checks.push({
       name: `Bearing ${b.name} on ${t.plate.size} plate (NDS 3.10.2)`,
       demand: fcperp,
@@ -142,8 +153,17 @@ export function designTruss(ctx: DesignContext, t: TrussInput): TrussResult {
     reactions,
     loadLines: lines,
     assumptions: [
-      fromDefault("Truss reactions", `Entered from ${t.designRef || "the truss design drawings"}`, "truss manufacturer", !t.designRef),
-      fromDefault("Plate bearing", "Truss bearing checked on the top plate only; truss chord bearing by the truss designer", "NDS 3.10.2"),
+      fromDefault(
+        "Truss reactions",
+        `Entered from ${t.designRef || "the truss design drawings"}`,
+        "truss manufacturer",
+        !t.designRef,
+      ),
+      fromDefault(
+        "Plate bearing",
+        "Truss bearing checked on the top plate only; truss chord bearing by the truss designer",
+        "NDS 3.10.2",
+      ),
     ],
     flags,
     input: t,

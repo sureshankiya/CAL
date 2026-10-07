@@ -24,7 +24,14 @@ import {
   type SeismicSystem,
   type VerticalDistribution,
 } from "../loads/seismic";
-import { endZoneA, mwfrsBandForce, velocityPressure, type Exposure, type VelocityPressure, type WindForce } from "../loads/wind";
+import {
+  endZoneA,
+  mwfrsBandForce,
+  velocityPressure,
+  type Exposure,
+  type VelocityPressure,
+  type WindForce,
+} from "../loads/wind";
 
 export type Dir = "X" | "Y";
 
@@ -126,7 +133,11 @@ export interface LateralResult {
   hn: number;
   cs: BaseShearResult;
   dist: VerticalDistribution;
-  weights: Array<{ storyId: string; items: Array<WeightItem & { psfUsed: number; W: number; text: string }>; W: number }>;
+  weights: Array<{
+    storyId: string;
+    items: Array<WeightItem & { psfUsed: number; W: number; text: string }>;
+    W: number;
+  }>;
   vp: VelocityPressure;
   h: number;
   thetaDeg: number;
@@ -149,7 +160,11 @@ function itemWeight(it: WeightItem, assemblies: DeadAssembly[], cos: number) {
   if (it.kind === "lump") return { psfUsed: 0, W: it.W ?? 0, text: `${fmt(it.W ?? 0, 0)} lb (entered)` };
   if (it.kind === "wall") {
     const W = psf * it.qty * (it.height ?? 0);
-    return { psfUsed: psf, W, text: `${fmt(psf, 1)} psf (${src}) × ${fmt(it.qty, 1)} ft × ${fmt(it.height ?? 0, 2)} ft` };
+    return {
+      psfUsed: psf,
+      W,
+      text: `${fmt(psf, 1)} psf (${src}) × ${fmt(it.qty, 1)} ft × ${fmt(it.height ?? 0, 2)} ft`,
+    };
   }
   const p = it.sloped ? psf / cos : psf;
   return {

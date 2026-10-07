@@ -13,7 +13,14 @@
 
 import { loadDurationFactor, type Combination } from "../core/combos";
 import { LOAD_TYPES, type LoadType, type LoadVector } from "../core/loads";
-import { beamStabilityFactor, columnStabilityFactor, effectiveLength, nds441Rule, volumeFactor, type ResolvedWood } from "./wood";
+import {
+  beamStabilityFactor,
+  columnStabilityFactor,
+  effectiveLength,
+  nds441Rule,
+  volumeFactor,
+  type ResolvedWood,
+} from "./wood";
 
 export interface ColumnConditions {
   wetService: boolean;

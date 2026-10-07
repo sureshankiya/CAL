@@ -19,7 +19,14 @@ import { LOAD_TYPES, loadVector, zeroLoads, type LoadType, type LoadVector } fro
 import { fromDefault, type AssumptionEntry } from "../core/provenance";
 import { designColumn, type ColumnResult } from "../design/column";
 import { firstPassing } from "../design/sizing";
-import { bearingAreaFactor, governingCheck, resolveWood, type Check, type ResolvedWood, type WoodMaterial } from "../design/wood";
+import {
+  bearingAreaFactor,
+  governingCheck,
+  resolveWood,
+  type Check,
+  type ResolvedWood,
+  type WoodMaterial,
+} from "../design/wood";
 import { lumberData, type Grade, type Species } from "../data/sawn";
 import { ndsOf, type DesignContext, type ExtraLoad, type LoadLine } from "./common";
 import { materialCallout } from "./beam";
@@ -96,7 +103,13 @@ function evaluate(ctx: DesignContext, p: PostInput, material = p.material) {
   for (const e of p.extra) {
     if (e.kind !== "point") throw new Error(`${e.label}: posts take point loads only — use a point link`);
     P[e.type] += e.P ?? 0;
-    lines.push({ type: e.type, label: e.label, expr: `${fmt(e.P ?? 0, 0)} lb at post top`, value: e.P ?? 0, unit: "lb" });
+    lines.push({
+      type: e.type,
+      label: e.label,
+      expr: `${fmt(e.P ?? 0, 0)} lb at post top`,
+      value: e.P ?? 0,
+      unit: "lb",
+    });
   }
   const selfWeightLb = p.selfWeight ? mat.selfWeight * p.height : 0;
   if (selfWeightLb > 0) {
@@ -140,7 +153,8 @@ function evaluate(ctx: DesignContext, p: PostInput, material = p.material) {
   let eg = { fc: 0, FcStar: 1, ratio: 0, combo: "", plateRequired: false };
   for (const r of col.rows) {
     const ratio = r.fc / r.FcStar;
-    if (ratio > eg.ratio) eg = { fc: r.fc, FcStar: r.FcStar, ratio, combo: r.combo.label, plateRequired: r.fc > 0.75 * r.FcStar };
+    if (ratio > eg.ratio)
+      eg = { fc: r.fc, FcStar: r.FcStar, ratio, combo: r.combo.label, plateRequired: r.fc > 0.75 * r.FcStar };
   }
 
   // bearing perpendicular to grain on a wood support
@@ -263,9 +277,13 @@ export function designPost(ctx: DesignContext, p: PostInput): PostResult {
       ),
     );
   if (ev.endGrain.plateRequired)
-    flags.push("f_c > 0.75 F_c* at the post end: 20 ga steel plate or equivalent bearing insert required (NDS 3.10.1.3)");
+    flags.push(
+      "f_c > 0.75 F_c* at the post end: 20 ga steel plate or equivalent bearing insert required (NDS 3.10.1.3)",
+    );
   if (p.bearing.on === "concrete")
-    flags.push("Post bears on concrete through a post base; base clear of the concrete per manufacturer (decay protection, CBC 2304.12)");
+    flags.push(
+      "Post bears on concrete through a post base; base clear of the concrete per manufacturer (decay protection, CBC 2304.12)",
+    );
   let alternatives: PostResult["alternatives"];
   if (!pass && p.material.kind === "sawn") {
     const base = p.material;

@@ -241,7 +241,9 @@ describe("gravity load path members", () => {
   });
 
   it("connector: downward checked per duration column, uplift on the 160 column", () => {
-    const hw = defaultHardware().map((h) => (h.id === "LUS210" ? { ...h, down: { "100": 1000, "125": 1200 }, uplift: 400 } : h));
+    const hw = defaultHardware().map((h) =>
+      h.id === "LUS210" ? { ...h, down: { "100": 1000, "125": 1200 }, uplift: 400 } : h,
+    );
     const r = designConnector(
       { ...ctx, hardware: hw },
       {

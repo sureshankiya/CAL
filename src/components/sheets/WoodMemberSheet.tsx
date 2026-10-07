@@ -1248,7 +1248,9 @@ export function WoodMemberSheet({
             "Connections",
             [
               ...(r.kind === "ceilingJoist" && r.tension?.nail
-                ? [`Heel joint: ${r.tension.nail.provided} × ${r.tension.nail.label} (≥ ${f2(r.tension.nail.required)} required)`]
+                ? [
+                    `Heel joint: ${r.tension.nail.provided} × ${r.tension.nail.label} (≥ ${f2(r.tension.nail.required)} required)`,
+                  ]
                 : []),
               ...(connections ?? []),
             ].join("; ") || "Bearing per framing schedule; toe-nailing per CBC Table 2304.10.2",

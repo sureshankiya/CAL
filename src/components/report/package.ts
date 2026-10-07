@@ -113,7 +113,12 @@ export function buildPackage(p: Project, design: ProjectDesign): SheetEntry[] {
     }
   }
   out.push(
-    { key: "loadpath", kind: "loadpath", section: "Load path", title: "Load-path summary — reactions carried from roof to foundation" },
+    {
+      key: "loadpath",
+      kind: "loadpath",
+      section: "Load path",
+      title: "Load-path summary — reactions carried from roof to foundation",
+    },
     {
       key: "schedules",
       kind: "schedules",
@@ -150,6 +155,8 @@ export function packageChecks(p: Project, design: ProjectDesign): PackageCheck[]
   for (const o of outcomes) {
     if (!o.result) continue;
     o.result.reactions.forEach((r, i) => {
+      // ridge-board rafters: the ridge reaction is resisted by the opposing rafter (internal to the pair)
+      if (o.result!.kind === "rafter" && o.result!.input.ridge === "board" && i === 1) return;
       if (r.maxDown > 1 && !carried.has(`${o.spec.id}:${i}`)) uncarried.push(`${o.result!.mark} ${r.name}`);
       if (r.minNet < -1 && !tied.has(`${o.spec.id}:${i}`)) untied.push(`${o.result!.mark} ${r.name}`);
     });
@@ -164,7 +171,9 @@ export function packageChecks(p: Project, design: ProjectDesign): PackageCheck[]
     },
     {
       ok: fails.length === 0,
-      text: fails.length ? `Members failing: ${fails.map((e) => e.spec.mark).join(", ")}` : "Every member passes all checks",
+      text: fails.length
+        ? `Members failing: ${fails.map((e) => e.spec.mark).join(", ")}`
+        : "Every member passes all checks",
     },
     {
       ok: verify === 0,
