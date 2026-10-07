@@ -1,6 +1,6 @@
 # HouseCalc — Wood-Frame House Structural Calculator
 
-Merged build plan · Rev. D · 2026-10-07 · Phase 0 deliverable (for approval)
+Merged build plan · Rev. E · 2026-10-07 · Phase 0 complete — decisions in §13 approved
 
 Sources merged:
 - **Rev. A plan** — review of your Lovable apps JoistCalc, StudCalc and TrussCalc. STRUTURA (steel truss) is excluded.
@@ -19,7 +19,7 @@ Where the sources differ, the BUILD_PLAN decisions govern. Conflicts that need y
 | Drawing input | Excluded | Manual forms **plus** PDF upload with AI-assisted extraction into an editable review table. Nothing calculates until values are confirmed |
 | Architecture | Client-only app | Three layers: input model, calc engine, report engine. Supporting pieces: data library, load takedown service, assumption log. TypeScript engine shared by the browser and server functions |
 | Code cycles | Two edition sets | Versioned data set per code cycle. Cycle stamped on every sheet; engine and data-library versions recorded on the report |
-| Outputs | Member sheets, schedules, general notes | Adds hardware schedule, specific notes, house-report table of contents and summary. DOCX / PDF choice open (§13) |
+| Outputs | Member sheets, schedules, general notes | Adds hardware schedule, specific notes, house-report table of contents and summary. Output is **PDF only** (decided, §13) |
 | Modules | — | Adds: max span and required spacing when a member fails, floor-vibration note, I-joist web holes, force transfer around openings (FTAO), automatic nailing / sheathing selection, shear-transfer nailing, stem walls |
 | QC | Unit tests; audit of Lovable engines | Adds: regression against your hand calcs with stated tolerances, source / edition tag on every table plus a second-pass check, validation on 5–10 past permit calcs |
 | Phases | Rev. A order (gravity incl. footings first) | Your Phase 0–5 structure, with Rev. A content mapped in |
@@ -153,7 +153,7 @@ Projects: 1002 3rd St JADU · 10269 Madrid Way · 1109 San Miguel Ave addition �
   → review table                        │          (roof → walls → posts → foundation)
   (confirm first)                       ▼
                                   REPORT ENGINE ──► member sheets → house report (TOC, summary,
-                                  (no calc code)    schedules, notes) → PDF / DOCX
+                                  (no calc code)    schedules, notes) → PDF (print)
                                         ▲
                                   Assumption log (every default / override / drawing source)
 ```
@@ -164,7 +164,7 @@ Projects: 1002 3rd St JADU · 10269 Madrid Way · 1109 San Miguel Ave addition �
   - The report engine renders results and never computes.
 - **Stack:** the same as your Lovable apps — TanStack Start, React 19, Vite, Tailwind v4, shadcn/ui.
   - The TypeScript calc engine runs both in the browser (live preview) and in server functions.
-  - Server functions are needed only for AI extraction and, if chosen, DOCX / PDF generation.
+  - Server functions are needed only for AI extraction (Phase 4). Reports print to PDF in the browser, as in your Lovable apps.
 - **Reference calcs:** an independent Python implementation of every check, written separately from the TypeScript engine (Python 3.13 is available here). It runs in the regression suite.
 - **Versioning:** every report records the engine version (semver) and the data-library version, e.g. `2025-cycle v1.0`.
 
@@ -500,18 +500,17 @@ Marks come from configurable templates that match your drawings — B101 (level 
 
 ---
 
-## 13. Conflicts and open decisions (recommendation first)
+## 13. Decisions (approved 2026-10-07)
 
-| # | Topic | Conflict / question | Recommendation |
-|---|---|---|---|
-| 1 | Where it is built and runs (BUILD_PLAN §9.4) | This GitHub repo vs a new Lovable project | **This repo** (`sureshankiya/CAL`), with the same stack as your Lovable apps. It can be deployed to any Node-capable host, which AI extraction requires. Alternative: Lovable, using Lovable Cloud and its AI gateway as STRUTURA does |
-| 2 | Report format (BUILD_PLAN §9.5) | DOCX, PDF or both | **PDF from Phase 1** (browser print, identical to your Lovable apps); **DOCX export in Phase 4** if you want editable files |
-| 3 | Drawing-input timing | BUILD_PLAN §1 says "from the start", but §7 puts extraction in Phase 4 | **Phase 1:** PDF upload, viewer, source tagging and review-table mechanism (manual). **Phase 4:** AI extraction fills the same table |
-| 4 | Footing timing | Phase 2 exit is "roof → foundation", but the foundation module is in Phase 4 | **Phase 2:** port continuous and pad footings (the code exists in StudCalc). **Phase 4:** stem walls and shear-wall / hold-down footings |
-| 5 | Second code cycle | Both cycles at once lengthens the build (BUILD_PLAN §8) | **Resolved by the portfolio:** nine sets use the 2022 CBC / CRC and eight the 2025, so both cycles are populated in Phase 1 |
-| 6 | Steel (AISC 360) | Not steel trusses, so not excluded | **Steel beams / lintels and HSS posts with base plates in core scope** (East Grand, East Lincoln, Bluebird). CFS stud walls optional |
-| 7 | Lateral timing | BUILD_PLAN puts lateral in Phase 3, but shear walls are in 14 of 17 portfolio sets and footings in 13 | **Move story forces, wall-line distribution, segmented shear walls with drift, hold-downs, sill anchorage and strip / pad footings into Phase 2.** Diaphragms, collectors, FTAO and the rigid option stay in Phase 3 |
-
+| # | Topic | Decision |
+|---|---|---|
+| 1 | Where it is built and runs | **This GitHub repo** (`sureshankiya/CAL`), with the same stack as your Lovable apps; deployable to any Node-capable host (needed for AI extraction) |
+| 2 | Report format | **PDF only** — browser print, identical to your Lovable apps. No DOCX export |
+| 3 | Drawing-input timing | **Phase 1:** PDF upload, viewer, source tagging and review-table mechanism (manual). **Phase 4:** AI extraction fills the same table |
+| 4 | Footing timing | **Phase 2:** continuous and pad footings. **Phase 4:** stem walls, CMU walls and hold-down footings |
+| 5 | Second code cycle | **Both cycles from Phase 1** — nine portfolio sets use the 2022 CBC / CRC and eight the 2025 |
+| 6 | Steel (AISC 360) | **Steel beams / lintels and HSS posts with base plates in core scope.** CFS stud walls optional |
+| 7 | Lateral timing | **Phase 2:** story forces, wall-line distribution, segmented shear walls with drift, hold-downs, sill anchorage. Diaphragms, collectors, FTAO and the rigid option in Phase 3 |
 ---
 
 ## 14. Phases and exit criteria (your structure, Rev. A content mapped in)
@@ -519,10 +518,10 @@ Marks come from configurable templates that match your drawings — B101 (level 
 | Phase | Work | Exit criterion |
 |---|---|---|
 | 0 | This merged spec; data-model schema; report layout (captured from your Lovable apps); code-cycle list; regression case list | Spec approved by you |
-| 1 | Scaffold and UI shell; input model with provenance, structures and mark templates; assumption log; data library (**2025 and 2022 cycles**, tagged); combinations; beam solver; report engine (sheets, cover, TOC, summary); project / site / criteria / loads sheets; rafters, ceiling joists, floor joists, I-joists, headers, beams (incl. multi-ply LVL), ridge beams; max span / required spacing / required size; PDF viewer and manual review table (if #3 accepted) | Reproduces JoistCalc results and your portfolio joist / rafter / beam sheets within tolerance |
-| 2 | Stud and bearing walls, wood posts, load takedown service, truss reaction import (+ uplift), hangers, ties, post caps / bases; **new / existing status and existing-member checks**; continuous and pad footings (if #4 accepted); **if #7 accepted:** seismic and wind story forces, wall-line distribution, segmented shear walls with drift, hold-downs, anchor bolts and post-installed anchors; framing / beam / post / wall / shear-wall / hold-down / connector / footing schedules | Gravity load path roof → foundation on a test house; shear walls and footings reproduce the portfolio sheets for identical inputs and give demand-based results for two portfolio houses (e.g. La Presa, Baily Ave) |
-| 3 | Diaphragms (shear, chords, collectors / drag struts), FTAO, rigid-diaphragm option, shear transfer and **top-plate splices / straps**, uplift path, ledgers; **steel beams / lintels, HSS posts with base / cap plates and anchor rods**; diaphragm schedule. If #7 is not accepted, the Phase 2 lateral items come here | Reproduces the East Grand steel sheets (W10×22 lintel, HSS 6×6×¼ post, base plate, anchor bolt) and matches your hand-checked lateral calcs on two portfolio houses |
-| 4 | **Concrete and CMU walls / stem walls** (reproduces the San Miguel CMU sheet), reinforced footings, slab-on-grade notes, **tie-ins to existing concrete**, hold-down footings; AI extraction into the review table; hardware schedule; general / specific notes generator; full house report; in-tool truss design (port TrussCalc); DOCX export (if #2 accepted) | Full report from drawings for one real past project (e.g. San Miguel addition or Bluebird remodel) |
+| 1 | Scaffold and UI shell; input model with provenance, structures and mark templates; assumption log; data library (**2025 and 2022 cycles**, tagged); combinations; beam solver; report engine (sheets, cover, TOC, summary); project / site / criteria / loads sheets; rafters, ceiling joists, floor joists, I-joists, headers, beams (incl. multi-ply LVL), ridge beams; max span / required spacing / required size; PDF viewer and manual review table | Reproduces JoistCalc results and your portfolio joist / rafter / beam sheets within tolerance |
+| 2 | Stud and bearing walls, wood posts, load takedown service, truss reaction import (+ uplift), hangers, ties, post caps / bases; **new / existing status and existing-member checks**; continuous and pad footings; seismic and wind story forces, wall-line distribution, segmented shear walls with drift, hold-downs, anchor bolts and post-installed anchors; framing / beam / post / wall / shear-wall / hold-down / connector / footing schedules | Gravity load path roof → foundation on a test house; shear walls and footings reproduce the portfolio sheets for identical inputs and give demand-based results for two portfolio houses (e.g. La Presa, Baily Ave) |
+| 3 | Diaphragms (shear, chords, collectors / drag struts), FTAO, rigid-diaphragm option, shear transfer and **top-plate splices / straps**, uplift path, ledgers; **steel beams / lintels, HSS posts with base / cap plates and anchor rods**; diaphragm schedule. | Reproduces the East Grand steel sheets (W10×22 lintel, HSS 6×6×¼ post, base plate, anchor bolt) and matches your hand-checked lateral calcs on two portfolio houses |
+| 4 | **Concrete and CMU walls / stem walls** (reproduces the San Miguel CMU sheet), reinforced footings, slab-on-grade notes, **tie-ins to existing concrete**, hold-down footings; AI extraction into the review table; hardware schedule; general / specific notes generator; full house report; in-tool truss design (port TrussCalc) | Full report from drawings for one real past project (e.g. San Miguel addition or Bluebird remodel) |
 | 5 | Validation on 5–10 portfolio sets, fixes, locked versions; optional CFS stud walls, decks, retaining walls | Sign-off checklist complete |
 
 Each phase ends with a pushed, working build that you can use.
@@ -547,7 +546,7 @@ Each phase ends with a pushed, working build that you can use.
 1. **Report layout:** confirm that the JoistCalc / StudCalc / TrussCalc sheet format is the target. If it is not, send sample Tedds reports.
 2. **Regression sets:** 17 portfolio sets received (Drive › `PORTFOLIO`). Because of §2B Q1–Q4, tell me which sets, if any, have hand-checked lateral and footing results you trust. Otherwise regression uses closed-form results, the Lovable apps and the independent Python reference calcs, and the portfolio sets are used for layout and input fidelity. Send any soils reports for the sets.
 3. **Typical house types:** stories, slab-on-grade vs raised floor, roof types, typical spans and hardware.
-4. **Answers to the decisions in §13** — "accept recommendations" is enough.
+4. ~~Decisions in §13~~ — answered 2026-10-07.
 5. **Phase 4 only:** an Anthropic API key, entered by you directly in the hosting environment. Do not paste keys into chat.
 
 ## 17. Exclusions
