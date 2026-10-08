@@ -84,6 +84,16 @@ export interface HoldownFootingResult extends MemberResultBase {
   uplift: { Tu: number; basis: string; wD: number; Le: number; Mu: number; phiMn: number; d?: number; plain: boolean };
 }
 
+/** Linear soil pressure under a rigid footing B × L_f with resultant P and moment M (no tension). */
+export function eccentricBearing(P: number, M: number, B: number, Lf: number) {
+  const e = P > 0 ? M / P : Infinity;
+  let qmax: number;
+  if (e <= Lf / 6) qmax = (P / (B * Lf)) * (1 + (6 * e) / Lf);
+  else if (e < Lf / 2) qmax = (2 * P) / (3 * B * (Lf / 2 - e));
+  else qmax = Infinity;
+  return { e, qmax, otRatio: P > 0 ? M / ((P * Lf) / 2) : Infinity };
+}
+
 export function designHoldownFooting(ctx: DesignContext, f: HoldownFootingInput): HoldownFootingResult {
   const w = f.wall;
   const Lw = w.input.b;
@@ -193,11 +203,7 @@ export function designHoldownFooting(ctx: DesignContext, f: HoldownFootingInput)
     const lateral: HoldownFootingRow["lateral"] = c.factors.E ? "E" : c.factors.W ? "W" : "—";
     const P = combine(gravity, c);
     const M = V * arm;
-    const e = P > 0 ? M / P : Infinity;
-    let qmax: number;
-    if (e <= f.Lf / 6) qmax = (P / A) * (1 + (6 * e) / f.Lf);
-    else if (e < f.Lf / 2) qmax = (2 * P) / (3 * f.B * (f.Lf / 2 - e));
-    else qmax = Infinity;
+    const { e, qmax } = eccentricBearing(P, M, f.B, f.Lf);
     const MR = (P * f.Lf) / 2;
     const row: HoldownFootingRow = {
       combo: c,

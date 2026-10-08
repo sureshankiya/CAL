@@ -62,10 +62,13 @@ function WallDiagrams({ d, unitM }: { d: MasonryWallResult["diagram"]; unitM: st
         {panels.map((p, k) => {
           const x0 = k * pw + pw / 2;
           const max = Math.max(1e-9, ...p.v.map((v) => Math.abs(v)));
-          const sc = (pw / 2 - 18) / max;
+          const sc = (pw / 2 - 42) / max;
           const pts = d.x.map((x, i) => `${x0 + p.v[i] * sc},${y(x)}`).join(" ");
-          const iMax = p.v.reduce((a, v, i) => (Math.abs(v) > Math.abs(p.v[a]) ? i : a), 0);
+          const iPos = p.v.reduce((a, v, i) => (v > p.v[a] ? i : a), 0);
+          const iNeg = p.v.reduce((a, v, i) => (v < p.v[a] ? i : a), 0);
           const iTop = p.v.length - 1;
+          const marks = [...new Set([iPos, iNeg, iTop])].filter((i) => Math.abs(p.v[i]) > max * 0.02);
+          const yLab = (i: number) => (i === 0 ? y(0) - 4 : i === iTop ? y(H) + 9 : y(d.x[i]) + 3);
           return (
             <g key={k}>
               <text x={k * pw + 6} y={10} style={{ ...txt, fontWeight: 700, fontSize: 8.5 }}>
@@ -73,24 +76,17 @@ function WallDiagrams({ d, unitM }: { d: MasonryWallResult["diagram"]; unitM: st
               </text>
               <line x1={x0} y1={y(0)} x2={x0} y2={y(H)} {...line} />
               <polygon points={`${x0},${y(0)} ${pts} ${x0},${y(H)}`} {...line} strokeWidth={0.8} />
-              <text
-                x={x0 + p.v[iMax] * sc + (p.v[iMax] >= 0 ? 3 : -3)}
-                y={y(d.x[iMax]) + 3}
-                style={txt}
-                textAnchor={p.v[iMax] >= 0 ? "start" : "end"}
-              >
-                {fmt(p.v[iMax], 1)}
-              </text>
-              {iTop !== iMax && Math.abs(p.v[iTop]) > 1e-6 ? (
+              {marks.map((i) => (
                 <text
-                  x={x0 + p.v[iTop] * sc + (p.v[iTop] >= 0 ? 3 : -3)}
-                  y={y(H) + 8}
+                  key={i}
+                  x={x0 + p.v[i] * sc + (p.v[i] >= 0 ? 3 : -3)}
+                  y={yLab(i)}
                   style={txt}
-                  textAnchor={p.v[iTop] >= 0 ? "start" : "end"}
+                  textAnchor={p.v[i] >= 0 ? "start" : "end"}
                 >
-                  {fmt(p.v[iTop], 1)}
+                  {fmt(p.v[i], 1)}
                 </text>
-              ) : null}
+              ))}
             </g>
           );
         })}
@@ -906,10 +902,13 @@ function TrussElevation({ r }: { r: WoodTrussResult }) {
   const xmin = -(g.overhang || 0);
   const xmax = g.span + (g.overhang || 0);
   const ymax = Math.max(...g.nodes.map((n) => n.y), 0.5);
-  const sc = Math.min((Wd - 2 * pad) / (xmax - xmin), 120 / ymax);
-  const Hd = ymax * sc + 46;
+  const sc = (Wd - 2 * pad) / (xmax - xmin);
+  // shallow trusses: exaggerate the vertical scale so members and forces stay legible
+  const scY = Math.min(Math.max(sc, 110 / ymax), 130 / ymax);
+  const exag = scY / sc;
+  const Hd = ymax * scY + 46;
   const X = (x: number) => pad + (x - xmin) * sc;
-  const Y = (y: number) => Hd - 24 - y * sc;
+  const Y = (y: number) => Hd - 24 - y * scY;
   return (
     <div className="avoid-break mb-1 block">
       <svg width="100%" viewBox={`0 0 ${Wd} ${Hd}`} role="img" aria-label="Truss elevation">
@@ -977,6 +976,7 @@ function TrussElevation({ r }: { r: WoodTrussResult }) {
         ))}
         <text x={pad} y={Hd - 2} style={txt}>
           Span {fmt(g.span, 2)} ft — maximum ASD member forces, lb (solid = compression, dashed = tension)
+          {exag > 1.05 ? `; vertical scale × ${fmt(exag, 1)}` : ""}
         </text>
       </svg>
     </div>

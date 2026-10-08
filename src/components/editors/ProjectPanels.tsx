@@ -264,6 +264,60 @@ export function CriteriaPanel({ p, set }: { p: Project; set: SetProject }) {
           />
         </Field>
       </Grid>
+      <Check
+        checked={!!p.slab}
+        onChange={(v) =>
+          set((x) => ({
+            ...x,
+            slab: v
+              ? {
+                  thickness: 4,
+                  reinforcement: "#3 @ 18 in. o.c. each way",
+                  vaporRetarder: "10-mil polyethylene (ASTM E1745 Class A)",
+                  base: "4 in. clean crushed rock / gravel capillary break",
+                  joints: "saw-cut at 12 ft o.c. maximum each way, within 12 hours of placement",
+                }
+              : undefined,
+          }))
+        }
+        label="Slab on grade (notes on the general notes sheet)"
+      />
+      {p.slab ? (
+        <>
+          <Grid cols={2}>
+            <Field label="Slab thickness (in)">
+              <NumberInput
+                value={p.slab.thickness}
+                min={3.5}
+                onChange={(v) => set((x) => ({ ...x, slab: { ...x.slab!, thickness: v ?? 4 } }))}
+              />
+            </Field>
+            <Field label="Reinforcement">
+              <TextInput
+                value={p.slab.reinforcement}
+                onChange={(v) => set((x) => ({ ...x, slab: { ...x.slab!, reinforcement: v } }))}
+              />
+            </Field>
+          </Grid>
+          <Grid cols={3}>
+            <Field label="Vapor retarder">
+              <TextInput
+                value={p.slab.vaporRetarder}
+                onChange={(v) => set((x) => ({ ...x, slab: { ...x.slab!, vaporRetarder: v } }))}
+              />
+            </Field>
+            <Field label="Base">
+              <TextInput value={p.slab.base} onChange={(v) => set((x) => ({ ...x, slab: { ...x.slab!, base: v } }))} />
+            </Field>
+            <Field label="Joints">
+              <TextInput
+                value={p.slab.joints}
+                onChange={(v) => set((x) => ({ ...x, slab: { ...x.slab!, joints: v } }))}
+              />
+            </Field>
+          </Grid>
+        </>
+      ) : null}
     </Collapsible>
   );
 }

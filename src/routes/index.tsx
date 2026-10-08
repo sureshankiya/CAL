@@ -18,6 +18,8 @@ import {
   designProject,
   duplicateMember,
   exampleProject,
+  sanMiguelProject,
+  eastLincolnTrussProject,
   fileNameFor,
   loadLocal,
   newMemberSpec,
@@ -153,6 +155,34 @@ function Index() {
               }}
             >
               Example
+            </button>
+            <button
+              type="button"
+              className={btn}
+              title="1109 San Miguel Avenue addition, rebuilt from the permit drawings"
+              onClick={() => {
+                const p = sanMiguelProject();
+                setProject(p);
+                setActiveId(p.members[0]?.id);
+                setSheetKey("cover");
+                setMessage({ tone: "info", text: "San Miguel addition (validation project) loaded." });
+              }}
+            >
+              San Miguel
+            </button>
+            <button
+              type="button"
+              className={btn}
+              title="130 East Lincoln 45 ft truss, designed in HouseCalc"
+              onClick={() => {
+                const p = eastLincolnTrussProject();
+                setProject(p);
+                setActiveId(p.members[0]?.id);
+                setSheetKey("cover");
+                setMessage({ tone: "info", text: "East Lincoln truss check loaded." });
+              }}
+            >
+              Truss check
             </button>
             <button type="button" className={btn} onClick={() => fileRef.current?.click()}>
               Open…

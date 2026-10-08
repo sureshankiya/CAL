@@ -125,7 +125,7 @@ export const unitOf = (u: string) => (u === "psi" ? "lb/in²" : u);
  * subscripts on the sheets.
  */
 export function rich(text: string): React.ReactNode {
-  const re = /([A-Za-zφΩλψΔδθσ]'?)_([A-Za-z0-9,]+)/g;
+  const re = /([A-Za-zφΩλψΔδθσγεταβμρ]'?)_([A-Za-z0-9,]+)/g;
   const out: React.ReactNode[] = [];
   let last = 0;
   let k = 0;

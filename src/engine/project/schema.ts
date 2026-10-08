@@ -868,6 +868,16 @@ export const projectSchema = z.object({
   drawings: z.array(drawingSchema).default([]),
   review: z.array(reviewItemSchema).default([]),
   notes: z.string().default(""),
+  /** slab-on-grade specification for the notes (thickened slabs are checked as pads) */
+  slab: z
+    .object({
+      thickness: pos,
+      reinforcement: z.string(),
+      vaporRetarder: z.string(),
+      base: z.string(),
+      joints: z.string(),
+    })
+    .optional(),
 });
 
 export type Project = z.infer<typeof projectSchema>;

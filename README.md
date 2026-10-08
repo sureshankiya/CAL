@@ -43,7 +43,18 @@ noted and stamped by the Engineer of Record.
 | Connections | ST shear transfer (clips or nails, required spacing), UP wind-uplift chain from the roof to the foundation, LG ledgers to wood rims, concrete or CMU (NDS 12.3 yield equations at the load angle) |
 | Schedules | Steel beam / column, base plate, diaphragm, shear transfer / uplift and ledger schedules |
 
-Concrete / CMU walls, hold-down footings, tie-ins to existing concrete and AI drawing extraction follow in Phase 4 (PLAN.md §14).
+## Phase 4
+
+| Area | Included |
+|---|---|
+| Concrete / CMU walls | CW-# stem and foundation walls: CMU per TMS 402 ASD (§8.3: P_a, cracked-section M_c at the applied P, F_v with M/(Vd), in-plane shear with F_vs and in-plane flexure, A_v / 3, prescriptive seismic reinforcement §7.4) and concrete per ACI 318-19 (P-M strength with φ from ε_t, member slenderness magnifier, one-way and in-plane shear, Table 11.6.1 minimums, 11.7 spacing); Timoshenko panel analysis (pinned / fixed / cantilever, parapet), wind, ASCE 7 §12.11.1 seismic, earth pressure, eccentric top load; load-path links from the walls above and to the footing |
+| Foundations | HF-# shear-wall / hold-down footings (rigid-body overturning, eccentric bearing, sliding with IBC 1806.3 friction and passive, hold-down uplift length and longitudinal flexure); pads as thickened slabs under posts; slab-on-grade notes; TI-# tie-ins to existing concrete (drilled dowels / adhesive anchors, ACI 318 Ch. 17 bond, breakout, pryout, interaction; shear friction 22.9) |
+| Trusses | T-# trusses designed in HouseCalc — TrussCalc geometry and joint solver ported (Fink, Howe, king, queen, king + queen, n-panel parallel chord Warren / Pratt); loads by type with balanced and unbalanced snow and wind uplift, ASCE 7 ASD combinations with C_D, member axial (C_P both axes), chord combined 3.9.1 / 3.9.2 with panel bending, heel bearing, tail bending, virtual-work deflection, nailed / bolted joints by NDS 12.3, metal plates from the manufacturer value |
+| Drawings | AI-assisted extraction of a drawing page into the review table (server function, `ANTHROPIC_API_KEY` from the hosting environment, cost estimate before each run, results unconfirmed until the engineer confirms them) |
+| Report | General notes generated from the designed members (codes, criteria, concrete, slab, masonry, wood, steel, connectors, post-installed anchors), special-inspection table (IBC Ch. 17), deferred submittals, field-verification list, consolidated hardware schedule; CMU / concrete wall, shear-wall footing, tie-in and truss schedules |
+| Validation projects | **San Miguel** — 1109 San Miguel Avenue addition rebuilt from the permit drawings; **Truss check** — the 45 ft East Lincoln storage-building truss |
+
+AI extraction needs an Anthropic API key set as `ANTHROPIC_API_KEY` in the environment that runs the server (never in the browser or the project file).
 
 ## Use
 
@@ -52,7 +63,7 @@ bun install
 bun run dev          # http://localhost:8080 (in a container without IPv6: bunx vite dev --host 127.0.0.1)
 ```
 
-- **Example** loads a one-story example house; **New** / **Open… / Save** manage project files (`*.housecalc.json`).
+- **Example** loads a one-story example house; **San Miguel** and **Truss check** load the Phase 4 validation projects; **New** / **Open… / Save** manage project files (`*.housecalc.json`).
 - The sidebar holds the project, criteria, dead-load assemblies, levels, members and drawings; the preview shows one sheet or the full package.
 - **Print / Save PDF** prints the full package (US Letter). Printing is blocked while any member has an error.
 - Values in red are overrides or data marked VERIFY; the cover prints a DRAFT banner until they are resolved.
@@ -68,7 +79,7 @@ bun run print-check          # with the dev server running: PDF of the example p
 bun run build
 ```
 
-`verification/reference.py`, `reference_p2.py` and `reference_p3.py` are independent implementations (closed-form beam
+`verification/reference.py`, `reference_p2.py`, `reference_p3.py` and `reference_p4.py` are independent implementations (closed-form beam
 formulas, three-moment equation, NDS, AISC 360 / DG1, ACI 318 Ch. 17, SDPWS and ASCE 7 provisions written from the
 code text) — they do not use the TypeScript engine. `tests/reference*.test.ts` compare the engine with them.
 
@@ -77,13 +88,14 @@ code text) — they do not use the TypeScript engine. `tests/reference*.test.ts`
 ```
 src/engine/core       code cycles, load types, ASCE 7 combinations, provenance, formatting
 src/engine/data       NDS Supplement values, sections, glulam / SCL, TJI, data-library registry
-src/engine/analysis   beam stiffness solver with pattern loading
-src/engine/design     NDS members and dowel fasteners, AISC 360 steel, DG1 base plates, ACI 318 concrete and anchors, sizing
+src/engine/analysis   beam stiffness solver with pattern loading, Timoshenko wall panels, pin-jointed trusses
+src/engine/design     NDS members and dowel fasteners, AISC 360 steel, DG1 base plates, ACI 318 concrete and anchors, TMS 402 masonry, sizing
 src/engine/loads      dead, live, roof live, snow, deflection criteria
-src/engine/members    member modules (FJ, R, CJ, IJ, B / H / RB, W, P, T, CN, F / PF, SW, SB, SC, BP, RD / FD, ST, UP, LG)
+src/engine/members    member modules (FJ, R, CJ, IJ, B / H / RB, W, P, T, CN, F / PF, SW, SB, SC, BP, RD / FD, ST, UP, LG, CW, HF, TI)
 src/engine/lateral    seismic and wind story forces, flexible and rigid wall-line distribution
-src/engine/project    project schema, load-path design order, marks, storage, review table
+src/engine/project    project schema, load-path design order, marks, storage, review table, notes, AI extraction plumbing
 src/components        report primitives, diagrams, sheets, editors, drawing viewer
+src/lib/aiExtract.ts  server function for AI drawing extraction
 ```
 
 Reference design values are tagged with their source and edition; tables not yet

@@ -11,7 +11,7 @@ import { LIVE_LOADS, liveLoad } from "@/engine/loads/live";
 import { snowLoads } from "@/engine/loads/snow";
 import { hardwareLabel } from "@/engine/data/hardware";
 import { fmtInFraction } from "@/engine/core/fmt";
-import type { AnyResult, Project, ProjectDesign } from "@/engine/project";
+import { generateNotes, hardwareSchedule, type AnyResult, type Project, type ProjectDesign } from "@/engine/project";
 import { B, DataTable, Flag, NotesList, SectionHead, Sheet, SheetTitle, TextRow, TR, eq } from "../report/primitives";
 import type { PackageCheck, SheetEntry } from "../report/package";
 import { DESIGN_AID, DesignBasis, f0, f1, f2, f3, footers, rich, titleFields, type SheetMeta } from "./common";
@@ -1089,36 +1089,69 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
 export function GeneralNotesSheet({ m, design }: { m: SheetMeta; design: ProjectDesign }) {
   const ft = footers(m);
   const c = m.cycle;
-  const specific: Array<[string, string]> = [];
-  for (const o of design.outcomes.values()) for (const f of o.result?.flags ?? []) specific.push([o.spec.mark, f]);
+  const n = generateNotes(m.project, design);
+  const hw = hardwareSchedule(m.project, design);
   return (
     <Sheet f={titleFields(m)} footerLeft={ft.left} footerCenter={ft.center} first={m.first} id="sheet-notes">
-      <SheetTitle title="General structural notes" subtitle={<>{c.label}</>} />
-      <NotesList
-        title="General notes"
-        notes={[
-          `Codes: ${c.building}; ${c.residential}; ${c.asce7}; ANSI/AWC ${c.nds} with ${c.ndsSupplement}; ${c.sdpws}.`,
-          "Design loads as listed on the design criteria and loads sheets. Dead loads include the framing allowance stated in each assembly.",
-          "Sawn lumber: grade-stamped by an approved agency, moisture content 19 % or less at installation; species and grade as scheduled.",
-          "Glued laminated timber per ANSI A190.1 with an AITC / APA trademark; structural composite lumber per the manufacturer ICC-ES evaluation report.",
-          "Prefabricated wood I-joists: install, block and stiffen per the manufacturer's literature; no field cuts in flanges.",
-          `Fastening per ${c.residential} Table R602.3(1) and ${c.building} Table 2304.10.2 unless noted otherwise.`,
-          "Connectors and hangers: Simpson Strong-Tie or approved equal with a current ICC-ES report; fill all fastener holes; hot-dip galvanized or stainless where exposed or in contact with preservative-treated wood.",
-          "Wood in contact with concrete or masonry, or within 8 in. of earth: preservative-treated per AWPA U1.",
-          "Deferred submittals: prefabricated wood trusses (design drawings and calculations by the truss manufacturer, reviewed by the Engineer of Record before submittal to the building official).",
-          "Contractor to verify all dimensions and existing conditions; report discrepancies to the Engineer of Record before proceeding.",
-          DESIGN_AID,
-        ]}
-      />
+      <SheetTitle title="General structural notes" subtitle={<>{c.label} — generated from the designed members</>} />
+      {n.sections.map((sec) => (
+        <NotesList key={sec.title} title={sec.title} notes={sec.notes.map((t) => rich(t))} />
+      ))}
+      {m.project.notes.trim() ? (
+        <NotesList title="Project notes (entered)" notes={m.project.notes.split(/\n+/).filter(Boolean)} />
+      ) : null}
+      <NotesList title="Responsibility" notes={[DESIGN_AID]} />
+      {hw.length ? (
+        <>
+          <SectionHead title="Hardware schedule" />
+          <DataTable
+            head={["Model", "Description", "Fasteners", "Used at", "Max D/C", "Report", "Status"]}
+            small
+            rows={hw.map((h) => [
+              h.model,
+              h.description,
+              h.fasteners,
+              h.usedAt.join("; "),
+              f3(h.maxRatio),
+              h.report || "—",
+              h.checked ? "Checked" : <Flag key="v">VERIFY</Flag>,
+            ])}
+          />
+        </>
+      ) : null}
+      {n.inspections.length ? (
+        <>
+          <SectionHead title="Special inspections (IBC Ch. 17) — to be confirmed by the Engineer of Record" />
+          <DataTable
+            head={["Item", "Basis", "Type", "Members"]}
+            small
+            rows={n.inspections.map((i) => [i.item, i.basis, i.type, i.members])}
+          />
+        </>
+      ) : null}
+      {n.deferred.length ? <NotesList title="Deferred submittals" notes={n.deferred} /> : null}
       <SectionHead title="Specific notes by member" />
-      {specific.length ? (
+      {n.specific.length ? (
         <DataTable
           head={["Mark", "Note"]}
           small
-          rows={specific.map(([mk, f]) => [mk, f.includes("VERIFY") ? <Flag key="f">{f}</Flag> : f])}
+          rows={n.specific.map((x) => [
+            x.mark,
+            x.note.includes("VERIFY") ? <Flag key="f">{x.note}</Flag> : rich(x.note),
+          ])}
         />
       ) : (
         <TextRow italic>No specific notes.</TextRow>
+      )}
+      <SectionHead title="Field verification and items to confirm" />
+      {n.fieldVerify.length ? (
+        <DataTable
+          head={["Mark", "Item", "Value / basis"]}
+          small
+          rows={n.fieldVerify.map((x) => [x.mark, x.item, <Flag key="v">{x.value}</Flag>])}
+        />
+      ) : (
+        <TextRow italic>None.</TextRow>
       )}
     </Sheet>
   );

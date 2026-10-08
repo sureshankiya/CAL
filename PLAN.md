@@ -1,6 +1,6 @@
 # HouseCalc — Wood-Frame House Structural Calculator
 
-Merged build plan · Rev. H · 2026-10-08 · Phase 3 delivered — see Revision H; decisions in §13 approved
+Merged build plan · Rev. I · 2026-10-08 · Phase 4 delivered — see Revision I; decisions in §13 approved
 
 Sources merged:
 - **Rev. A plan** — review of your Lovable apps JoistCalc, StudCalc and TrussCalc. STRUTURA (steel truss) is excluded.
@@ -10,6 +10,36 @@ Sources merged:
 Where the sources differ, the BUILD_PLAN decisions govern. Conflicts that need your decision are in §13.
 
 ---
+
+## Revision I — Phase 4 delivered
+
+| Item | Status |
+|---|---|
+| Concrete / CMU walls (CW) | Stem and foundation walls per foot of wall; Timoshenko panel solver (shear deformation, Tedds convention for CMU), pinned / fixed / cantilever, parapet; wind, ASCE 7 §12.11.1 seismic (0.4 S_DS I_e w ≥ 0.1 w) plus entered pressure, equivalent-fluid earth pressure (H = 1.0 ASD / 1.6 strength), eccentric top load. CMU (TMS 402 ASD §8.3): P_a (Eqs. 8-21 / 8-22), cracked-section M_c at the applied P, F_vm with M/(Vd) and the 2–3 √f'm caps, in-plane shear with F_vs and in-plane flexure, A_v / 3, prescriptive seismic reinforcement §7.4 (VERIFY). Concrete (ACI 318-19): P-M strength with φ from ε_t, member slenderness magnifier for k l_c / r > 22, one-way shear, in-plane shear 11.5.4.3, Table 11.6.1 minimums, 11.7 spacing, two curtains above 10 in. |
+| Foundations | HF shear-wall / hold-down footings: rigid-body overturning, eccentric bearing (kern / partial contact), sliding (IBC Table 1806.2 friction + one-face passive), hold-down uplift length T_u / 0.9w_D and its longitudinal flexure. Pads as thickened slabs under posts. Slab-on-grade spec → general notes (CRC R506). |
+| Tie-ins (TI) | Drilled dowels / adhesive rods in a row along a joint: ACI 318 Ch. 17 steel, breakout, bond (c_Na, A_Na), seismic 0.75, shear steel / breakout / pryout, 17.8 interaction, 17.9 geometry, h_min; shear friction 22.9 with dowel development. Default bond values are the ACI 318-19 Table 17.6.5.2.5 minimums until a product's ICC-ES values are entered |
+| Trusses (T, designed) | TrussCalc geometry and solver ported unchanged; n-panel parallel chord (Warren / Pratt) added; loads by type (roof D on sloped or plan basis, ceiling D, attic L, L_r with reduction, balanced and unbalanced snow, wind uplift) and every relevant ASCE 7 ASD combination with its C_D; member tension / compression with C_P on both axes, chord combined 3.9.1 / 3.9.2 with panel bending and C_r, heel bearing with C_b, tail bending, virtual-work deflection (live, live + K_cr D), joints (nailed by NDS 12.3 single shear, bolted by double shear, plates by the manufacturer value — VERIFY); reactions per foot feed the walls like imported trusses |
+| AI extraction | Server function (src/lib/aiExtract.ts) sends one rendered page (1,568 px) and its vector text with the member / field list; structured JSON output; API key only from `ANTHROPIC_API_KEY` in the hosting environment; cost estimate before each run, actual usage after; every item enters the review table unconfirmed, linked only to valid member fields |
+| Notes / schedules | General notes generated from the designed members (codes, criteria, foundations, slab, masonry, wood, steel, connectors, post-installed anchors); special-inspection table (IBC 1705 items triggered by the member types — EOR to confirm exceptions); deferred submittals; field-verification list from every VERIFY assumption; consolidated hardware schedule (where used, max D/C, status); CMU / concrete wall, shear-wall footing, tie-in and designed-truss schedules |
+| Validation projects | **1109 San Miguel addition** rebuilt from the permit drawings (R-1, CN-1/2, 1W-1, existing wall and footing, SW1–SW3 with HDU2, RD-1, CW-1 CMU stem wall, F1, HF-1, TI-1, slab) — designs end to end, 23 sheets / 96 pages; **East Lincoln truss check** — 9 sheets / 19 pages |
+| Verification | 130 tests. Tedds parity — San Miguel CMU wall: self weight 88.13 psf, E 75.25 psf, P 144.6 lb/ft, M 669.8 lb-in/ft, V 97.6 lb/ft (governing combination 10 at the base), top reaction 60.4 lb/ft (shear deformation reproduced), k_bal 0.251, M_bal 14,736, M_c 23,454 vs 23,462 lb-in/ft, F_a 493.8 psi, F_v 50.7 vs 50.8 psi, combination utilizations 0.007–0.040 identical. Independent Python reference for Phase 4 (verification/reference_p4.py: Timoshenko panel, CMU section and weight, concrete P-M, adhesive dowel row, parallel-chord truss, eccentric bearing) — all within 0.1 %. Print check: example house 42 sheets / 203 pages, San Miguel 23 / 96, truss check 9 / 19 |
+
+**Findings while building Phase 4**
+- **San Miguel CMU sheet (Tedds MSJC-13):** F_b = f'm/3 is used; TMS 402 §8.3.4.2.2 gives 0.45 f'm in the editions HouseCalc targets (**confirm**; HouseCalc takes the factor as an input and uses 0.45). The wall is analysed at t = 8 in. (specified 7-5/8 in.), P_a on (A_n − A_s) (code: A_n — 0.5 % conservative) and F_vm with 0.6D instead of the combination's 0.46D (≈ 0.2 % unconservative). With the specified thickness and 0.45 f'm the wall still passes (D/C 0.04).
+- **San Miguel F1:** the drawing calls for #4 @ 18 in. transverse in the 18 in. × 10 in. footing — 0.133 in²/ft, below A_s,min = 0.0018 A_g = 0.216 in²/ft (ACI 318 7.6.1.1 / 13.3). The Tedds footing sheet in the same package uses #4 @ 6 in. Drawing and calculation disagree; #4 @ 11 in. or closer satisfies the minimum. HouseCalc keeps the drawing value and reports FAIL.
+- **San Miguel shear walls:** the Tedds sheets use W = 18 lb and E = 40 lb per wall (§2B Q1). From ELF (S_DS 1.0, S_D1 0.6 assumed) HouseCalc gives E_h = 1,868 lb on the SW3 line and 934 lb on each of SW1 / SW2; all three still pass (governing: sill anchor concrete breakout, D/C 0.57 on SW3).
+- **San Miguel X direction:** SW3 is the only new X-direction wall; the remaining load goes into the existing house, which is outside the calculation — left as an open package item.
+- **East Lincoln truss report:** strength-level loads (1.2D + 1.6L = 100 plf) are checked against ASD reference values; M = 25.3 kip-ft is written but 20.0 kip-ft is used for the chord forces; F_t for DF-L No.1 is taken as 1,000 psi (Table 4A: 675 psi) and E_min as 690,000 psi (620,000 psi); web slenderness is taken as L/r = 41.6 instead of l_e/d; deflection uses a 40 ft span; "8 panels at 5 ft" do not span 45 ft. HouseCalc (9 × 5 ft panels, 15 / 20 psf, ASD): end compression diagonal 3,396 lb (report 1,720 lb), 2x4 No.1 unbraced D/C 2.61 — with a continuous lateral brace at mid-length the 2x4 web passes (0.72) and the truss passes with the bottom chord at 0.99 (A_n = 0.85 A_g).
+- **TrussCalc audit (corrected in the port):** a single combination with one C_D; fastener values scaled by (G / 0.5)^1.5 (not an NDS relationship); plate "tooth values" of 110 / 145 psi with no source; parallel-chord depth derived from the pitch and only four panels. HouseCalc uses the NDS yield equations, combinations with C_D each, and requires the plate value from the manufacturer.
+
+**Needed from you (Phase 4 data, all print VERIFY)**
+1. TMS 402 edition values: F_b factor (0.45 f'm assumed), and the f'm basis for 2,500 psi units with Type M / S mortar (TMS 602 Table 2).
+2. Prescriptive seismic reinforcement limits (TMS 402 §7.4) by SDC and wall classification as you apply them.
+3. Adhesive products you specify for tie-ins and post-installed anchors (ICC-ES report, τ_cr / τ_uncr, k_c, φ); defaults are the ACI minimums.
+4. Truss plate design values, or confirm that metal-plate trusses always stay deferred submittals.
+5. Set `ANTHROPIC_API_KEY` in the hosting environment to enable AI extraction (the server function is built and tested offline; no live extraction was run here). Do not paste the key into chat.
+6. San Miguel: S_D1 and site class, the basis of the 40 psf added seismic pressure and the CMU wall top loads used on the Tedds sheet, and the roof framing direction (single slope to the existing wall assumed).
+7. Still open from Phase 3: hand-checked lateral calcs for two portfolio houses you trust.
 
 ## Revision H — Phase 3 delivered
 

@@ -7,3 +7,6 @@ export * from "./templates";
 export * from "./review";
 export * from "./lateral";
 export * from "./extraction";
+export * from "./notes";
+export * from "./sanMiguel";
+export * from "./eastLincoln";
