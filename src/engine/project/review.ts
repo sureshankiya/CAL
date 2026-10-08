@@ -87,7 +87,32 @@ export function targetFields(m: MemberSpec): TargetField[] {
         { field: "b", label: "Segment length (ft)", numeric: true },
         { field: "h", label: "Wall height (ft)", numeric: true },
       ];
+    case "steelBeam":
+      return [...common, ...spans(m.spans.length), { field: "shape", label: "Steel shape", numeric: false }];
+    case "steelColumn":
+      return [
+        ...common,
+        { field: "height", label: "Column height (ft)", numeric: true },
+        { field: "shape", label: "Steel shape", numeric: false },
+      ];
+    case "basePlate":
+      return [
+        ...common,
+        { field: "plate.N", label: "Plate N (in)", numeric: true },
+        { field: "plate.B", label: "Plate B (in)", numeric: true },
+        { field: "plate.tp", label: "Plate thickness (in)", numeric: true },
+      ];
+    case "ledger":
+      return [
+        ...common,
+        { field: "ledger.size", label: "Ledger size", numeric: false },
+        { field: "fastener.spacing", label: "Fastener spacing (in)", numeric: true },
+      ];
+    case "transfer":
+      return [...common, { field: "spacing", label: "Connector spacing (in)", numeric: true }];
     case "connector":
+    case "diaphragm":
+    case "uplift":
       return [...common];
   }
 }

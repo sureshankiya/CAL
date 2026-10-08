@@ -21,6 +21,9 @@ export interface BeamGeometry {
   leftCantilever?: number;
   /** overhang beyond the last support, ft */
   rightCantilever?: number;
+  /** rotation restrained at the first / last support (fixed end; not with a cantilever on that side) */
+  fixedLeft?: boolean;
+  fixedRight?: boolean;
 }
 
 export type BeamLoadKind = "udl" | "linear" | "point";
@@ -44,6 +47,8 @@ export interface BeamLoad {
 export interface CaseResult {
   /** reaction at each support, lb (upward positive) */
   R: number[];
+  /** reaction moment at each support, lb-ft (counter-clockwise positive; zero unless fixed) */
+  Mr: number[];
   /** moment at each station, lb-ft */
   M: number[];
   /** shear just left / right of each station, lb */
@@ -133,6 +138,7 @@ export function staticsAt(
   R: number[],
   loads: BeamLoad[],
   side: "L" | "R",
+  Mr?: number[],
 ): { V: number; M: number } {
   let V = 0;
   let M = 0;
@@ -140,7 +146,7 @@ export function staticsAt(
   supports.forEach((xs, i) => {
     if (left(xs)) {
       V += R[i];
-      M += R[i] * (x - xs);
+      M += R[i] * (x - xs) - (Mr?.[i] ?? 0);
     }
   });
   for (const ld of loads) {
@@ -269,7 +275,11 @@ export function analyseBeam(
     spans: geometry.spans,
     leftCantilever: geometry.leftCantilever ?? 0,
     rightCantilever: geometry.rightCantilever ?? 0,
+    fixedLeft: !!geometry.fixedLeft,
+    fixedRight: !!geometry.fixedRight,
   };
+  if ((g.fixedLeft && g.leftCantilever > EPS) || (g.fixedRight && g.rightCantilever > EPS))
+    throw new Error("A fixed end cannot have a cantilever beyond it");
   if (!g.spans.length || g.spans.some((s) => !(s > 0))) throw new Error("Each span must be greater than zero");
   if (!(EI > 0)) throw new Error("EI must be greater than zero");
   const supports = supportPositions(g);
@@ -281,6 +291,16 @@ export function analyseBeam(
 
   // reduced system: remove vertical DOFs at supports
   const constrained = new Set(supportNode.map((k) => 2 * k));
+  const rotNode: Array<number | undefined> = supportNode.map(() => undefined);
+  if (g.fixedLeft) {
+    constrained.add(2 * supportNode[0] + 1);
+    rotNode[0] = supportNode[0];
+  }
+  if (g.fixedRight) {
+    const last = supportNode.length - 1;
+    constrained.add(2 * supportNode[last] + 1);
+    rotNode[last] = supportNode[last];
+  }
   const map = new Int32Array(ndof).fill(-1);
   let nf = 0;
   for (let d = 0; d < ndof; d++) if (!constrained.has(d)) map[d] = nf++;
@@ -360,19 +380,21 @@ export function analyseBeam(
       }
     }
     const R = supportNode.map((k) => Rfull[2 * k] - F[2 * k]);
+    // reaction couples at fixed ends, lb-in → lb-ft
+    const Mr = rotNode.map((k) => (k === undefined ? 0 : (Rfull[2 * k + 1] - F[2 * k + 1]) / 12));
     const M: number[] = [];
     const VL: number[] = [];
     const VR: number[] = [];
     for (const x of nodes) {
-      const l = staticsAt(x, supports, R, set, "L");
-      const r = staticsAt(x, supports, R, set, "R");
+      const l = staticsAt(x, supports, R, set, "L", Mr);
+      const r = staticsAt(x, supports, R, set, "R", Mr);
       M.push(r.M);
       VL.push(l.V);
       VR.push(r.V);
     }
     const defl: number[] = [];
     for (let i = 0; i < nn; i++) defl.push(-u[2 * i]);
-    return { R, M, VL, VR, defl, loads: set };
+    return { R, Mr, M, VL, VR, defl, loads: set };
   };
 
   const byType = {} as Record<LoadType, CaseResult>;

@@ -49,7 +49,17 @@ export const DESIGN_AID =
   "HouseCalc is a design aid. These calculations are valid only when reviewed, completed where noted and stamped by the Engineer of Record.";
 
 /** Design basis block with the code-cycle stamp, printed on every sheet. */
-export function DesignBasis({ m, material, tables }: { m: SheetMeta; material?: React.ReactNode; tables?: string[] }) {
+export function DesignBasis({
+  m,
+  material,
+  tables,
+  combos,
+}: {
+  m: SheetMeta;
+  material?: React.ReactNode;
+  tables?: string[];
+  combos?: React.ReactNode;
+}) {
   const c = m.cycle;
   return (
     <>
@@ -64,7 +74,7 @@ export function DesignBasis({ m, material, tables }: { m: SheetMeta; material?: 
           </>
         }
       />
-      <TR desc="Loads and combinations" expr={<>{c.asce7} Ch. 2 (ASD §2.4), Ch. 4, Ch. 7</>} />
+      <TR desc="Loads and combinations" expr={combos ?? <>{c.asce7} Ch. 2 (ASD §2.4), Ch. 4, Ch. 7</>} />
       {material ? <TR desc="Material standard" expr={material} /> : null}
       {tables?.length ? (
         <TR
@@ -109,3 +119,26 @@ export const Sub = ({ b, s }: { b: React.ReactNode; s: React.ReactNode }) => (
 );
 
 export const unitOf = (u: string) => (u === "psi" ? "lb/in²" : u);
+
+/**
+ * Engine strings write subscripts as "M_p", "f_p,max", "c'_a1"; print them as
+ * subscripts on the sheets.
+ */
+export function rich(text: string): React.ReactNode {
+  const re = /([A-Za-zφΩλψΔδθσ]'?)_([A-Za-z0-9,]+)/g;
+  const out: React.ReactNode[] = [];
+  let last = 0;
+  let k = 0;
+  for (let m = re.exec(text); m; m = re.exec(text)) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    out.push(
+      <span key={k++}>
+        {m[1]}
+        <sub>{m[2]}</sub>
+      </span>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out.length === 1 && typeof out[0] === "string" ? out[0] : <>{out}</>;
+}

@@ -49,6 +49,13 @@ const KIND_ORDER: Record<string, number> = {
   shearWall: 8,
   connector: 9,
   footing: 10,
+  steelBeam: 3,
+  steelColumn: 7,
+  basePlate: 7.5,
+  ledger: 4.5,
+  diaphragm: 7.8,
+  transfer: 8.5,
+  uplift: 9.5,
 };
 
 function orderKey(m: MemberSpec): number {
@@ -148,8 +155,13 @@ export function packageChecks(p: Project, design: ProjectDesign): PackageCheck[]
   const errors = outcomes.filter((o) => o.error);
   const fails = outcomes.filter((o) => o.result && !o.result.pass);
   const verify = outcomes.reduce((n, o) => n + (o.result ? o.result.assumptions.filter((a) => a.verify).length : 0), 0);
-  const carried = new Set(p.members.flatMap((m) => m.links.map((l) => `${l.sourceId}:${l.support}`)));
-  const tied = new Set(p.members.flatMap((m) => (m.kind === "connector" ? [`${m.sourceId}:${m.support}`] : [])));
+  const carried = new Set([
+    ...p.members.flatMap((m) => m.links.map((l) => `${l.sourceId}:${l.support}`)),
+    ...p.members.flatMap((m) => (m.kind === "basePlate" && m.sourceId ? [`${m.sourceId}:0`, `${m.sourceId}:1`] : [])),
+  ]);
+  const tied = new Set(
+    p.members.flatMap((m) => (m.kind === "connector" || m.kind === "uplift" ? [`${m.sourceId}:${m.support}`] : [])),
+  );
   const uncarried: string[] = [];
   const untied: string[] = [];
   for (const o of outcomes) {
@@ -157,6 +169,8 @@ export function packageChecks(p: Project, design: ProjectDesign): PackageCheck[]
     o.result.reactions.forEach((r, i) => {
       // ridge-board rafters: the ridge reaction is resisted by the opposing rafter (internal to the pair)
       if (o.result!.kind === "rafter" && o.result!.input.ridge === "board" && i === 1) return;
+      // ledgers deliver their load into the wall they are anchored to (outside the member model)
+      if (o.result!.kind === "ledger") return;
       if (r.maxDown > 1 && !carried.has(`${o.spec.id}:${i}`)) uncarried.push(`${o.result!.mark} ${r.name}`);
       if (r.minNet < -1 && !tied.has(`${o.spec.id}:${i}`)) untied.push(`${o.result!.mark} ${r.name}`);
     });
@@ -202,6 +216,20 @@ export function packageChecks(p: Project, design: ProjectDesign): PackageCheck[]
       text: empty.length
         ? `Wall lines without shear walls: ${empty.map((l) => l.line.name).join(", ")}`
         : "Every wall line has at least one shear wall",
+    });
+    const missing: string[] = [];
+    for (const st of p.lateral.stories)
+      for (const dir of ["X", "Y"] as const)
+        if (
+          p.lateral.lines.some((l) => l.storyId === st.id && l.dir === dir) &&
+          !p.members.some((m) => m.kind === "diaphragm" && m.storyId === st.id && m.dir === dir)
+        )
+          missing.push(`${st.name} ${dir}`);
+    out.push({
+      ok: missing.length === 0,
+      text: missing.length
+        ? `Diaphragm not designed for: ${missing.join(", ")}`
+        : "Diaphragm, chords and collectors designed for every story and direction",
     });
   }
   return out;

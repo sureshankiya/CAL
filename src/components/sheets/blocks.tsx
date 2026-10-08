@@ -18,7 +18,7 @@ import {
   TR,
   eq,
 } from "../report/primitives";
-import { DESIGN_AID, f0, f2, f3, unitOf } from "./common";
+import { DESIGN_AID, f0, f2, f3, rich, unitOf } from "./common";
 
 const TYPE_NAME: Record<LoadType, string> = {
   D: "Dead",
@@ -39,15 +39,16 @@ export function LoadLines({ lines, title = "Applied loading" }: { lines: LoadLin
           key={i}
           desc={
             <>
-              {l.label}
+              {rich(l.label)}
               {l.verify ? <Flag> (override — VERIFY)</Flag> : null}
             </>
           }
           expr={
             <>
-              {TYPE_NAME[l.type]}: {l.expr}
-              {l.unit === "lb" && l.expr.startsWith("T_") ? "" : ""}
-              {eq(`${fmt(l.value, l.unit === "lb" ? 0 : 2)} ${l.unit === "plf" ? "lb/ft" : l.unit}`)}
+              {TYPE_NAME[l.type]}: {rich(l.expr)}
+              {eq(
+                `${fmt(l.value, l.unit === "lb" || l.unit === "lb-ft" ? 0 : 2)} ${l.unit === "plf" ? "lb/ft" : l.unit}`,
+              )}
             </>
           }
         />

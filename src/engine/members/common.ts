@@ -49,7 +49,7 @@ export interface LoadLine {
   label: string;
   expr: string;
   value: number;
-  unit: "plf" | "lb" | "psf";
+  unit: "plf" | "lb" | "psf" | "lb-ft";
   ref?: string;
   verify?: boolean;
 }

@@ -13,6 +13,10 @@
  *  - hold-down device (catalogue allowable tension) incl. uplift from a wall stacked above
  *  - hold-down anchor in concrete, strength level (ACI 318-19 Ch. 17), seismic Ω0 option
  *  - sill anchor bolts: NDS 12.3 bolt in the sill, ACI 318 breakout parallel to the edge
+ *  - FTAO walls (one opening, SDPWS 4.3.5.2, rational analysis by the Diekmann method):
+ *    pier unit shear v_p = V / (L1 + L2); hold-down H = V h / L; unit shear above and below the
+ *    opening v_ab = H / (h_a + h_b); strap force at the opening corners F = (v_p − v) L_i;
+ *    pier aspect h_o / L_i ≤ 3.5 and L_i ≥ 2 ft; aspect factor on the piers
  *  - seismic drift: SDPWS Eq. 4.3-1 δ_sw at strength level, δ_x = C_d δ_xe / I_e (ASCE 7
  *    Eq. 12.8-15) vs Δ_a (Table 12.12-1); wind deflection at a service factor
  */
@@ -95,6 +99,24 @@ export interface ShearWallInput {
   /** vertical anchor stiffness k_a, lb/in, when no hold-down device is selected */
   ka?: number;
   windService: { factor: number; limitN: number };
+  /** force transfer around one opening (FTAO): pier lengths and opening, ft; strap from the hardware list */
+  opening?: { L1: number; Lo: number; L2: number; ha: number; hb: number; strapId?: string };
+}
+
+export interface FtaoResult {
+  L1: number;
+  L2: number;
+  Lo: number;
+  ho: number;
+  ha: number;
+  hb: number;
+  pierAspect: number;
+  v: { s: number; w: number };
+  vp: { s: number; w: number };
+  H: { s: number; w: number };
+  vab: { s: number; w: number };
+  F: { s: number; w: number };
+  strap?: { item: HardwareItem; F: number; ratio: number };
 }
 
 export interface ShearWallDemand {
@@ -174,6 +196,7 @@ export interface ShearWallResult extends MemberResultBase {
     ratio: number;
   };
   windDefl: { v: number; d: number; allow: number; ratio: number };
+  ftao?: FtaoResult;
 }
 
 function combineSides(sides: Array<{ row: SheathingRow; vs: number; vw: number; Ga: number }>) {
@@ -189,13 +212,18 @@ function combineSides(sides: Array<{ row: SheathingRow; vs: number; vw: number; 
 }
 
 /** Capacity weight used to share a wall line between its walls: allowable seismic capacity of the segment, lb. */
-export function shearWallWeight(s: Pick<ShearWallInput, "sides" | "b" | "h">): number {
+export function shearWallWeight(s: Pick<ShearWallInput, "sides" | "b" | "h" | "opening">): number {
   const sides = s.sides.map((x) => {
     const v = sideValues(x.key, x.spacing);
     return { ...v, vs: x.vsOverride ?? v.vs, vw: x.vsOverride ? Math.round((1.4 * x.vsOverride) / 5) * 5 : v.vw };
   });
   const { vsc } = combineSides(sides);
   const fam = sides.some((x) => x.row.family === "gypsum") ? "gypsum" : "wsp";
+  if (s.opening) {
+    const ho = s.h - s.opening.ha - s.opening.hb;
+    const Lp = s.opening.L1 + s.opening.L2;
+    return (vsc * aspectFactor(fam, ho / Math.min(s.opening.L1, s.opening.L2)) * Lp) / 2;
+  }
   return (vsc * aspectFactor(fam, s.h / s.b) * s.b) / 2;
 }
 
@@ -222,13 +250,56 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   });
   const { vsc, vwc, Gac } = combineSides(sides);
   const family = sides.some((x) => x.row.family === "gypsum") ? "gypsum" : "wsp";
-  const aspect = s.h / s.b;
-  const maxAspect = Math.min(...sides.map((x) => x.row.maxAspect));
-  const Car = aspectFactor(family, aspect);
+  let aspect = s.h / s.b;
+  let maxAspect = Math.min(...sides.map((x) => x.row.maxAspect));
+  let Car = aspectFactor(family, aspect);
+  let vS = (0.7 * dem.Eh) / s.b;
+  let vW = (0.6 * dem.W) / s.b;
+  let ftao: FtaoResult | undefined;
+  if (s.opening) {
+    const o = s.opening;
+    if (Math.abs(o.L1 + o.Lo + o.L2 - s.b) > 0.01)
+      throw new Error(
+        `FTAO: L1 + opening + L2 = ${fmt(o.L1 + o.Lo + o.L2, 2)} ft must equal the wall length ${fmt(s.b, 2)} ft`,
+      );
+    const ho = s.h - o.ha - o.hb;
+    if (!(ho > 0) || !(o.ha > 0) || !(o.hb >= 0))
+      throw new Error("FTAO: check the heights above and below the opening");
+    const Lp = o.L1 + o.L2;
+    const Lmin = Math.min(o.L1, o.L2);
+    const v = { s: vS, w: vW };
+    const vp = { s: (0.7 * dem.Eh) / Lp, w: (0.6 * dem.W) / Lp };
+    const H = { s: (0.7 * dem.Eh * s.h) / s.b, w: (0.6 * dem.W * s.h) / s.b };
+    const vab = { s: H.s / (o.ha + o.hb), w: H.w / (o.ha + o.hb) };
+    const Lmax = Math.max(o.L1, o.L2);
+    const F = { s: (vp.s - v.s) * Lmax, w: (vp.w - v.w) * Lmax };
+    aspect = ho / Lmin;
+    maxAspect = Math.min(3.5, maxAspect);
+    Car = aspectFactor(family, aspect);
+    vS = Math.max(vp.s, vab.s);
+    vW = Math.max(vp.w, vab.w);
+    ftao = { L1: o.L1, L2: o.L2, Lo: o.Lo, ho, ha: o.ha, hb: o.hb, pierAspect: aspect, v, vp, H, vab, F };
+    if (Lmin < 2) flags.push(`FTAO pier ${fmt(Lmin, 2)} ft is shorter than 2 ft (SDPWS 4.3.5.2)`);
+    if (o.strapId) {
+      const item = ctx.hardware?.find((x) => x.id === o.strapId);
+      if (!item) throw new Error(`FTAO strap ${o.strapId} not in the project hardware list`);
+      if (item.tension === undefined) throw new Error(`${item.model}: allowable tension not entered`);
+      const Fm = Math.max(F.s, F.w);
+      ftao.strap = { item, F: Fm, ratio: Fm / item.tension };
+      if (!item.checked)
+        assumptions.push(fromDefault("Strap capacity", `${item.model} ${fmt(item.tension, 0)} lb`, item.source, true));
+    } else flags.push("FTAO: select a strap for the corner forces at the head and sill of the opening");
+    assumptions.push(
+      fromDefault(
+        "FTAO method",
+        "Force transfer around the opening by the Diekmann rational method (equal unit shear in the panels above and below the opening, pier shear by length, straps at head and sill continuous over the piers); the deflection uses Eq. 4.3-1 over the full wall with the larger of v_p and v_ab — VERIFY method with the EOR",
+        "SDPWS 4.3.5.2 (principles of mechanics)",
+        true,
+      ),
+    );
+  }
   const vAllowS = (vsc * Car) / 2;
   const vAllowW = (vwc * Car) / 2;
-  const vS = (0.7 * dem.Eh) / s.b;
-  const vW = (0.6 * dem.W) / s.b;
 
   // gravity per foot on the wall
   const self = resolveDead(ctx, s.self);
@@ -337,8 +408,19 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   });
 
   const checks: Check[] = [];
+  if (ftao?.strap)
+    checks.push({
+      name: `FTAO strap ${ftao.strap.item.model} at opening corners (catalogue allowable)`,
+      demand: ftao.strap.F,
+      capacity: ftao.strap.item.tension!,
+      ratio: ftao.strap.ratio,
+      pass: ftao.strap.ratio <= 1,
+      combo: ftao.F.s >= ftao.F.w ? "0.7E" : "0.6W",
+      CD: 1.6,
+      unit: "lb",
+    });
   checks.push({
-    name: "Aspect ratio h/b_s (SDPWS Table 4.3.4)",
+    name: ftao ? "Pier aspect ratio h_o / L_pier (SDPWS 4.3.5.2)" : "Aspect ratio h/b_s (SDPWS Table 4.3.4)",
     category: "detailing",
     demand: aspect,
     capacity: maxAspect,
@@ -349,7 +431,9 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     unit: "",
   });
   checks.push({
-    name: "Unit shear, seismic (SDPWS 4.3.3, ASD v_s / 2.0)",
+    name: ftao
+      ? "Unit shear, seismic — max(pier, above / below opening) (ASD v_s / 2.0)"
+      : "Unit shear, seismic (SDPWS 4.3.3, ASD v_s / 2.0)",
     demand: vS,
     capacity: vAllowS,
     ratio: vS / vAllowS,
@@ -359,7 +443,9 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     unit: "plf",
   });
   checks.push({
-    name: "Unit shear, wind (SDPWS 4.3.3, ASD v_w / 2.0)",
+    name: ftao
+      ? "Unit shear, wind — max(pier, above / below opening) (ASD v_w / 2.0)"
+      : "Unit shear, wind (SDPWS 4.3.3, ASD v_w / 2.0)",
     demand: vW,
     capacity: vAllowW,
     ratio: vW / vAllowW,
@@ -579,7 +665,8 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
       : Math.max(0, vd * s.h - wDd * tribEnd);
   const da = Td / ka;
   const bend = (8 * vd * s.h ** 3) / (E * A * s.b);
-  const shear = (vd * s.h) / (1000 * Gac);
+  const vdShear = ftao ? Math.max(dem.QE / (ftao.L1 + ftao.L2), (dem.QE * s.h) / s.b / (ftao.ha + ftao.hb)) : vd;
+  const shear = (vdShear * s.h) / (1000 * Gac);
   const slip = (s.h * da) / s.b;
   const dxe = bend + shear + slip;
   const dx = (dem.Cd * dxe) / dem.Ie;
@@ -645,7 +732,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     id: s.id,
     mark: s.mark,
     kind: "shearWall",
-    title: "Wood shear wall",
+    title: ftao ? "Wood shear wall — force transfer around opening" : "Wood shear wall",
     callout: `${fmtFtIn(s.b)} × ${fmtFtIn(s.h)}: ${sideText}${hdItem ? `; ${hdItem.model}` : ""}`,
     pass: checks.every((c) => c.pass),
     governing,
@@ -680,5 +767,6 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     sill,
     drift: { v: vd, Td, da, ka, bend, shear, slip, dxe, dx, allow, ratio: dx / allow },
     windDefl: { v: vwd, d: dw, allow: allowW, ratio: dw / allowW },
+    ftao,
   };
 }

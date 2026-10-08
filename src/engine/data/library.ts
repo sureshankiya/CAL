@@ -172,6 +172,42 @@ export const TABLES: Record<string, TableMeta> = {
     status: "unverified",
     note: "ASCE 7-22 exposure constants to be confirmed; 7-16 constants used for both editions.",
   },
+  "aisc-shapes": {
+    id: "aisc-shapes",
+    title: "W and C shape properties",
+    source: "AISC Shapes Database v15.0 (Manual Tables 1-1, 1-5)",
+    edition: "AISC Manual 15th ed.",
+    status: "unverified",
+    note: "Tabulated rows checked for internal consistency against their plate dimensions; confirm against the database.",
+  },
+  "aisc-hss": {
+    id: "aisc-hss",
+    title: "HSS and pipe properties (computed)",
+    source: "Computed from t_des = 0.93 t_nom, corner radius 2t (AISC Manual Part 1)",
+    edition: "AISC 360 §B4.2",
+    status: "unverified",
+  },
+  "aisc-2-4": {
+    id: "aisc-2-4",
+    title: "Structural steel material properties",
+    source: "AISC Manual Table 2-4 / ASTM A992, A36, A500, A53, F1554",
+    edition: "AISC Manual 15th ed.",
+    status: "unverified",
+  },
+  "sdpws-4.2A": {
+    id: "sdpws-4.2A",
+    title: "Nominal unit shear capacities — wood structural panel diaphragms",
+    source: "SDPWS Table 4.2A",
+    edition: "SDPWS-2021",
+    status: "unverified",
+  },
+  "nds-12.3.3": {
+    id: "nds-12.3.3",
+    title: "Dowel bearing strengths",
+    source: "NDS Table 12.3.3 / Eq. 12.3-11; masonry / concrete value entered",
+    edition: "NDS-2018 / 2024",
+    status: "unverified",
+  },
 };
 
 export const tableRef = (id: string) => TABLES[id];

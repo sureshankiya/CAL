@@ -103,3 +103,72 @@ export function nailSingleShear(i: NailShearInput): NailShearResult {
   }
   return { Z: penetrationOk ? Z : 0, mode, modes, Fes, Fem, Fyb, Rd, p, lm, ls, penetrationOk };
 }
+
+/* ------------------------------------------------------------------------- */
+
+/** Dowel bearing strength of wood for D ≥ 1/4 in. at an angle θ to grain (NDS Table 12.3.3, Eq. 12.3-11), psi. */
+export function dowelBearingAngle(G: number, D: number, thetaDeg: number) {
+  const Fpar = 11200 * G;
+  const Fperp = (6100 * G ** 1.45) / Math.sqrt(D);
+  const t = (thetaDeg * Math.PI) / 180;
+  const Fe = (Fpar * Fperp) / (Fpar * Math.sin(t) ** 2 + Fperp * Math.cos(t) ** 2);
+  return { Fpar, Fperp, Fe };
+}
+
+export interface DowelYieldInput {
+  D: number;
+  Fyb: number;
+  /** side member: bearing length and dowel bearing strength */
+  ls: number;
+  Fes: number;
+  /** main member: bearing length (dowel penetration) and dowel bearing strength */
+  lm: number;
+  Fem: number;
+  /** largest angle of load to grain in either member, degrees (K_θ = 1 + 0.25 θ/90) */
+  thetaDeg: number;
+}
+
+export interface DowelYieldResult {
+  Z: number;
+  mode: "Im" | "Is" | "II" | "IIIm" | "IIIs" | "IV";
+  modes: Record<"Im" | "Is" | "II" | "IIIm" | "IIIs" | "IV", number>;
+  Re: number;
+  Rt: number;
+  Ktheta: number;
+  k1: number;
+  k2: number;
+  k3: number;
+  Rd: { I: number; II: number; III: number };
+}
+
+/**
+ * Single-shear yield limit equations (NDS 12.3.1, Table 12.3.1A) for bolts and
+ * lag screws, D ≥ 1/4 in.: R_d = 4K_θ (Modes I), 3.6K_θ (II), 3.2K_θ (III, IV),
+ * Table 12.3.1B.
+ */
+export function dowelYieldSingle(i: DowelYieldInput): DowelYieldResult {
+  const { D, Fyb, ls, lm, Fes, Fem } = i;
+  const Kt = 1 + (0.25 * Math.min(90, Math.abs(i.thetaDeg))) / 90;
+  const Rd = { I: 4 * Kt, II: 3.6 * Kt, III: 3.2 * Kt };
+  const Re = Fem / Fes;
+  const Rt = lm / ls;
+  const k1 = (Math.sqrt(Re + 2 * Re * Re * (1 + Rt + Rt * Rt) + Rt * Rt * Re ** 3) - Re * (1 + Rt)) / (1 + Re);
+  const k2 = -1 + Math.sqrt(2 * (1 + Re) + (2 * Fyb * (1 + 2 * Re) * D * D) / (3 * Fem * lm * lm));
+  const k3 = -1 + Math.sqrt((2 * (1 + Re)) / Re + (2 * Fyb * (2 + Re) * D * D) / (3 * Fem * ls * ls));
+  const modes = {
+    Im: (D * lm * Fem) / Rd.I,
+    Is: (D * ls * Fes) / Rd.I,
+    II: (k1 * D * ls * Fes) / Rd.II,
+    IIIm: (k2 * D * lm * Fem) / ((1 + 2 * Re) * Rd.III),
+    IIIs: (k3 * D * ls * Fem) / ((2 + Re) * Rd.III),
+    IV: ((D * D) / Rd.III) * Math.sqrt((2 * Fem * Fyb) / (3 * (1 + Re))),
+  };
+  let mode: DowelYieldResult["mode"] = "Im";
+  let Z = Infinity;
+  for (const [k, v] of Object.entries(modes))
+    if (v < Z) {
+      Z = v;
+      mode = k as DowelYieldResult["mode"];
+    }
+  return { Z, mode, modes, Re, Rt, Ktheta: Kt, k1, k2, k3, Rd };
+}

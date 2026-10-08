@@ -66,6 +66,7 @@ export function defaultLateral(p: Pick<Project, "assemblies">): LateralSpec {
     Ke: 1,
     stories: [{ id: "ST1", name: "First story", height: 9, items: [] }],
     lines: [],
+    distribution: "flexible",
   };
   lat.stories[0].items = generateWeights(p, lat, 0);
   return lat;

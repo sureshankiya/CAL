@@ -16,7 +16,14 @@ export type MemberKind =
   | "truss"
   | "connector"
   | "footing"
-  | "shearWall";
+  | "shearWall"
+  | "steelBeam"
+  | "steelColumn"
+  | "basePlate"
+  | "diaphragm"
+  | "transfer"
+  | "uplift"
+  | "ledger";
 
 export interface MemberReaction {
   support: number;

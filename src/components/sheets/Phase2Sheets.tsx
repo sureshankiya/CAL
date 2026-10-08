@@ -27,7 +27,7 @@ import {
   VerdictLine,
   eq,
 } from "../report/primitives";
-import { DesignBasis, f0, f1, f2, f3, footers, titleFields, type SheetMeta } from "./common";
+import { DesignBasis, f0, f1, f2, f3, footers, rich, titleFields, type SheetMeta } from "./common";
 import {
   AssumptionRows,
   ChecksSummary,
@@ -837,7 +837,8 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
       title={`Wood shear wall design (${m.cycle.sdpws})`}
       subtitle={
         <>
-          In accordance with {m.cycle.sdpws}, ANSI/AWC {m.cycle.nds} (ASD) and the segmented shear wall method — member{" "}
+          In accordance with {m.cycle.sdpws}, ANSI/AWC {m.cycle.nds} (ASD) and the{" "}
+          {r.ftao ? "force-transfer-around-openings method (SDPWS 4.3.5.2)" : "segmented shear wall method"} — member{" "}
           {index} of {total}: {r.mark}
         </>
       }
@@ -866,7 +867,24 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         desc="Panel height / length"
         expr={
           <>
-            h = {f2(s.h)} ft; b<sub>s</sub> = {f3(s.b)} ft; h / b<sub>s</sub> = {f3(r.aspect)} (max {f1(r.maxAspect)})
+            h = {f2(s.h)} ft;{" "}
+            {r.ftao ? (
+              "L"
+            ) : (
+              <>
+                b<sub>s</sub>
+              </>
+            )}{" "}
+            = {f3(s.b)} ft;{" "}
+            {r.ftao ? (
+              <>
+                pier h<sub>o</sub> / L<sub>min</sub> = {f3(r.aspect)} (max {f1(r.maxAspect)})
+              </>
+            ) : (
+              <>
+                h / b<sub>s</sub> = {f3(r.aspect)} (max {f1(r.maxAspect)})
+              </>
+            )}
           </>
         }
         pass={r.aspect <= r.maxAspect}
@@ -905,38 +923,128 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
       />
       <TR
         desc="Aspect ratio factor (SDPWS 4.3.4.2)"
-        expr={<>{r.aspect <= 2 ? "h / b_s ≤ 2: 1.00" : `1.25 − 0.125 h / b_s = ${f3(r.Car)}`}</>}
+        expr={
+          <>
+            {rich(
+              r.ftao
+                ? r.aspect <= 2
+                  ? "pier h_o / L ≤ 2: 1.00"
+                  : `1.25 − 0.125 h_o / L = ${f3(r.Car)}`
+                : r.aspect <= 2
+                  ? "h / b_s ≤ 2: 1.00"
+                  : `1.25 − 0.125 h / b_s = ${f3(r.Car)}`,
+            )}
+          </>
+        }
       />
       <LoadLines lines={r.loadLines} title="Loading on the wall" />
-      <SectionHead title="Unit shear — ASD (SDPWS 4.3.3, nominal / 2.0)" />
-      <TR
-        desc="Seismic"
-        expr={
-          <>
-            v = 0.7 E<sub>h</sub> / b<sub>s</sub> = 0.7 × {f0(d.Eh)} / {f3(s.b)} = {f1(r.vS)} plf ≤ v<sub>sc</sub> C
-            <sub>ar</sub> / 2 = {f1(r.vAllowS)} plf
-          </>
-        }
-        pass={r.vS <= r.vAllowS}
-      />
-      <TR
-        desc="Wind"
-        expr={
-          <>
-            v = 0.6 W / b<sub>s</sub> = 0.6 × {f0(d.W)} / {f3(s.b)} = {f1(r.vW)} plf ≤ v<sub>wc</sub> C<sub>ar</sub> / 2
-            = {f1(r.vAllowW)} plf
-          </>
-        }
-        pass={r.vW <= r.vAllowW}
-      />
+      {r.ftao ? (
+        <>
+          <SectionHead title="Force transfer around opening — SDPWS 4.3.5.2 (Diekmann rational analysis, ASD)" />
+          <TR
+            desc="Geometry"
+            expr={
+              <>
+                L = L<sub>1</sub> + L<sub>o</sub> + L<sub>2</sub> = {f2(r.ftao.L1)} + {f2(r.ftao.Lo)} + {f2(r.ftao.L2)}{" "}
+                = {f2(s.b)} ft; h<sub>a</sub> = {f2(r.ftao.ha)} ft above, h<sub>o</sub> = {f2(r.ftao.ho)} ft opening, h
+                <sub>b</sub> = {f2(r.ftao.hb)} ft below
+              </>
+            }
+          />
+          <TR
+            desc="Pier aspect ratio"
+            expr={
+              <>
+                h<sub>o</sub> / L<sub>min</sub> = {f2(r.ftao.ho)} / {f2(Math.min(r.ftao.L1, r.ftao.L2))} ={" "}
+                {f3(r.ftao.pierAspect)} ≤ 3.5; C<sub>ar</sub> = {f3(r.Car)}
+              </>
+            }
+            pass={r.ftao.pierAspect <= 3.5}
+          />
+          <DataTable
+            caption="FTAO forces (ASD)"
+            head={["Quantity", "Equation", "Seismic 0.7E", "Wind 0.6W"]}
+            align={["left", "left", "right", "right"]}
+            small
+            rows={[
+              ["Wall unit shear v (plf)", "V / L", f1(r.ftao.v.s), f1(r.ftao.v.w)],
+              ["Pier unit shear v_p (plf)", "V / (L_1 + L_2)", f1(r.ftao.vp.s), f1(r.ftao.vp.w)],
+              ["Hold-down force H (lb)", "V h / L", f0(r.ftao.H.s), f0(r.ftao.H.w)],
+              ["Unit shear above / below opening v_ab (plf)", "H / (h_a + h_b)", f1(r.ftao.vab.s), f1(r.ftao.vab.w)],
+              ["Strap force at opening corners F (lb)", "(v_p − v) × max(L_1, L_2)", f0(r.ftao.F.s), f0(r.ftao.F.w)],
+            ].map((row) => row.map((c) => rich(c)))}
+          />
+          <TR
+            desc="Unit shear, seismic"
+            expr={
+              <>
+                max(v<sub>p</sub>, v<sub>ab</sub>) = {f1(r.vS)} plf ≤ v<sub>sc</sub> C<sub>ar</sub> / 2 ={" "}
+                {f1(r.vAllowS)} plf
+              </>
+            }
+            pass={r.vS <= r.vAllowS}
+          />
+          <TR
+            desc="Unit shear, wind"
+            expr={
+              <>
+                max(v<sub>p</sub>, v<sub>ab</sub>) = {f1(r.vW)} plf ≤ v<sub>wc</sub> C<sub>ar</sub> / 2 ={" "}
+                {f1(r.vAllowW)} plf
+              </>
+            }
+            pass={r.vW <= r.vAllowW}
+          />
+          {r.ftao.strap ? (
+            <TR
+              desc={`Strap ${hardwareLabel(r.ftao.strap.item)} at head and sill`}
+              expr={
+                <>
+                  F = {f0(r.ftao.strap.F)} lb ≤ {f0(r.ftao.strap.item.tension ?? 0)} lb allowable; strap continuous over
+                  the opening and min. one pier length each side
+                  {r.ftao.strap.item.checked ? "" : <Flag> — VERIFY</Flag>}
+                </>
+              }
+              pass={r.ftao.strap.ratio <= 1}
+            />
+          ) : (
+            <TR desc="Strap" expr={<Flag>Not selected</Flag>} />
+          )}
+        </>
+      ) : (
+        <>
+          <SectionHead title="Unit shear — ASD (SDPWS 4.3.3, nominal / 2.0)" />
+          <TR
+            desc="Seismic"
+            expr={
+              <>
+                v = 0.7 E<sub>h</sub> / b<sub>s</sub> = 0.7 × {f0(d.Eh)} / {f3(s.b)} = {f1(r.vS)} plf ≤ v<sub>sc</sub> C
+                <sub>ar</sub> / 2 = {f1(r.vAllowS)} plf
+              </>
+            }
+            pass={r.vS <= r.vAllowS}
+          />
+          <TR
+            desc="Wind"
+            expr={
+              <>
+                v = 0.6 W / b<sub>s</sub> = 0.6 × {f0(d.W)} / {f3(s.b)} = {f1(r.vW)} plf ≤ v<sub>wc</sub> C<sub>ar</sub>{" "}
+                / 2 = {f1(r.vAllowW)} plf
+              </>
+            }
+            pass={r.vW <= r.vAllowW}
+          />
+        </>
+      )}
       <SectionHead title="Chord forces — overturning" />
       <TR
         desc="Method"
         expr={
           <>
-            {s.overturning === "full"
-              ? `T = (V h − w_D b² / 2) / a, a = b − end-post thickness = ${f3(r.arm)} ft`
-              : `T = V h / b − w_D s / 2 (end-post tributary dead load), b = ${f3(r.arm)} ft`}
+            {rich(
+              s.overturning === "full"
+                ? `T = (V h − w_D b² / 2) / a, a = b − end-post thickness = ${f3(r.arm)} ft`
+                : `T = V h / b − w_D s / 2 (end-post tributary dead load), b = ${f3(r.arm)} ft`,
+            )}
             ; C = V h / a + w s / 2
           </>
         }

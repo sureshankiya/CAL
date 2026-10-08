@@ -250,28 +250,47 @@ export function LateralSheet({ m, design }: { m: SheetMeta; design: ProjectDesig
             the reference corner. The larger of the envelope force and the §28.3.4 minimum (16 psf walls, 8 psf roof
             projection) is used.
           </TextRow>
-          <SectionHead title="Distribution to wall lines — flexible diaphragm, tributary width" />
+          <SectionHead
+            title={`Distribution to wall lines — ${L.distribution === "flexible" ? "flexible diaphragm, tributary width" : L.distribution === "rigid" ? "rigid diaphragm with torsion" : "envelope of flexible and rigid diaphragm"}`}
+          />
           <DataTable
             head={[
               "Line",
               "Story",
               "Dir.",
+              "Pos. (ft)",
               "Trib. (ft)",
-              "Share",
-              "E_h = ρQ_E (lb)",
-              "W (lb)",
+              "Flex. E_h / W (lb)",
+              ...(L.distribution !== "flexible" ? ["Rigid E_h / W (lb)"] : []),
+              "E_h used (lb)",
+              "W used (lb)",
               "0.7E_h (lb)",
               "0.6W (lb)",
-              "Governs (ASD)",
+              "Governs",
             ]}
-            align={["left", "left", "center", "right", "right", "right", "right", "right", "right", "left"]}
+            align={[
+              "left",
+              "left",
+              "center",
+              "right",
+              "right",
+              "right",
+              ...(L.distribution !== "flexible" ? (["right"] as const) : []),
+              "right",
+              "right",
+              "right",
+              "right",
+              "left",
+            ]}
             small
             rows={L.lines.map((l) => [
               l.line.name,
               p.lateral!.stories.find((s) => s.id === l.line.storyId)?.name ?? "?",
               l.line.dir,
-              f1(l.line.trib),
-              f3(l.share),
+              l.line.pos === undefined ? "—" : f1(l.line.pos),
+              `${f1(l.trib)}${l.tribComputed ? "" : " (entered)"}`,
+              `${f0(l.flex.Eh)} / ${f0(l.flex.W)}`,
+              ...(L.distribution !== "flexible" ? [l.rigid ? `${f0(l.rigid.Eh)} / ${f0(l.rigid.W)}` : "—"] : []),
               f0(l.Eh),
               f0(l.W),
               f0(l.Easd),
@@ -279,15 +298,70 @@ export function LateralSheet({ m, design }: { m: SheetMeta; design: ProjectDesig
               l.governs,
             ])}
           />
+          {L.rigid?.length ? (
+            <>
+              <SectionHead title="Rigid diaphragm — centre of rigidity and torsion (§12.8.4)" />
+              <TR
+                desc="Line stiffness"
+                expr={
+                  <>
+                    k = Σ Q<sub>E,wall</sub> / δ<sub>xe,wall</sub> of the line&apos;s shear walls (SDPWS Eq. 4.3-1,
+                    secant at the design force); accidental eccentricity e<sub>a</sub> = ±0.05 × plan dimension
+                    (§12.8.4.2); torsion that would reduce a line force is not subtracted
+                  </>
+                }
+              />
+              <DataTable
+                head={[
+                  "Story",
+                  "Load",
+                  "Dir.",
+                  "V (lb)",
+                  "x_cr / y_cr (ft)",
+                  "e (ft)",
+                  "e_a (ft)",
+                  "J (lb·ft²/in)",
+                  "δmax/δavg",
+                ]}
+                align={["left", "left", "center", "right", "right", "right", "right", "right", "right"]}
+                small
+                rows={L.rigid.map((r) => [
+                  r.storyName,
+                  r.kind,
+                  r.dir,
+                  f0(r.V),
+                  `${f2(r.cr.x)} / ${f2(r.cr.y)}`,
+                  f2(r.e),
+                  f2(r.ea),
+                  f0(r.J),
+                  r.kind === "seismic" ? f3(r.torsionRatio) : "—",
+                ])}
+              />
+            </>
+          ) : null}
+          <SectionHead title="Diaphragm design force — §12.10.1.1" />
+          <DataTable
+            head={[
+              "Story",
+              "w_px (lb)",
+              "ΣF_i/Σw_i × w_px (lb)",
+              "0.2 S_DS I_e w_px (lb)",
+              "0.4 S_DS I_e w_px (lb)",
+              "F_px (lb)",
+            ]}
+            align={["left", "right", "right", "right", "right", "right"]}
+            small
+            rows={L.stories.map((s) => [s.name, f0(s.w), f0(s.FpxCalc), f0(s.FpxMin), f0(s.FpxMax), f0(s.Fpx)])}
+          />
           {L.warnings.map((w, i) => (
             <TextRow key={i}>
               <Flag>{w}</Flag>
             </TextRow>
           ))}
           <TextRow italic>
-            Accidental torsion, rigid-diaphragm distribution, diaphragm design (F_px), collectors and chords follow in
-            Phase 3. The line force is shared between the shear walls of the line in proportion to their allowable
-            capacity.
+            The line force is shared between the shear walls of the line in proportion to their allowable capacity (FTAO
+            walls: pier lengths). Diaphragms, chords and collectors are designed on the RD / FD sheets with F_px (ρ =
+            1.0).
           </TextRow>
           <TR
             desc="Result"

@@ -15,7 +15,15 @@ import type {
   ShearWallSpec,
   TrussSpec,
   WallSpec,
+  SteelBeamSpec,
+  SteelColumnSpec,
+  BasePlateSpec,
+  DiaphragmSpec,
+  TransferSpec,
+  UpliftSpec,
+  LedgerSpec,
 } from "./schema";
+import { zeroLoads } from "../core/loads";
 
 export type NewMemberKind =
   | "joist"
@@ -31,7 +39,16 @@ export type NewMemberKind =
   | "connector"
   | "footing"
   | "pad"
-  | "shearWall";
+  | "shearWall"
+  | "ftaoWall"
+  | "roofDiaphragm"
+  | "floorDiaphragm"
+  | "transfer"
+  | "uplift"
+  | "ledger"
+  | "steelBeam"
+  | "steelColumn"
+  | "basePlate";
 
 export const NEW_MEMBER_LABEL: Record<NewMemberKind, string> = {
   joist: "Floor joist (FJ)",
@@ -48,6 +65,15 @@ export const NEW_MEMBER_LABEL: Record<NewMemberKind, string> = {
   footing: "Continuous footing (F)",
   pad: "Pad footing (PF)",
   shearWall: "Shear wall (SW)",
+  ftaoWall: "Shear wall — force transfer around opening (SW)",
+  roofDiaphragm: "Roof diaphragm (RD)",
+  floorDiaphragm: "Floor diaphragm (FD)",
+  transfer: "Shear transfer connection (ST)",
+  uplift: "Wind uplift load path (UP)",
+  ledger: "Ledger (LG)",
+  steelBeam: "Steel beam / lintel (SB)",
+  steelColumn: "Steel column — HSS / pipe (SC)",
+  basePlate: "Column base plate + anchor rods (BP)",
 };
 
 let counter = 0;
@@ -56,7 +82,7 @@ export const newId = (prefix = "m") => `${prefix}-${Date.now().toString(36)}-${(
 export function newMemberSpec(p: Project, kind: NewMemberKind, structureId: string, levelId: string): MemberSpec {
   const level = p.structures.find((s) => s.id === structureId)?.levels.find((l) => l.id === levelId);
   const lvNo = level?.number ?? 1;
-  const key: MarkKey = kind;
+  const key: MarkKey = kind === "ftaoWall" ? "shearWall" : kind;
   const base = {
     id: newId(),
     mark: nextMark(p, key, lvNo),
@@ -235,6 +261,7 @@ export function newMemberSpec(p: Project, kind: NewMemberKind, structureId: stri
         stories: 1,
       } satisfies FootingSpec;
     case "shearWall":
+    case "ftaoWall":
       return {
         kind: "shearWall",
         ...base,
@@ -251,7 +278,145 @@ export function newMemberSpec(p: Project, kind: NewMemberKind, structureId: stri
         sill: { type: "cast-in", d: 0.625, spacing: 48, embed: 7, edge: 1.75 },
         sillSize: "2x4",
         windService: { factor: 0.42, limitN: 600 },
+        ...(kind === "ftaoWall"
+          ? {
+              b: 12,
+              opening: {
+                L1: 3,
+                Lo: 6,
+                L2: 3,
+                ha: 1.5,
+                hb: 3,
+                strapId: p.hardware.find((h) => h.kind === "strap")?.id,
+              },
+            }
+          : {}),
       } satisfies ShearWallSpec;
+    case "roofDiaphragm":
+    case "floorDiaphragm": {
+      const st = p.lateral?.stories ?? [];
+      return {
+        kind: "diaphragm",
+        ...base,
+        level: kind === "roofDiaphragm" ? "roof" : "floor",
+        storyId: (kind === "roofDiaphragm" ? st[st.length - 1] : st[0])?.id ?? "",
+        dir: "X",
+        sheathing: kind === "roofDiaphragm" ? "SH-15/32-8d" : "SH-19/32-10d",
+        blocked: false,
+        edge: "6/6",
+        unblockedCase: 1,
+        chord: {
+          species: "DF-L",
+          grade: "No.2",
+          size: "2x6",
+          splice: { type: "nails", nail: "16d-common", nails: 12 },
+        },
+        collectorOmega: false,
+      } satisfies DiaphragmSpec;
+    }
+    case "transfer":
+      return {
+        kind: "transfer",
+        ...base,
+        interface: "diaphragm-to-wall",
+        source: { kind: "wall", id: p.members.find((m) => m.kind === "shearWall")?.id ?? "" },
+        connector: {
+          type: "clip",
+          hardwareId: p.hardware.find((h) => h.model.startsWith("A35"))?.id ?? "",
+          direction: "F1",
+        },
+        spacing: 24,
+      } satisfies TransferSpec;
+    case "uplift":
+      return {
+        kind: "uplift",
+        ...base,
+        sourceId: p.members.find((m) => m.kind === "rafter" || m.kind === "truss")?.id ?? "",
+        support: 0,
+        levels: [
+          {
+            label: "Rafter to top plate",
+            deadAbove: 0,
+            connector: { type: "hardware", hardwareId: p.hardware.find((h) => h.kind === "tie")?.id ?? "" },
+            spacing: 24,
+          },
+        ],
+      } satisfies UpliftSpec;
+    case "ledger":
+      return {
+        kind: "ledger",
+        ...base,
+        ledger: { species: "DF-L", grade: "No.2", size: "2x12" },
+        extra: [],
+        lateral: { W: 0, E: 0 },
+        fastener: { type: "bolt", D: 0.625, Fyb: 45000, spacing: 24 },
+        support: { kind: "concrete", Fe: 7500, embed: 5 },
+        continuity: 1.25,
+      } satisfies LedgerSpec;
+    case "steelBeam":
+      return {
+        kind: "steelBeam",
+        ...base,
+        role: "beam",
+        shape: "W8x18",
+        grade: "A992",
+        method: "LRFD",
+        spans: [12],
+        area: [],
+        walls: [],
+        extra: [],
+        Lb: 0,
+        deflection: { preset: "floor" },
+        selfWeight: true,
+        bearing: [
+          { lb: 5.5, support: "post", species: "DF-L", grade: "No.1", size: "6x6" },
+          { lb: 5.5, support: "post", species: "DF-L", grade: "No.1", size: "6x6" },
+        ],
+      } satisfies SteelBeamSpec;
+    case "steelColumn":
+      return {
+        kind: "steelColumn",
+        ...base,
+        shape: "HSS4x4x1/4",
+        grade: "A500C",
+        method: "LRFD",
+        height: 9,
+        Kx: 1,
+        Ky: 1,
+        extra: [],
+        ex: 0,
+        ey: 0,
+        selfWeight: true,
+      } satisfies SteelColumnSpec;
+    case "basePlate":
+      return {
+        kind: "basePlate",
+        ...base,
+        method: "LRFD",
+        sourceId: p.members.find((m) => m.kind === "steelColumn")?.id,
+        column: "HSS4x4x1/4",
+        P: zeroLoads(),
+        M: zeroLoads(),
+        V: zeroLoads(),
+        plate: { N: 10, B: 10, tp: 0.5, grade: "A36-PL" },
+        rod: {
+          d: 0.625,
+          steel: 0,
+          nx: 2,
+          ny: 2,
+          sx: 6,
+          sy: 6,
+          e1: 2,
+          hef: 7,
+          type: "headed",
+          Abrg: 0.7,
+          eh: 3,
+          washer: 0,
+          groutPad: false,
+        },
+        foundation: { edges: [12, 12, 12, 12], ha: 18, cracked: true, condition: "B" },
+        weld: { w: 0.1875, FEXX: 70 },
+      } satisfies BasePlateSpec;
   }
 }
 
@@ -275,7 +440,15 @@ export function supportCount(m: MemberSpec): number {
     case "connector":
     case "footing":
     case "shearWall":
+    case "diaphragm":
+    case "transfer":
+    case "uplift":
       return 0;
+    case "steelColumn":
+      return 2;
+    case "basePlate":
+    case "ledger":
+      return 1;
     default:
       return m.spans.length + 1;
   }
@@ -292,6 +465,12 @@ export function supportLabels(m: MemberSpec): string[] {
       return ["Base (line)", ...m.packs.map((k) => k.label || `Stud pack at ${k.x} ft`)];
     case "post":
       return ["Base"];
+    case "steelColumn":
+      return ["Base", "Base shear"];
+    case "basePlate":
+      return ["Foundation"];
+    case "ledger":
+      return ["Wall (line)"];
     default:
       return Array.from({ length: supportCount(m) }, (_, i) => String.fromCharCode(65 + i));
   }

@@ -15,6 +15,15 @@ import {
 import { WoodMemberSheet } from "../sheets/WoodMemberSheet";
 import { ConnectorSheet, FootingSheet, PostSheet, ShearWallSheet, TrussSheet, WallSheet } from "../sheets/Phase2Sheets";
 import { LateralSheet, LoadPathSheet } from "../sheets/LateralSheets";
+import {
+  BasePlateSheet,
+  DiaphragmSheet,
+  LedgerSheet,
+  SteelBeamSheet,
+  SteelColumnSheet,
+  TransferSheet,
+  UpliftSheet,
+} from "../sheets/Phase3Sheets";
 import { Flag, Sheet, SheetTitle, TextRow } from "./primitives";
 import { packageChecks, type SheetEntry } from "./package";
 import { footers, titleFields } from "../sheets/common";
@@ -35,6 +44,14 @@ function receivedFrom(p: Project, design: ProjectDesign, id: string): string[] {
     const src = p.members.find((m) => m.id === spec.sourceId);
     out.add(`${src?.mark ?? "?"} reaction ${spec.support + 1}`);
   }
+  if (spec.kind === "basePlate" && spec.sourceId) {
+    const src = p.members.find((m) => m.id === spec.sourceId);
+    out.add(`${src?.mark ?? "?"} base reactions (axial and shear)`);
+  }
+  if (spec.kind === "uplift") {
+    const src = p.members.find((m) => m.id === spec.sourceId);
+    out.add(`${src?.mark ?? "?"} reaction ${spec.support + 1} (per foot, wind uplift)`);
+  }
   if (spec.kind === "ceilingJoist" && spec.tensionFrom) {
     const src = p.members.find((m) => m.id === spec.tensionFrom);
     out.add(`${src?.mark ?? "?"} thrust (tension)`);
@@ -44,7 +61,7 @@ function receivedFrom(p: Project, design: ProjectDesign, id: string): string[] {
 
 function connectionsOf(project: Project, design: ProjectDesign, id: string): string[] {
   return project.members
-    .filter((m) => m.kind === "connector" && m.sourceId === id)
+    .filter((m) => (m.kind === "connector" || m.kind === "uplift") && m.sourceId === id)
     .map((m) => {
       const r = design.outcomes.get(m.id)?.result;
       return r ? `${r.mark}: ${r.callout}` : `${m.mark}: (error)`;
@@ -137,6 +154,20 @@ function SheetBody({
           return <FootingSheet {...common} r={r} />;
         case "shearWall":
           return <ShearWallSheet {...common} r={r} />;
+        case "steelBeam":
+          return <SteelBeamSheet {...common} r={r} />;
+        case "steelColumn":
+          return <SteelColumnSheet {...common} r={r} />;
+        case "basePlate":
+          return <BasePlateSheet {...common} r={r} />;
+        case "diaphragm":
+          return <DiaphragmSheet {...common} r={r} />;
+        case "transfer":
+          return <TransferSheet {...common} r={r} />;
+        case "uplift":
+          return <UpliftSheet {...common} r={r} />;
+        case "ledger":
+          return <LedgerSheet {...common} r={r} />;
         default:
           return (
             <WoodMemberSheet

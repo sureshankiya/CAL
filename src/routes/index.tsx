@@ -221,6 +221,7 @@ function Index() {
                     links: m.links.filter((l) => l.sourceId !== id),
                     ...(m.kind === "ceilingJoist" && m.tensionFrom === id ? { tensionFrom: undefined } : {}),
                     ...(m.kind === "shearWall" && m.upliftFrom === id ? { upliftFrom: undefined } : {}),
+                    ...(m.kind === "basePlate" && m.sourceId === id ? { sourceId: undefined } : {}),
                   })) as MemberSpec[],
               }));
               if (activeId === id) setActiveId(undefined);

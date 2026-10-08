@@ -14,7 +14,7 @@ import { fmtInFraction } from "@/engine/core/fmt";
 import type { AnyResult, Project, ProjectDesign } from "@/engine/project";
 import { B, DataTable, Flag, NotesList, SectionHead, Sheet, SheetTitle, TextRow, TR, eq } from "../report/primitives";
 import type { PackageCheck, SheetEntry } from "../report/package";
-import { DESIGN_AID, DesignBasis, f0, f1, f2, f3, footers, titleFields, type SheetMeta } from "./common";
+import { DESIGN_AID, DesignBasis, f0, f1, f2, f3, footers, rich, titleFields, type SheetMeta } from "./common";
 
 export function spansText(r: AnyResult): string {
   switch (r.kind) {
@@ -29,7 +29,15 @@ export function spansText(r: AnyResult): string {
     case "footing":
       return r.input.type === "strip" ? "continuous" : `${fmtFtIn(r.input.B)} × ${fmtFtIn(r.input.L ?? r.input.B)}`;
     case "connector":
+    case "basePlate":
+    case "transfer":
+    case "uplift":
+    case "ledger":
       return "—";
+    case "steelColumn":
+      return `${fmtFtIn(r.input.height)} high`;
+    case "diaphragm":
+      return `${r.input.dir}-direction load`;
   }
   const s = r.kind === "rafter" ? [r.input.run] : r.input.spans;
   const base = s.map((x) => fmtFtIn(x)).join(" + ");
@@ -574,9 +582,24 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
   const sws = of("shearWall");
   const cns = of("connector");
   const ftgs = of("footing");
+  const sbs = of("steelBeam");
+  const scs = of("steelColumn");
+  const bps = of("basePlate");
+  const dias = of("diaphragm");
+  const sts = of("transfer");
+  const ups = of("uplift");
+  const lgs = of("ledger");
   const usedHw = new Set<string>([
     ...cns.map((c) => c.item.id),
     ...sws.flatMap((x) => (x.holdown ? [x.holdown.item.id] : [])),
+    ...sws.flatMap((x) => (x.ftao?.strap ? [x.ftao.strap.item.id] : [])),
+    ...dias.flatMap((x) =>
+      x.input.chord.splice.type === "strap" && x.input.chord.splice.strapId ? [x.input.chord.splice.strapId] : [],
+    ),
+    ...sts.flatMap((x) => (x.input.connector.type === "clip" ? [x.input.connector.hardwareId] : [])),
+    ...ups.flatMap((x) =>
+      x.input.levels.flatMap((l) => (l.connector.type === "hardware" ? [l.connector.hardwareId] : [])),
+    ),
   ]);
   return (
     <Sheet f={titleFields(m)} footerLeft={ft.left} footerCenter={ft.center} first={m.first} id="sheet-schedules">
@@ -807,6 +830,125 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
           ])}
         />
       ) : null}
+      {sbs.length || scs.length ? (
+        <DataTable
+          caption="Steel beam and column schedule"
+          head={["Mark", "Member", "Section / grade", "Span / height", "Bracing", "Method", "Gov. D/C", "Result"]}
+          small
+          rows={[
+            ...sbs.map((r) => [
+              r.mark,
+              r.title,
+              r.callout,
+              spansText(r),
+              r.input.Lb > 0 ? rich(`L_b = ${fmtFtIn(r.input.Lb)}`) : "continuous",
+              r.method,
+              f3(r.governing.ratio),
+              pf(r),
+            ]),
+            ...scs.map((r) => [
+              r.mark,
+              r.title,
+              `${r.shape.name} ${r.gradeLabel}`,
+              fmtFtIn(r.input.height),
+              `K = ${r.input.Kx} / ${r.input.Ky}`,
+              r.method,
+              f3(r.governing.ratio),
+              pf(r),
+            ]),
+          ]}
+        />
+      ) : null}
+      {bps.length ? (
+        <DataTable
+          caption="Base plate schedule"
+          head={["Mark", "Column", "Plate N × B × t", "Anchor rods", "Embedment", "Weld", "Result"]}
+          small
+          rows={bps.map((r) => [
+            r.mark,
+            r.input.sourceMark ? `${r.input.sourceMark} (${r.col.name})` : r.col.name,
+            `${f2(r.input.plate.N)}" × ${f2(r.input.plate.B)}" × ${fmtInFraction(r.input.plate.tp)}"`,
+            `(${r.input.rod.nx * r.input.rod.ny}) ${fmtInFraction(r.input.rod.d)}" ${r.rodSteel.label} @ ${f2(r.input.rod.sx)}" × ${f2(r.input.rod.sy)}"`,
+            rich(`h_ef ${f2(r.input.rod.hef)}" ${r.input.rod.type}`),
+            `${fmtInFraction(r.input.weld.w)}" fillet all round`,
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {dias.length ? (
+        <DataTable
+          caption="Diaphragm schedule"
+          head={[
+            "Mark",
+            "Level / load dir.",
+            "Sheathing",
+            "Nailing (edge / field)",
+            "Blocking",
+            "Max v (plf) / allow.",
+            "Chord splice",
+            "Result",
+          ]}
+          small
+          rows={dias.map((r) => {
+            const vs = Math.max(...r.segments.map((x) => 0.7 * x.vE));
+            const vw = Math.max(...r.segments.map((x) => 0.6 * x.vW));
+            return [
+              r.mark,
+              `${r.input.level} / ${r.input.dir}`,
+              r.values.row.label,
+              r.input.blocked
+                ? `${r.input.edge.replace("2.5", "2-1/2").replace("/", '" / ')}" (boundary / other edges), 12" field`
+                : '6" edge, 12" field',
+              r.input.blocked ? "Blocked" : "Unblocked",
+              `${f0(Math.max(vs, vw))} / ${f0(vs >= vw ? r.vAllowS : r.vAllowW)}`,
+              r.chord.spliceText.split(":")[0],
+              pf(r),
+            ];
+          })}
+        />
+      ) : null}
+      {sts.length || ups.length ? (
+        <DataTable
+          caption="Shear transfer and uplift connection schedule"
+          head={["Tag", "Connection", "Connector", "Spacing", "Demand / capacity (lb)", "Result"]}
+          small
+          rows={[
+            ...sts.map((r) => [
+              r.mark,
+              `${r.input.interface.replace(/-/g, " ")} — ${r.demand.sourceText}`,
+              r.callout,
+              `${f0(r.input.spacing)}" o.c.`,
+              `${f0(r.perFastener)} / ${f0(r.capacity)}`,
+              pf(r),
+            ]),
+            ...ups.flatMap((r) =>
+              r.rows.map((x, i) => [
+                i === 0 ? r.mark : "",
+                `${x.label} (${r.input.sourceMark})`,
+                x.model,
+                `${f0(x.spacing)}" o.c.`,
+                `${f0(x.F)} / ${f0(x.capacity)}`,
+                x.F <= x.capacity ? "OK" : "FAIL",
+              ]),
+            ),
+          ]}
+        />
+      ) : null}
+      {lgs.length ? (
+        <DataTable
+          caption="Ledger schedule"
+          head={["Mark", "Member size", "Anchorage", "Support", "Gov. D/C", "Result"]}
+          small
+          rows={lgs.map((r) => [
+            r.mark,
+            `${r.input.ledger.size} ${r.input.ledger.species} ${r.input.ledger.grade}`,
+            `${fmtInFraction(r.input.fastener.D)}" ${r.input.fastener.type === "bolt" ? "bolts" : "lag screws"} @ ${f0(r.input.fastener.spacing)}" o.c.`,
+            r.supportText,
+            f3(r.governing.ratio),
+            pf(r),
+          ])}
+        />
+      ) : null}
       {usedHw.size ? (
         <DataTable
           caption="Connector hardware data used (project hardware list)"
@@ -835,10 +977,7 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
             ])}
         />
       ) : null}
-      <TextRow italic>
-        Wall-to-wall, top-plate splice, diaphragm and collector connections are scheduled with the Phase 3 lateral
-        design.
-      </TextRow>
+      <TextRow italic>Typical nailing per CRC / IRC Table R602.3(1) unless scheduled above.</TextRow>
     </Sheet>
   );
 }

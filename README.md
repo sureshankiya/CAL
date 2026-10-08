@@ -32,7 +32,18 @@ noted and stamped by the Engineer of Record.
 | Lateral | ASCE 7 ELF base shear and Fx, Ch. 28 Part 1 envelope wind (Load Cases A / B, §28.3.4 minimum), wall lines by tributary width; SW segmented shear walls (SDPWS-2021): unit shear, aspect factor, chord forces, end posts, hold-downs incl. stacked uplift, ACI 318-19 Ch. 17 hold-down anchors, sill bolts, seismic drift and wind deflection |
 | Schedules | Framing, truss, beam / header, wall, post, shear wall, hold-down, connector and foundation schedules, hardware data used |
 
-Diaphragms, collectors, FTAO, steel, concrete / CMU walls and AI drawing extraction follow in Phases 3–4 (PLAN.md §14).
+## Phase 3
+
+| Area | Included |
+|---|---|
+| Steel | SB steel beams, headers and lintels (W, C, HSS; AISC 360-16 / 360-22, LRFD or ASD): flexure with LTB per unbraced segment and C_b (F2 / F3 / F7 / F8), shear (G2 / G4 / G5), deflection, web local yielding and crippling (J10), bearing on wood; fixed-end supports in the beam solver; SC HSS / pipe columns: E3 / E7 compression, H1 interaction with B1, eccentric beam bearing, wind on the column, wood beam bearing on the cap plate; BP base plates: DG1 small / large moment, J8 bearing, rod tension + shear + grout-pad bending (J3.7), column weld, ACI 318 Ch. 17 anchor group (tension breakout, pullout, blowout, steel and breakout shear Cases 1 and 2, pryout, interaction) |
+| Diaphragms | RD / FD wood diaphragms (SDPWS Table 4.2A): F_px with the §12.10.1.1 limits, unit shear per span, aspect ratio, chords on the top plate with nailed or strapped splices, collector force profile along each wall line (Ω0 or the light-frame exception) |
+| Lateral distribution | Wall-line plan positions with computed tributary widths; rigid-diaphragm distribution with inherent and accidental torsion, envelope option, torsional-irregularity ratio |
+| Shear walls | FTAO walls (one opening, Diekmann rational method): pier and above / below unit shears, corner strap forces, pier aspect |
+| Connections | ST shear transfer (clips or nails, required spacing), UP wind-uplift chain from the roof to the foundation, LG ledgers to wood rims, concrete or CMU (NDS 12.3 yield equations at the load angle) |
+| Schedules | Steel beam / column, base plate, diaphragm, shear transfer / uplift and ledger schedules |
+
+Concrete / CMU walls, hold-down footings, tie-ins to existing concrete and AI drawing extraction follow in Phase 4 (PLAN.md §14).
 
 ## Use
 
@@ -57,9 +68,9 @@ bun run print-check          # with the dev server running: PDF of the example p
 bun run build
 ```
 
-`verification/reference.py` and `verification/reference_p2.py` are independent implementations (closed-form beam formulas,
-three-moment equation, NDS factor equations, NDS 12.3 yield equations) — it does not use
-the TypeScript engine. `tests/reference.test.ts` and `tests/reference_p2.test.ts` compare the engine with them.
+`verification/reference.py`, `reference_p2.py` and `reference_p3.py` are independent implementations (closed-form beam
+formulas, three-moment equation, NDS, AISC 360 / DG1, ACI 318 Ch. 17, SDPWS and ASCE 7 provisions written from the
+code text) — they do not use the TypeScript engine. `tests/reference*.test.ts` compare the engine with them.
 
 ## Layout
 
@@ -67,10 +78,10 @@ the TypeScript engine. `tests/reference.test.ts` and `tests/reference_p2.test.ts
 src/engine/core       code cycles, load types, ASCE 7 combinations, provenance, formatting
 src/engine/data       NDS Supplement values, sections, glulam / SCL, TJI, data-library registry
 src/engine/analysis   beam stiffness solver with pattern loading
-src/engine/design     NDS bending and compression members, dowel fasteners, ACI 318 concrete and anchors, sizing
+src/engine/design     NDS members and dowel fasteners, AISC 360 steel, DG1 base plates, ACI 318 concrete and anchors, sizing
 src/engine/loads      dead, live, roof live, snow, deflection criteria
-src/engine/members    member modules (FJ, R, CJ, IJ, B / H / RB, W, P, T, CN, F / PF, SW)
-src/engine/lateral    seismic and wind story forces, wall-line distribution
+src/engine/members    member modules (FJ, R, CJ, IJ, B / H / RB, W, P, T, CN, F / PF, SW, SB, SC, BP, RD / FD, ST, UP, LG)
+src/engine/lateral    seismic and wind story forces, flexible and rigid wall-line distribution
 src/engine/project    project schema, load-path design order, marks, storage, review table
 src/components        report primitives, diagrams, sheets, editors, drawing viewer
 ```

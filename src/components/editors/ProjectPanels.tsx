@@ -837,18 +837,49 @@ export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
           <span />
         )}
       </Grid>
-      <div className="text-xs font-semibold text-muted-foreground">
-        Wall lines (tributary width, flexible diaphragm)
-      </div>
+      <div className="text-xs font-semibold text-muted-foreground">Diaphragm distribution</div>
+      <Grid cols={3}>
+        <Field label="Distribution to wall lines">
+          <Select
+            value={lat.distribution ?? "flexible"}
+            options={[
+              { value: "flexible", label: "Flexible (tributary)" },
+              { value: "rigid", label: "Rigid with torsion" },
+              { value: "envelope", label: "Envelope of both" },
+            ]}
+            onChange={(v) => upd({ distribution: v })}
+          />
+        </Field>
+        <Field label="Centre of mass x (ft)" hint="blank = plan centre">
+          <NumberInput
+            value={lat.com?.x}
+            allowEmpty
+            min={0}
+            onChange={(v) => upd({ com: v === undefined ? undefined : { x: v, y: lat.com?.y ?? lat.Ly / 2 } })}
+          />
+        </Field>
+        <Field label="Centre of mass y (ft)">
+          <NumberInput
+            value={lat.com?.y}
+            allowEmpty
+            min={0}
+            onChange={(v) => upd({ com: v === undefined ? undefined : { x: lat.com?.x ?? lat.Lx / 2, y: v } })}
+          />
+        </Field>
+      </Grid>
+      <div className="text-xs font-semibold text-muted-foreground">Wall lines</div>
       {lat.lines.map((l, i) => (
         <Grid key={l.id} cols={4}>
           <TextInput value={l.name} onChange={(v) => setLine(i, { name: v })} />
-          <Select
-            value={l.storyId}
-            options={lat.stories.map((s) => ({ value: s.id, label: s.name }))}
-            onChange={(v) => setLine(i, { storyId: v })}
-          />
-          <Select value={l.dir} options={["X", "Y"] as const} onChange={(v) => setLine(i, { dir: v })} />
+          <div className="flex gap-1">
+            <Select
+              value={l.storyId}
+              options={lat.stories.map((s) => ({ value: s.id, label: s.name }))}
+              onChange={(v) => setLine(i, { storyId: v })}
+            />
+            <Select value={l.dir} options={["X", "Y"] as const} onChange={(v) => setLine(i, { dir: v })} />
+          </div>
+          <NumberInput value={l.pos} allowEmpty min={0} onChange={(v) => setLine(i, { pos: v })} />
           <div className="flex gap-1">
             <NumberInput value={l.trib} min={0.5} onChange={(v) => setLine(i, { trib: v ?? l.trib })} />
             <SmallButton
@@ -874,8 +905,9 @@ export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
         + Add wall line
       </AddButton>
       <Hint>
-        Name · story · direction (forces along X or Y) · tributary diaphragm width (ft). Σ widths per story and
-        direction should equal the building depth.
+        Name · story / direction (forces along X or Y) · plan position (ft: y of an X line, x of a Y line) · tributary
+        width (ft, used when positions are blank). With positions on every line of a story and direction, tributary
+        widths are computed and diaphragms, collectors and the rigid option become available.
       </Hint>
     </Collapsible>
   );

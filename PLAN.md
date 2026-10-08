@@ -1,6 +1,6 @@
 # HouseCalc — Wood-Frame House Structural Calculator
 
-Merged build plan · Rev. G · 2026-10-07 · Phase 2 delivered — see Revision G; decisions in §13 approved
+Merged build plan · Rev. H · 2026-10-08 · Phase 3 delivered — see Revision H; decisions in §13 approved
 
 Sources merged:
 - **Rev. A plan** — review of your Lovable apps JoistCalc, StudCalc and TrussCalc. STRUTURA (steel truss) is excluded.
@@ -10,6 +10,38 @@ Sources merged:
 Where the sources differ, the BUILD_PLAN decisions govern. Conflicts that need your decision are in §13.
 
 ---
+
+## Revision H — Phase 3 delivered
+
+| Item | Status |
+|---|---|
+| Steel beams / lintels (SB) | W, C, HSS; AISC 360-16 (2022 cycle) / 360-22 (2025 cycle), LRFD or ASD; F2 / F3 / F6 / F7 / F8 flexure with LTB per unbraced segment and C_b (F1-1), G2 / G4 / G5 shear, J10.2 / J10.3 at bearings, NDS bearing on wood supports, IBC 1604.3 deflection; fixed-end supports added to the beam solver |
+| Steel columns (SC) | HSS / pipe / W: E3, E7 effective width (slender HSS walls), F7 / F8, H1-1a/b with App. 8 B1, eccentric beam bearing, wind on the column, cap-plate bearing of the wood beam |
+| Base plates (BP) | DG1 small / large moment, J8 bearing, plate at bearing and tension interfaces, rods in tension + shear + grout-pad bending (J3.7), column weld; ACI 318-19 Ch. 17 anchor group: steel, tension breakout of the tension row, pullout (headed / hooked), side-face blowout, steel shear (grout pad 0.8), breakout perpendicular (Case 1 front row and Case 2 rear row, c'a1 limit), parallel, pryout, interaction, seismic 0.75 |
+| Diaphragms (RD / FD) | SDPWS Table 4.2A blocked / unblocked; F_px (Eq. 12.10-1 with 0.2 / 0.4 S_DS I_e w_px limits, ρ = 1.0); per-span reactions, unit shear, aspect ratio; chord on the double top plate with nailed (NDS 12.3) or strapped splice; collector force profile along each line from the wall positions (FTAO walls as their piers) or the upper bound; Ω0 unless the §12.10.2.1 light-frame exception applies |
+| Distribution | Wall-line plan positions → computed tributary widths; rigid diaphragm with line stiffness from the designed shear walls (secant Q_E / δ_xe), inherent and ±5 % accidental torsion, envelope option, δmax/δavg torsional-irregularity flag (A_x not applied — EOR) |
+| FTAO shear walls | One opening per wall, Diekmann rational method (SDPWS 4.3.5.2): v_p, H, v_ab, corner strap force, pier aspect ≤ 3.5 and C_ar, strap from the hardware list; line sharing and collectors by pier length; deflection by Eq. 4.3-1 over the full wall with max(v_p, v_ab) — flagged VERIFY |
+| Shear transfer (ST) | Clips (F1 / F2 from the hardware list) or nails (NDS 12.3, toe-nail C_tn 0.83); demand from a shear wall or a wall line |
+| Uplift path (UP) | Chain of connections from a roof member's net uplift per foot, 0.6D + 0.6W at each level with the dead load above |
+| Ledgers (LG) | NDS 12.3 single-shear yield equations at the angle of the resultant (K_θ, Fe at θ), wood rim or concrete / CMU (entered dowel bearing), ledger bending / shear between fasteners, loaded-edge distance |
+| Schedules | Steel beam / column, base plate, diaphragm, shear transfer / uplift and ledger schedules; package check that every story and direction has a diaphragm design |
+| Verification | 100 tests. Tedds parity — 336 East Grand: W10×22 fixed–fixed lintel (M −4.441 / +2.220 kip-ft, V 2.665 kip, Mn 108.333, φMn 97.5 kip-ft, Vn 73.44 kip, δ 0.006 in), HSS 6×6×¼ post (SR 59.0, Fcr 38.8 ksi, φPn 182.6 vs 182.9 kip, φMn 42.06 vs 42.0 kip-ft, B1 1.0, H1-1b 0.271 vs 0.272 — difference is computed vs tabulated A and Z), 12×12×¾ base plate (Pp 979.2 kip, Y 0.137 in, T 4.25 kip, t_req 0.479 / 0.224 in, rod f_t 28.8 vs φF'nt 32.6 ksi), anchor bolts (Nsa 19.40, Ncbg 32.22, Np 32.00, Vsa 18.62, Vcbg 19.32 with c'a1 = 8 in, Vcpg 74.36 kip); 45324 Indian Well 2×12 ledger (Fe⊥ 3,157.6 psi, k1 2.32, k2 1.43, k3 1.03, Z modes 3600 / 474 / 1221 / 1336 / 298.2 / 348.2 lb, D/C 0.293). Independent Python reference for Phase 3 (verification/reference_p3.py: W beam LTB, HSS properties, HSS column H1, slender HSS E7, small-moment base plate, anchor group, ledger, FTAO, diaphragm and collectors, rigid torsion, F_px) — all within 0.1 %. Print check: example house 42 sheets, 199 pages |
+
+**Example house** now adds a rear porch (R-2 rafters on a 2×8 ledger LG-1 and a W8×10 beam SB-1 on two HSS 4×4×¼ posts SC-1 / SC-2 with base plates BP-1 / BP-2 on pads PF-2 / PF-3), an FTAO front wall 1SW-1 around window W1, roof diaphragms RD-1 / RD-2 with chords and collectors, shear transfer ST-1, uplift path UP-1, and the envelope (flexible / rigid) distribution.
+
+**Findings while building Phase 3**
+- East Grand W10×22 lintel: the Tedds sheet checks 1.2D only; for a dead-only lintel 1.4D governs (M = 5.18 vs 4.44 kip-ft; D/C still small). The 0.022 kip/ft line load duplicates the self weight that Tedds also includes.
+- East Grand base-plate anchor sheet uses φ = 0.65 for concrete breakout of cast-in anchors; ACI 318 Table 17.5.3(c) gives 0.70 (Condition B) / 0.75 (Condition A) — Tedds is conservative. Its interaction (0.451) is triggered only by that φ.
+- Indian Well ledger: the Tedds yield-mode values reproduce exactly with F_yb = 22,500 psi; with the NDS bolt bending yield strength of 45,000 psi, Mode IIIs gives Z = 370.6 lb (Tedds 298.2 lb, conservative). The CMU dowel bearing value 6,000 psi used by Tedds is not an NDS table value — **confirm the basis** (HouseCalc requires it as an entered, VERIFY value).
+- Rigid distribution of the example (symmetric plan): accidental torsion raises the line forces 1–7 %; δmax/δavg = 1.06 (no torsional irregularity).
+- Diaphragm force: for a one-story WSP building (R = 6.5), F_px is governed by the 0.2 S_DS I_e w_px minimum (6,478 lb vs C_s W = 4,983 lb in the example), so diaphragms and collectors see about 30 % more than the wall-line forces.
+
+**Needed from you (Phase 3 data, all print VERIFY)**
+1. W and C shape properties against the AISC Shapes Database (rows were checked for internal consistency against their dimensions); HSS properties are computed from geometry and match the AISC tables to three figures.
+2. SDPWS Table 4.2A diaphragm values (entered from the 2015 / 2021 tables).
+3. Clip / strap values for shear transfer and splices (A35, LTP4, MST, ST straps) — enter in the hardware list; CS16 remains to be checked.
+4. Basis for the dowel bearing strength of concrete / CMU for ledger bolts (7,500 / 6,000 psi entered).
+5. FTAO deflection method (HouseCalc uses a conservative full-wall Eq. 4.3-1 with the larger panel shear) and whether you want the APA / SEAOC multi-opening FTAO method added in Phase 4.
 
 ## Revision G — Phase 2 delivered
 

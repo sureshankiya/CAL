@@ -14,7 +14,8 @@ import { getCycle } from "../core/codes";
 import { LOAD_TYPES, zeroLoads, type LoadType, type LoadVector } from "../core/loads";
 import { fromDefault } from "../core/provenance";
 import { soilClass } from "../data/soil";
-import { analyseLateral, type LateralResult } from "../lateral/analysis";
+import { analyseLateral, type Dir, type LateralResult } from "../lateral/analysis";
+import { rigidDistribution, type RigidStoryResult } from "../lateral/rigid";
 import { driftLimitFactor } from "../loads/seismic";
 import { velocityPressure } from "../loads/wind";
 import {
@@ -37,7 +38,19 @@ import { designPost, type PostResult } from "../members/post";
 import { designShearWall, shearWallWeight, type ShearWallDemand, type ShearWallResult } from "../members/shearWall";
 import { designTruss, type TrussResult } from "../members/truss";
 import { designWall, type WallResult } from "../members/wall";
-import type { MemberSpec, Project, ShearWallSpec } from "./schema";
+import { designDiaphragm, type DiaphragmDemand, type DiaphragmResult } from "../members/diaphragm";
+import { designLedger, type LedgerResult } from "../members/ledger";
+import {
+  designBasePlateMember,
+  designSteelBeam,
+  designSteelColumn,
+  type BasePlateMemberResult,
+  type SteelBeamResult,
+  type SteelColumnResult,
+} from "../members/steel";
+import { designTransfer, type TransferDemand, type TransferResult } from "../members/transfer";
+import { designUplift, type UpliftResult } from "../members/uplift";
+import type { DiaphragmSpec, MemberSpec, Project, ShearWallSpec, TransferSpec } from "./schema";
 
 export type AnyResult =
   | JoistResult
@@ -50,7 +63,14 @@ export type AnyResult =
   | TrussResult
   | ConnectorResult
   | FootingResult
-  | ShearWallResult;
+  | ShearWallResult
+  | SteelBeamResult
+  | SteelColumnResult
+  | BasePlateMemberResult
+  | DiaphragmResult
+  | TransferResult
+  | UpliftResult
+  | LedgerResult;
 
 export interface DesignOutcome {
   spec: MemberSpec;
@@ -112,6 +132,9 @@ export function dependencies(m: MemberSpec): string[] {
   if (m.kind === "ceilingJoist" && m.tensionFrom) ids.add(m.tensionFrom);
   if (m.kind === "connector") ids.add(m.sourceId);
   if (m.kind === "shearWall" && m.upliftFrom) ids.add(m.upliftFrom);
+  if (m.kind === "basePlate" && m.sourceId) ids.add(m.sourceId);
+  if (m.kind === "uplift") ids.add(m.sourceId);
+  if (m.kind === "transfer" && m.source.kind === "wall") ids.add(m.source.id);
   return [...ids];
 }
 
@@ -309,8 +332,127 @@ function designOne(
       });
     case "shearWall":
       return designShearWall(ctx, { ...m, top: shearWallTop(m, linked) }, shearWallDemand(p, m, lateral, outcomes));
+    case "steelBeam":
+      return designSteelBeam(ctx, { ...m, extra: [...m.extra, ...linked] });
+    case "steelColumn":
+      return designSteelColumn(ctx, { ...m, extra: [...m.extra, ...linked] });
+    case "basePlate": {
+      const P = { ...m.P };
+      const V = { ...m.V };
+      let column = m.column;
+      let sourceMark: string | undefined;
+      if (m.sourceId) {
+        const src = outcomes.get(m.sourceId)?.result;
+        if (!src) throw new Error(`Column ${markOf(p, m.sourceId)} has an error or is missing`);
+        if (src.kind !== "steelColumn") throw new Error(`${src.mark} is not a steel column`);
+        for (const t of LOAD_TYPES) {
+          P[t] += src.reactions[0].byType[t];
+          V[t] += src.reactions[1].byType[t];
+        }
+        column = src.shape.name;
+        sourceMark = src.mark;
+      }
+      return designBasePlateMember(ctx, {
+        ...m,
+        P,
+        V,
+        column,
+        sourceMark,
+        fc: p.criteria.concrete.fc,
+        seismic: ["C", "D", "E", "F"].includes(p.criteria.seismic.SDC),
+      });
+    }
+    case "diaphragm":
+      return designDiaphragm(ctx, m, diaphragmDemand(p, m, lateral));
+    case "transfer":
+      return designTransfer(ctx, m, transferDemand(p, m, lateral, outcomes));
+    case "uplift": {
+      const src = outcomes.get(m.sourceId)?.result;
+      if (!src) throw new Error(`Uplift source ${markOf(p, m.sourceId)} has an error or is missing`);
+      const r = src.reactions[m.support];
+      if (!r) throw new Error(`${src.mark}: support ${m.support + 1} does not exist`);
+      if (!r.perFoot) throw new Error(`${src.mark} ${r.name}: not a repetitive member — no reaction per foot`);
+      return designUplift(ctx, { ...m, sourceMark: `${src.mark} ${r.name}`, perFoot: r.perFoot });
+    }
+    case "ledger":
+      return designLedger(ctx, { ...m, extra: [...m.extra, ...linked] });
   }
 }
+
+/** Plan dimensions: span direction (perpendicular to the load) and depth (parallel to it). */
+const planOf = (p: Project, dir: Dir) => {
+  const lat = p.lateral!;
+  return dir === "X" ? { Dspan: lat.Ly, Dpar: lat.Lx } : { Dspan: lat.Lx, Dpar: lat.Ly };
+};
+
+/** Effective length of a shear wall for line sharing and collectors (FTAO: the piers). */
+const wallLength = (w: ShearWallSpec) => (w.opening ? w.opening.L1 + w.opening.L2 : w.b);
+
+function diaphragmDemand(p: Project, d: DiaphragmSpec, lateral: LateralResult | undefined): DiaphragmDemand {
+  if (!p.lateral?.enabled || !lateral)
+    throw new Error("Diaphragms need the lateral analysis — enable it under Lateral");
+  const sf = lateral.stories.find((x) => x.storyId === d.storyId);
+  if (!sf) throw new Error("Diaphragm: story not found");
+  const lines = p.lateral.lines.filter((l) => l.storyId === d.storyId && l.dir === d.dir);
+  if (!lines.length) throw new Error(`Diaphragm: no ${d.dir} wall lines in ${sf.name}`);
+  const missing = lines.filter((l) => l.pos === undefined);
+  if (missing.length)
+    throw new Error(`Diaphragm: enter the plan position of wall line(s) ${missing.map((l) => l.name).join(", ")}`);
+  const { Dspan, Dpar } = planOf(p, d.dir);
+  return {
+    storyName: sf.name,
+    Fpx: sf.Fpx,
+    FpxCalc: sf.FpxCalc,
+    FpxMin: sf.FpxMin,
+    FpxMax: sf.FpxMax,
+    Fw: sf.windF[d.dir],
+    Dspan,
+    Dpar,
+    lines: lines.map((l) => ({
+      id: l.id,
+      name: l.name,
+      pos: l.pos!,
+      walls: p.members
+        .filter((m): m is ShearWallSpec => m.kind === "shearWall" && m.lineId === l.id)
+        .flatMap((w) =>
+          // FTAO wall: its two full-height piers (the opening is spanned by the strap / header)
+          w.opening
+            ? [
+                { mark: `${w.mark} pier 1`, L: w.opening.L1, x: w.x },
+                {
+                  mark: `${w.mark} pier 2`,
+                  L: w.opening.L2,
+                  x: w.x === undefined ? undefined : w.x + w.opening.L1 + w.opening.Lo,
+                },
+              ]
+            : [{ mark: w.mark, L: wallLength(w), x: w.x }],
+        ),
+    })),
+    Omega0: lateral.system.Omega0,
+    lightFrame: p.lateral.system === "wsp",
+    SDC: p.criteria.seismic.SDC,
+  };
+}
+
+function transferDemand(
+  p: Project,
+  t: TransferSpec,
+  lateral: LateralResult | undefined,
+  outcomes: Map<string, DesignOutcome>,
+): TransferDemand {
+  if (t.source.kind === "wall") {
+    const r = outcomes.get(t.source.id)?.result;
+    if (!r || r.kind !== "shearWall") throw new Error("Shear transfer: source shear wall has an error or is missing");
+    return { sourceText: `${r.mark} (${r.demand.lineName})`, vS: r.vS, vW: r.vW };
+  }
+  const src = t.source;
+  const lf = lateral?.lines.find((x) => x.line.id === src.lineId);
+  if (!lf || !p.lateral) throw new Error("Shear transfer: wall line not found or lateral analysis off");
+  const { Dpar } = planOf(p, lf.line.dir);
+  return { sourceText: `${lf.line.name} over ${fmtFt(Dpar)}`, vS: lf.Easd / Dpar, vW: lf.Wasd / Dpar };
+}
+
+const fmtFt = (v: number) => `${Math.round(v * 100) / 100} ft`;
 
 /**
  * Allowable soil pressure check (plan §2B Q4): a presumptive value (IBC Table
@@ -367,30 +509,108 @@ export function designProject(p: Project): ProjectDesign {
       lateralError = e instanceof Error ? e.message : String(e);
     }
   }
-  const outcomes = new Map<string, DesignOutcome>();
   const { order, circular } = designOrder(p.members);
-  for (const id of order) {
-    const m = p.members.find((x) => x.id === id)!;
-    const o: DesignOutcome = { spec: m, dependsOn: dependencies(m), linked: [] };
-    outcomes.set(id, o);
-    try {
-      o.linked = linkLoads(p, m, outcomes);
-      o.result = designOne(p, ctx, m, o.linked, outcomes, lateral);
-      markExisting(m, o.result);
-    } catch (e) {
-      o.error = e instanceof Error ? e.message : String(e);
+  const run = () => {
+    const outcomes = new Map<string, DesignOutcome>();
+    for (const id of order) {
+      const m = p.members.find((x) => x.id === id)!;
+      const o: DesignOutcome = { spec: m, dependsOn: dependencies(m), linked: [] };
+      outcomes.set(id, o);
+      try {
+        o.linked = linkLoads(p, m, outcomes);
+        o.result = designOne(p, ctx, m, o.linked, outcomes, lateral);
+        markExisting(m, o.result);
+      } catch (e) {
+        o.error = e instanceof Error ? e.message : String(e);
+      }
+    }
+    for (const id of circular) {
+      const m = p.members.find((x) => x.id === id)!;
+      outcomes.set(id, {
+        spec: m,
+        dependsOn: dependencies(m),
+        linked: [],
+        error: "Circular load path — this member is loaded by a member it supports",
+      });
+    }
+    return outcomes;
+  };
+  let outcomes = run();
+  // rigid / envelope distribution: line stiffness from the shear walls of the previous pass
+  if (lateral && p.lateral && p.lateral.distribution !== "flexible") {
+    for (let iter = 0; iter < 3; iter++) {
+      if (!applyRigid(p, lateral, outcomes)) break;
+      outcomes = run();
     }
   }
-  for (const id of circular) {
-    const m = p.members.find((x) => x.id === id)!;
-    outcomes.set(id, {
-      spec: m,
-      dependsOn: dependencies(m),
-      linked: [],
-      error: "Circular load path — this member is loaded by a member it supports",
-    });
-  }
   return { ctx, outcomes, order, circular, lateral, lateralError };
+}
+
+/**
+ * Wall-line stiffness from the designed shear walls (secant k = Q_E / δ_xe of
+ * each wall) and the rigid-diaphragm line forces; envelope takes the larger of
+ * the flexible and rigid forces. Returns false when the rigid distribution
+ * cannot be formed (positions or stiffness missing).
+ */
+function applyRigid(p: Project, lateral: LateralResult, outcomes: Map<string, DesignOutcome>): boolean {
+  const lat = p.lateral!;
+  const k = new Map<string, number>();
+  for (const o of outcomes.values()) {
+    const r = o.result;
+    if (r?.kind !== "shearWall" || !(r.drift.dxe > 0)) continue;
+    const id = (o.spec as ShearWallSpec).lineId;
+    k.set(id, (k.get(id) ?? 0) + r.demand.QE / r.drift.dxe);
+  }
+  const results: Array<RigidStoryResult & { storyId: string; storyName: string; kind: "seismic" | "wind" }> = [];
+  let applied = false;
+  for (const sf of lateral.stories) {
+    const ls = lat.lines.filter((l) => l.storyId === sf.storyId);
+    if (!ls.length) continue;
+    if (ls.some((l) => l.pos === undefined || !(k.get(l.id)! > 0))) {
+      const msg = `${sf.name}: rigid distribution needs a plan position and designed shear walls on every wall line — flexible distribution used`;
+      if (!lateral.warnings.includes(msg)) lateral.warnings.push(msg);
+      continue;
+    }
+    const rl = ls.map((l) => ({ id: l.id, dir: l.dir as Dir, pos: l.pos!, k: k.get(l.id)! }));
+    const cm = lat.com ?? { x: lat.Lx / 2, y: lat.Ly / 2 };
+    const plan = { Lx: lat.Lx, Ly: lat.Ly };
+    const per = new Map<string, { E: number; W: number; dE: number; tE: number; dW: number; tW: number }>();
+    for (const dir of ["X", "Y"] as Dir[]) {
+      if (!rl.some((l) => l.dir === dir)) continue;
+      const rs = rigidDistribution(rl, sf.VE, dir, cm, plan, true);
+      const rw = rigidDistribution(rl, sf.VW[dir], dir, { x: lat.Lx / 2, y: lat.Ly / 2 }, plan, false);
+      results.push({ ...rs, storyId: sf.storyId, storyName: sf.name, kind: "seismic" });
+      results.push({ ...rw, storyId: sf.storyId, storyName: sf.name, kind: "wind" });
+      for (const l of rs.lines) {
+        const w = rw.lines.find((x) => x.id === l.id)!;
+        const cur = per.get(l.id) ?? { E: 0, W: 0, dE: 0, tE: 0, dW: 0, tW: 0 };
+        if (l.total > cur.E) Object.assign(cur, { E: l.total, dE: l.direct, tE: l.torsion });
+        if (w.total > cur.W) Object.assign(cur, { W: w.total, dW: w.direct, tW: w.torsion });
+        per.set(l.id, cur);
+      }
+      if (rs.torsionRatio > 1.2) {
+        const msg = `${sf.name}, ${dir} direction: δmax/δavg = ${rs.torsionRatio.toFixed(2)} > 1.2 — torsional irregularity (ASCE 7 Table 12.3-1 Type 1a${rs.torsionRatio > 1.4 ? ", extreme 1b" : ""}); amplification A_x (§12.8.4.3) not applied — EOR review`;
+        if (!lateral.warnings.includes(msg)) lateral.warnings.push(msg);
+      }
+    }
+    for (const lf of lateral.lines) {
+      const r = per.get(lf.line.id);
+      if (!r || lf.line.storyId !== sf.storyId) continue;
+      const rigid = { Eh: lateral.rho * r.E, W: r.W, directE: r.dE, torsionE: r.tE, directW: r.dW, torsionW: r.tW };
+      const env = lat.distribution === "envelope";
+      lf.rigid = rigid;
+      lf.method = lat.distribution;
+      lf.Eh = env ? Math.max(lf.flex.Eh, rigid.Eh) : rigid.Eh;
+      lf.W = env ? Math.max(lf.flex.W, rigid.W) : rigid.W;
+      lf.Easd = 0.7 * lf.Eh;
+      lf.Wasd = 0.6 * lf.W;
+      lf.governs = lf.Easd >= lf.Wasd ? "seismic" : "wind";
+      lf.share = sf.VE > 0 ? lf.Eh / (lateral.rho * sf.VE) : lf.share;
+      applied = true;
+    }
+  }
+  lateral.rigid = results;
+  return applied;
 }
 
 /** Members that take load from the given member (for the load-path view). */

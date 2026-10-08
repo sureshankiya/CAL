@@ -384,6 +384,181 @@ export const shearWallSpecSchema = z.object({
     .optional(),
   ka: pos.optional(),
   windService: z.object({ factor: pos, limitN: pos }),
+  /** start position along the wall line, ft (for the collector force profile) */
+  x: nonneg.optional(),
+  /** force transfer around one opening (FTAO) */
+  opening: z.object({ L1: pos, Lo: pos, L2: pos, ha: pos, hb: nonneg, strapId: z.string().optional() }).optional(),
+});
+
+const steelMethodSchema = z.enum(["LRFD", "ASD"]);
+
+export const steelBeamSpecSchema = z.object({
+  kind: z.literal("steelBeam"),
+  ...common,
+  role: z.enum(["beam", "header", "lintel", "ridge", "flush", "dropped"]),
+  shape: z.string(),
+  grade: z.string(),
+  method: steelMethodSchema,
+  spans: z.array(pos).min(1).max(3),
+  leftCantilever: nonneg.optional(),
+  rightCantilever: nonneg.optional(),
+  fixedLeft: z.boolean().optional(),
+  fixedRight: z.boolean().optional(),
+  area: z.array(areaLoadSchema).default([]),
+  walls: z.array(wallAboveSchema).default([]),
+  extra: z.array(extraLoadSchema).default([]),
+  Lb: nonneg,
+  CbOverride: pos.optional(),
+  deflection: deflectionSchema,
+  selfWeight: z.boolean(),
+  bearing: z
+    .array(
+      z.object({
+        lb: pos,
+        support: z.enum(["wood", "post", "steel", "concrete"]),
+        species: speciesSchema.optional(),
+        grade: gradeSchema.optional(),
+        size: z.string().optional(),
+      }),
+    )
+    .min(1),
+});
+
+export const steelColumnSpecSchema = z.object({
+  kind: z.literal("steelColumn"),
+  ...common,
+  shape: z.string(),
+  grade: z.string(),
+  method: steelMethodSchema,
+  height: pos,
+  Kx: pos,
+  Ky: pos,
+  Ly: pos.optional(),
+  extra: z.array(extraLoadSchema).default([]),
+  ex: nonneg,
+  ey: nonneg,
+  wind: z.object({ psf: nonneg, width: nonneg }).optional(),
+  selfWeight: z.boolean(),
+  cap: z.object({ length: pos, width: pos, species: speciesSchema, grade: gradeSchema }).optional(),
+});
+
+export const basePlateSpecSchema = z.object({
+  kind: z.literal("basePlate"),
+  ...common,
+  method: steelMethodSchema,
+  /** steel column above (its base reactions are the plate forces) */
+  sourceId: z.string().optional(),
+  column: z.string(),
+  /** additional unfactored base forces by type: P (lb, + down), M (lb-ft), V (lb) */
+  P: loadVectorSchema,
+  M: loadVectorSchema,
+  V: loadVectorSchema,
+  plate: z.object({ N: pos, B: pos, tp: pos, grade: z.string() }),
+  rod: z.object({
+    d: pos,
+    steel: z.number().int().min(0),
+    nx: z.number().int().min(1).max(4),
+    ny: z.number().int().min(1).max(4),
+    sx: nonneg,
+    sy: nonneg,
+    e1: pos,
+    hef: pos,
+    type: z.enum(["headed", "hooked"]),
+    Abrg: pos,
+    eh: pos,
+    washer: nonneg,
+    groutPad: z.boolean(),
+    nShear: z.number().int().min(1).optional(),
+  }),
+  foundation: z.object({
+    edges: z.tuple([pos, pos, pos, pos]),
+    ha: pos,
+    cracked: z.boolean(),
+    condition: z.enum(["A", "B"]),
+  }),
+  weld: z.object({ w: pos, FEXX: pos }),
+});
+
+export const diaphragmSpecSchema = z.object({
+  kind: z.literal("diaphragm"),
+  ...common,
+  level: z.enum(["roof", "floor"]),
+  storyId: z.string(),
+  dir: z.enum(["X", "Y"]),
+  sheathing: z.string(),
+  blocked: z.boolean(),
+  edge: z.enum(["6/6", "4/6", "2.5/4", "2/3"]),
+  unblockedCase: z.union([z.literal(1), z.literal(2)]),
+  chord: z.object({
+    species: speciesSchema,
+    grade: gradeSchema,
+    size: z.string(),
+    splice: z.object({
+      type: z.enum(["nails", "strap"]),
+      nail: z.string(),
+      nails: z.number().int().min(1),
+      strapId: z.string().optional(),
+    }),
+  }),
+  collectorOmega: z.boolean(),
+});
+
+export const transferSpecSchema = z.object({
+  kind: z.literal("transfer"),
+  ...common,
+  interface: z.enum(["diaphragm-to-wall", "sole-plate", "rim-to-sill", "other"]),
+  source: z.union([
+    z.object({ kind: z.literal("wall"), id: z.string() }),
+    z.object({ kind: z.literal("line"), lineId: z.string() }),
+  ]),
+  connector: z.union([
+    z.object({ type: z.literal("clip"), hardwareId: z.string(), direction: z.enum(["F1", "F2"]) }),
+    z.object({
+      type: z.literal("nails"),
+      nail: z.string(),
+      ts: pos,
+      tm: pos,
+      species: speciesSchema,
+      toenail: z.boolean(),
+      rows: z.number().int().min(1).max(3),
+    }),
+  ]),
+  spacing: pos,
+});
+
+export const upliftSpecSchema = z.object({
+  kind: z.literal("uplift"),
+  ...common,
+  sourceId: z.string(),
+  support: z.number().int().min(0),
+  levels: z
+    .array(
+      z.object({
+        label: z.string(),
+        deadAbove: nonneg,
+        connector: z.union([
+          z.object({ type: z.literal("hardware"), hardwareId: z.string() }),
+          z.object({ type: z.literal("entered"), capacity: pos, source: z.string(), model: z.string() }),
+        ]),
+        spacing: pos,
+      }),
+    )
+    .min(1),
+});
+
+export const ledgerSpecSchema = z.object({
+  kind: z.literal("ledger"),
+  ...common,
+  ledger: z.object({ species: speciesSchema, grade: gradeSchema, size: z.string() }),
+  extra: z.array(extraLoadSchema).default([]),
+  lateral: z.object({ W: nonneg, E: nonneg }),
+  fastener: z.object({ type: z.enum(["bolt", "lag"]), D: pos, Fyb: pos, spacing: pos, label: z.string().optional() }),
+  support: z.union([
+    z.object({ kind: z.literal("wood"), species: speciesSchema, thickness: pos }),
+    z.object({ kind: z.enum(["concrete", "cmu"]), Fe: pos, embed: pos }),
+  ]),
+  continuity: pos,
+  wetService: z.boolean().optional(),
 });
 
 export const memberSpecSchema = z.discriminatedUnion("kind", [
@@ -398,6 +573,13 @@ export const memberSpecSchema = z.discriminatedUnion("kind", [
   connectorSpecSchema,
   footingSpecSchema,
   shearWallSpecSchema,
+  steelBeamSpecSchema,
+  steelColumnSpecSchema,
+  basePlateSpecSchema,
+  diaphragmSpecSchema,
+  transferSpecSchema,
+  upliftSpecSchema,
+  ledgerSpecSchema,
 ]);
 
 export const hardwareItemSchema = z.object({
@@ -450,8 +632,17 @@ export const lateralSchema = z.object({
     z.object({ id: z.string(), name: z.string(), height: pos, items: z.array(weightItemSchema).default([]) }),
   ),
   lines: z.array(
-    z.object({ id: z.string(), name: z.string(), storyId: z.string(), dir: z.enum(["X", "Y"]), trib: pos }),
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      storyId: z.string(),
+      dir: z.enum(["X", "Y"]),
+      trib: pos,
+      pos: nonneg.optional(),
+    }),
   ),
+  distribution: z.enum(["flexible", "rigid", "envelope"]).default("flexible"),
+  com: z.object({ x: nonneg, y: nonneg }).optional(),
 });
 
 export const assemblySchema = z.object({
@@ -556,6 +747,13 @@ export type TrussSpec = z.infer<typeof trussSpecSchema>;
 export type ConnectorSpec = z.infer<typeof connectorSpecSchema>;
 export type FootingSpec = z.infer<typeof footingSpecSchema>;
 export type ShearWallSpec = z.infer<typeof shearWallSpecSchema>;
+export type SteelBeamSpec = z.infer<typeof steelBeamSpecSchema>;
+export type SteelColumnSpec = z.infer<typeof steelColumnSpecSchema>;
+export type BasePlateSpec = z.infer<typeof basePlateSpecSchema>;
+export type DiaphragmSpec = z.infer<typeof diaphragmSpecSchema>;
+export type TransferSpec = z.infer<typeof transferSpecSchema>;
+export type UpliftSpec = z.infer<typeof upliftSpecSchema>;
+export type LedgerSpec = z.infer<typeof ledgerSpecSchema>;
 export type LateralSpec = z.infer<typeof lateralSchema>;
 export type HardwareSpec = z.infer<typeof hardwareItemSchema>;
 export type LinkedLoad = z.infer<typeof linkedLoadSchema>;

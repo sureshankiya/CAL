@@ -2,7 +2,10 @@
  * Example project: one-story wood-framed residence, 24 ft deep, raised floor.
  * Rafters with a ridge board tied by the ceiling joists, a window header
  * carrying the rafter and ceiling joist reactions, floor joists on a girder,
- * and an I-joist floor bay. Used for first-run, tests and the help sheet.
+ * and an I-joist floor bay; a rear porch roof on a ledger and a steel beam on
+ * HSS posts with base plates and pads; shear walls (one FTAO wall) on four
+ * wall lines with roof diaphragms, a shear-transfer connection and the uplift
+ * path. Used for first-run, tests and the help sheet.
  */
 
 import { defaultHardware } from "../data/hardware";
@@ -10,6 +13,7 @@ import { defaultAssemblies } from "../loads/dead";
 import { defaultLateral, generateWeights } from "./lateral";
 import { DEFAULT_MARKS } from "./marks";
 import type { Project } from "./schema";
+import { loadVector } from "../core/loads";
 
 export function newProject(name = "New project"): Project {
   const p: Project = {
@@ -495,7 +499,237 @@ export function exampleProject(): Project {
     sw("m-sw4", "1SW-4", "LNA", 16, "Left gable-end wall", 60, [], "HDU2-SDS2.5"),
     sw("m-sw5", "1SW-5", "LNB", 16, "Right gable-end wall", 60, [], "HDU2-SDS2.5"),
   );
+  // rear porch: rafters from a ledger on the house wall to a steel beam on two HSS posts
+  const porch = { structureId: "S1", levelId: "L1", status: "new" as const };
+  p.members.push(
+    {
+      kind: "rafter",
+      id: "m-r2",
+      mark: "R-2",
+      description: "Rear porch rafters, ledger to steel beam SB-1",
+      structureId: "S1",
+      levelId: "RF",
+      status: "new",
+      links: [],
+      species: "DF-L",
+      grade: "No.2",
+      size: "2x6",
+      spacing: 24,
+      rise: 3,
+      run: 8,
+      overhang: 1,
+      ridge: "beam",
+      plateSeat: 3.5,
+      ridgeSeat: 1.5,
+      seatCut: 0,
+      dead: { assemblyId: "RD1" },
+      roofLive: true,
+      snow: true,
+      deflection: { preset: "roof-nonplaster" },
+      luBottom: 4,
+      rule441: false,
+      gable: false,
+    },
+    {
+      kind: "ledger",
+      id: "m-lg1",
+      mark: "LG-1",
+      description: "Porch ledger on the rear wall framing",
+      ...porch,
+      links: [L("k80", "m-r2", 1, "Porch rafters")],
+      ledger: { species: "DF-L", grade: "No.2", size: "2x8" },
+      extra: [],
+      lateral: { W: 0, E: 0 },
+      fastener: { type: "lag", D: 0.5, Fyb: 45000, spacing: 16, label: "1/2 in. lag screws" },
+      support: { kind: "wood", species: "DF-L", thickness: 3 },
+      continuity: 1.25,
+    },
+    {
+      kind: "steelBeam",
+      id: "m-sb1",
+      mark: "SB-1",
+      description: "Rear porch beam",
+      ...porch,
+      links: [L("k81", "m-r2", 0, "Porch rafters")],
+      role: "beam",
+      shape: "W8x10",
+      grade: "A992",
+      method: "LRFD",
+      spans: [16],
+      area: [],
+      walls: [],
+      extra: [],
+      Lb: 2,
+      deflection: { preset: "roof-nonplaster" },
+      selfWeight: true,
+      bearing: [
+        { lb: 4, support: "steel" },
+        { lb: 4, support: "steel" },
+      ],
+    },
+    ...[0, 1].map((k) => ({
+      kind: "steelColumn" as const,
+      id: `m-sc${k + 1}`,
+      mark: `SC-${k + 1}`,
+      description: `Porch post, ${k ? "right" : "left"} end of SB-1`,
+      ...porch,
+      links: [P(`k82${k}`, "m-sb1", k, "Steel beam", 0)],
+      shape: "HSS4x4x1/4",
+      grade: "A500C",
+      method: "LRFD" as const,
+      height: 9,
+      Kx: 1,
+      Ky: 1,
+      extra: [],
+      ex: 0,
+      ey: 0,
+      wind: { psf: 20, width: 1 },
+      selfWeight: true,
+    })),
+    ...[0, 1].map((k) => ({
+      kind: "basePlate" as const,
+      id: `m-bp${k + 1}`,
+      mark: `BP-${k + 1}`,
+      description: `Base plate of SC-${k + 1}`,
+      ...porch,
+      links: [],
+      method: "LRFD" as const,
+      sourceId: `m-sc${k + 1}`,
+      column: "HSS4x4x1/4",
+      P: loadVector({}),
+      M: loadVector({}),
+      V: loadVector({}),
+      plate: { N: 10, B: 10, tp: 0.5, grade: "A36-PL" },
+      rod: {
+        d: 0.625,
+        steel: 0,
+        nx: 2,
+        ny: 2,
+        sx: 6,
+        sy: 6,
+        e1: 2,
+        hef: 7,
+        type: "headed" as const,
+        Abrg: 0.7,
+        eh: 3,
+        washer: 0,
+        groutPad: false,
+      },
+      foundation: {
+        edges: [9, 9, 9, 9] as [number, number, number, number],
+        ha: 12,
+        cracked: true,
+        condition: "B" as const,
+      },
+      weld: { w: 0.1875, FEXX: 70 },
+    })),
+    ...[0, 1].map((k) => ({
+      kind: "footing" as const,
+      id: `m-pf${k + 2}`,
+      mark: `PF-${k + 2}`,
+      description: `Pad under SC-${k + 1} / BP-${k + 1}`,
+      ...porch,
+      links: [P(`k84${k}`, `m-bp${k + 1}`, 0, "Steel post", 0)],
+      type: "pad" as const,
+      B: 1.5,
+      L: 1.5,
+      h: 12,
+      depth: 18,
+      soilOver: 0,
+      c1: 10,
+      c2: 10,
+      extra: [],
+      stories: 1,
+    })),
+    {
+      kind: "diaphragm",
+      id: "m-rd1",
+      mark: "RD-1",
+      description: "Roof diaphragm, X-direction load",
+      structureId: "S1",
+      levelId: "RF",
+      status: "new",
+      links: [],
+      level: "roof",
+      storyId: "ST1",
+      dir: "X",
+      sheathing: "SH-15/32-8d",
+      blocked: false,
+      edge: "6/6",
+      unblockedCase: 1,
+      chord: { species: "DF-L", grade: "No.2", size: "2x6", splice: { type: "nails", nail: "16d-common", nails: 12 } },
+      collectorOmega: false,
+    },
+    {
+      kind: "diaphragm",
+      id: "m-rd2",
+      mark: "RD-2",
+      description: "Roof diaphragm, Y-direction load",
+      structureId: "S1",
+      levelId: "RF",
+      status: "new",
+      links: [],
+      level: "roof",
+      storyId: "ST1",
+      dir: "Y",
+      sheathing: "SH-15/32-8d",
+      blocked: false,
+      edge: "6/6",
+      unblockedCase: 2,
+      chord: { species: "DF-L", grade: "No.2", size: "2x6", splice: { type: "nails", nail: "16d-common", nails: 12 } },
+      collectorOmega: false,
+    },
+    {
+      kind: "transfer",
+      id: "m-st1",
+      mark: "ST-1",
+      description: "Roof blocking to top plate over 1SW-3",
+      structureId: "S1",
+      levelId: "RF",
+      status: "new",
+      links: [],
+      interface: "diaphragm-to-wall",
+      source: { kind: "wall", id: "m-sw3" },
+      connector: { type: "nails", nail: "16d-common", ts: 1.5, tm: 3, species: "DF-L", toenail: true, rows: 1 },
+      spacing: 6,
+    },
+    {
+      kind: "uplift",
+      id: "m-up1",
+      mark: "UP-1",
+      description: "Main roof uplift, rafter to foundation",
+      structureId: "S1",
+      levelId: "RF",
+      status: "new",
+      links: [],
+      sourceId: "m-r1",
+      support: 0,
+      levels: [
+        {
+          label: "Rafter to top plate",
+          deadAbove: 0,
+          connector: { type: "hardware", hardwareId: "H2.5A" },
+          spacing: 24,
+        },
+        {
+          label: "Top plate to sill (stud strap)",
+          deadAbove: 0,
+          connector: { type: "hardware", hardwareId: "CS16" },
+          spacing: 48,
+        },
+      ],
+    },
+  );
   const sw1 = p.members.find((m) => m.id === "m-sw1");
+  if (sw1?.kind === "shearWall") {
+    // force transfer around window W1 (4–10 ft), head 6 ft 8 in., sill 3 ft
+    sw1.description = "Front wall from the left corner through window W1 (FTAO)";
+    sw1.b = 22;
+    sw1.x = 0;
+    sw1.opening = { L1: 4, Lo: 6, L2: 12, ha: 2.33, hb: 3, strapId: "CS16" };
+  }
+  const xs: Record<string, number> = { "m-sw2": 26, "m-sw3": 8, "m-sw4": 4, "m-sw5": 4 };
+  for (const m of p.members) if (m.kind === "shearWall" && xs[m.id] !== undefined) m.x = xs[m.id];
   if (sw1?.kind === "shearWall")
     sw1.holdownAnchor = {
       d: 0.625,
@@ -515,11 +749,12 @@ export function exampleProject(): Project {
     pitch: 4,
     roofRise: 4,
     lines: [
-      { id: "LN1", name: "Line 1 (front)", storyId: "ST1", dir: "X", trib: 12 },
-      { id: "LN2", name: "Line 2 (rear)", storyId: "ST1", dir: "X", trib: 12 },
-      { id: "LNA", name: "Line A (left)", storyId: "ST1", dir: "Y", trib: 20 },
-      { id: "LNB", name: "Line B (right)", storyId: "ST1", dir: "Y", trib: 20 },
+      { id: "LN1", name: "Line 1 (front)", storyId: "ST1", dir: "X", trib: 12, pos: 0 },
+      { id: "LN2", name: "Line 2 (rear)", storyId: "ST1", dir: "X", trib: 12, pos: 24 },
+      { id: "LNA", name: "Line A (left)", storyId: "ST1", dir: "Y", trib: 20, pos: 0 },
+      { id: "LNB", name: "Line B (right)", storyId: "ST1", dir: "Y", trib: 20, pos: 40 },
     ],
+    distribution: "envelope",
   };
   p.lateral.stories[0].items = generateWeights(p, p.lateral, 0);
   return p;
