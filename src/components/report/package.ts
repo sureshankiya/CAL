@@ -56,6 +56,10 @@ const KIND_ORDER: Record<string, number> = {
   diaphragm: 7.8,
   transfer: 8.5,
   uplift: 9.5,
+  masonryWall: 9.8,
+  holdownFooting: 10.5,
+  tieIn: 10.8,
+  woodTruss: 1,
 };
 
 function orderKey(m: MemberSpec): number {

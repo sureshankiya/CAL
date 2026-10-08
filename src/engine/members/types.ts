@@ -23,7 +23,11 @@ export type MemberKind =
   | "diaphragm"
   | "transfer"
   | "uplift"
-  | "ledger";
+  | "ledger"
+  | "masonryWall"
+  | "holdownFooting"
+  | "tieIn"
+  | "woodTruss";
 
 export interface MemberReaction {
   support: number;

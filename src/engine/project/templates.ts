@@ -22,6 +22,10 @@ import type {
   TransferSpec,
   UpliftSpec,
   LedgerSpec,
+  MasonryWallSpec,
+  HoldownFootingSpec,
+  TieInSpec,
+  WoodTrussSpec,
 } from "./schema";
 import { zeroLoads } from "../core/loads";
 
@@ -48,7 +52,12 @@ export type NewMemberKind =
   | "ledger"
   | "steelBeam"
   | "steelColumn"
-  | "basePlate";
+  | "basePlate"
+  | "cmuWall"
+  | "concreteWall"
+  | "holdownFooting"
+  | "tieIn"
+  | "woodTruss";
 
 export const NEW_MEMBER_LABEL: Record<NewMemberKind, string> = {
   joist: "Floor joist (FJ)",
@@ -74,6 +83,11 @@ export const NEW_MEMBER_LABEL: Record<NewMemberKind, string> = {
   steelBeam: "Steel beam / lintel (SB)",
   steelColumn: "Steel column — HSS / pipe (SC)",
   basePlate: "Column base plate + anchor rods (BP)",
+  cmuWall: "CMU wall / stem wall (CW)",
+  concreteWall: "Concrete wall / stem wall (CW)",
+  holdownFooting: "Shear-wall / hold-down footing (HF)",
+  tieIn: "Tie-in to existing concrete — dowels / adhesive anchors (TI)",
+  woodTruss: "Wood truss — designed in HouseCalc (T)",
 };
 
 let counter = 0;
@@ -82,7 +96,14 @@ export const newId = (prefix = "m") => `${prefix}-${Date.now().toString(36)}-${(
 export function newMemberSpec(p: Project, kind: NewMemberKind, structureId: string, levelId: string): MemberSpec {
   const level = p.structures.find((s) => s.id === structureId)?.levels.find((l) => l.id === levelId);
   const lvNo = level?.number ?? 1;
-  const key: MarkKey = kind === "ftaoWall" ? "shearWall" : kind;
+  const key: MarkKey =
+    kind === "ftaoWall"
+      ? "shearWall"
+      : kind === "cmuWall" || kind === "concreteWall"
+        ? "masonryWall"
+        : kind === "woodTruss"
+          ? "truss"
+          : kind;
   const base = {
     id: newId(),
     mark: nextMark(p, key, lvNo),
@@ -417,6 +438,110 @@ export function newMemberSpec(p: Project, kind: NewMemberKind, structureId: stri
         foundation: { edges: [12, 12, 12, 12], ha: 18, cracked: true, condition: "B" },
         weld: { w: 0.1875, FEXX: 70 },
       } satisfies BasePlateSpec;
+    case "cmuWall":
+    case "concreteWall": {
+      const cmu = kind === "cmuWall";
+      return {
+        kind: "masonryWall",
+        ...base,
+        material: cmu ? "cmu" : "concrete",
+        L: 12,
+        h: 3,
+        support: "pinned-fixed",
+        t: cmu ? 7.625 : 8,
+        cmu: cmu
+          ? {
+              fm: 2000,
+              fmSource: "TMS 602 unit strength method — confirm with the specification",
+              mortar: "S",
+              block: {
+                hb: 7.625,
+                lb: 15.625,
+                tf: 1.25,
+                tw: 1.0,
+                te: 1.25,
+                nWeb: 1,
+                nEnd: 2,
+                gammaBlock: 115,
+                gammaGrout: 140,
+              },
+              FbFactor: 0.45,
+              shearDeformation: true,
+            }
+          : undefined,
+        concrete: cmu ? undefined : { fc: p.criteria.concrete.fc, gamma: 150, cover: 1.5 },
+        fy: 60000,
+        vertical: { size: "#5", spacing: cmu ? 16 : 16, layout: "center" },
+        horizontal: { size: "#4", count: cmu ? 2 : 1, spacing: cmu ? 16 : 12 },
+        extra: [],
+        eccentricity: 0,
+        wind: { W: 0, Wp: 0 },
+        seismic: { include: true, Eadd: 0 },
+      } satisfies MasonryWallSpec;
+    }
+    case "holdownFooting": {
+      const sw = p.members.find((m) => m.kind === "shearWall");
+      return {
+        kind: "holdownFooting",
+        ...base,
+        sourceId: sw?.id ?? "",
+        Lf: sw && sw.kind === "shearWall" ? sw.b + 2 : 10,
+        B: 1.25,
+        h: 18,
+        depth: 18,
+        longitudinal: { size: "#4", top: 2, bottom: 2 },
+        extra: [],
+      } satisfies HoldownFootingSpec;
+    }
+    case "tieIn":
+      return {
+        kind: "tieIn",
+        ...base,
+        joint: "New footing to existing footing",
+        anchor: { kind: "rebar", size: "#4", fya: 60000, futa: 90000, steelLabel: "ASTM A615 Grade 60" },
+        hef: 6,
+        spacing: 16,
+        ca1: 6,
+        ha: 12,
+        existing: { fc: 2500, cracked: true, verified: false },
+        product: {
+          name: "Adhesive — enter the product",
+          report: "ACI 318-19 Table 17.6.5.2.5 minimum bond stress (replace with the ICC-ES report values)",
+          tauCr: 200,
+          tauUncr: 650,
+          kcCr: 17,
+          kcUncr: 24,
+          phiBond: 0.55,
+          phiConcrete: 0.65,
+          verified: false,
+        },
+        shearDir: "toward-edge",
+        demand: { Nu: 0, Vu: 0, source: "" },
+      } satisfies TieInSpec;
+    case "woodTruss":
+      return {
+        kind: "woodTruss",
+        ...base,
+        type: "fink",
+        span: 28,
+        pitch: 4,
+        overhang: 1.5,
+        spacing: 24,
+        bearingLen: 3.5,
+        tc: { species: "DF-L", grade: "No.2", size: "2x6" },
+        bc: { species: "DF-L", grade: "No.2", size: "2x6" },
+        web: { species: "DF-L", grade: "No.2", size: "2x4" },
+        webBracing: "none",
+        roofDead: roofDead ? { assemblyId: roofDead } : { psf: 15, basis: "sloped" },
+        ceilingDead: ceilDead ? { assemblyId: ceilDead } : { psf: 10 },
+        atticLive: 0,
+        roofLive: true,
+        snow: p.criteria.snow.pg > 0,
+        windUplift: 0,
+        netSection: 0.85,
+        joint: { type: "plate", value: 100, zone: 12, source: "truss plate manufacturer ESR — enter the value" },
+        deflection: { preset: "custom", live: 360, total: 240 },
+      } satisfies WoodTrussSpec;
   }
 }
 
@@ -430,6 +555,7 @@ export function duplicateMember(p: Project, m: MemberSpec): MemberSpec {
 export function supportCount(m: MemberSpec): number {
   switch (m.kind) {
     case "rafter":
+    case "woodTruss":
       return 2;
     case "truss":
       return m.bearings.length;
@@ -443,11 +569,14 @@ export function supportCount(m: MemberSpec): number {
     case "diaphragm":
     case "transfer":
     case "uplift":
+    case "holdownFooting":
+    case "tieIn":
       return 0;
     case "steelColumn":
       return 2;
     case "basePlate":
     case "ledger":
+    case "masonryWall":
       return 1;
     default:
       return m.spans.length + 1;
@@ -459,6 +588,8 @@ export function supportLabels(m: MemberSpec): string[] {
   switch (m.kind) {
     case "rafter":
       return ["Plate", "Ridge"];
+    case "woodTruss":
+      return ["Left heel (line)", "Right heel (line)"];
     case "truss":
       return m.bearings.map((b) => b.name);
     case "wall":
@@ -471,6 +602,8 @@ export function supportLabels(m: MemberSpec): string[] {
       return ["Foundation"];
     case "ledger":
       return ["Wall (line)"];
+    case "masonryWall":
+      return ["Base (line)"];
     default:
       return Array.from({ length: supportCount(m) }, (_, i) => String.fromCharCode(65 + i));
   }

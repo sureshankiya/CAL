@@ -29,6 +29,10 @@ import {
   type TransferSpec,
   type UpliftSpec,
   type LedgerSpec,
+  type MasonryWallSpec,
+  type HoldownFootingSpec,
+  type TieInSpec,
+  type WoodTrussSpec,
 } from "@/engine/project";
 import { C_SHAPES, HSS_NAMES, ROUND_NAMES, STEEL_GRADES, W_SHAPES, steelShape } from "@/engine/data/steel";
 import { DIAPHRAGM_ROWS } from "@/engine/data/diaphragm";
@@ -871,6 +875,18 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
     case "ledger":
       body = <LedgerEditor p={p} m={m} upd={upd as Upd<LedgerSpec>} />;
       break;
+    case "masonryWall":
+      body = <MasonryWallEditor p={p} m={m} upd={upd as Upd<MasonryWallSpec>} />;
+      break;
+    case "holdownFooting":
+      body = <HoldownFootingEditor p={p} m={m} upd={upd as Upd<HoldownFootingSpec>} />;
+      break;
+    case "tieIn":
+      body = <TieInEditor p={p} m={m} upd={upd as Upd<TieInSpec>} />;
+      break;
+    case "woodTruss":
+      body = <WoodTrussEditor p={p} m={m} upd={upd as Upd<WoodTrussSpec>} />;
+      break;
   }
   return (
     <>
@@ -1625,6 +1641,13 @@ function FootingEditor({ p, m, upd }: { p: Project; m: FootingSpec; upd: Upd<Foo
         >
           <NumberInput value={m.qaOverride} allowEmpty min={500} onChange={(v) => upd({ qaOverride: v })} />
         </Field>
+        {!strip ? (
+          <Check
+            checked={!!m.thickened}
+            onChange={(v) => upd({ thickened: v || undefined })}
+            label="Thickened slab-on-grade under the post (monolithic with the slab)"
+          />
+        ) : null}
       </Section>
       <Section title="Reinforcement">
         <Grid cols={3}>
@@ -3043,6 +3066,751 @@ function LedgerEditor({ p, m, upd }: { p: Project; m: LedgerSpec; upd: Upd<Ledge
         <Collapsible title={`Entered line loads (${m.extra.length})`} open={m.extra.length > 0}>
           <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
         </Collapsible>
+      </Section>
+    </>
+  );
+}
+
+const BAR_OPTIONS = Object.keys(BARS);
+
+function MasonryWallEditor({ p, m, upd }: { p: Project; m: MasonryWallSpec; upd: Upd<MasonryWallSpec> }) {
+  const cmu = m.material === "cmu";
+  const num = (v: number | undefined, d: number) => v ?? d;
+  return (
+    <>
+      <Section title={cmu ? "CMU wall" : "Concrete wall"}>
+        <CommonFields p={p} m={m} upd={upd as Upd<MemberSpec>} />
+        <Grid cols={4}>
+          <Field label="Length L (ft)">
+            <NumberInput value={m.L} min={1} onChange={(v) => upd({ L: num(v, 12) })} />
+          </Field>
+          <Field label="Height h (ft)">
+            <NumberInput value={m.h} min={0.5} onChange={(v) => upd({ h: num(v, 3) })} />
+          </Field>
+          <Field label="Thickness t (in)">
+            <NumberInput value={m.t} min={4} onChange={(v) => upd({ t: num(v, 7.625) })} />
+          </Field>
+          <Field label="Parapet (ft)">
+            <NumberInput value={m.parapet ?? 0} min={0} onChange={(v) => upd({ parapet: v || undefined })} />
+          </Field>
+        </Grid>
+        <Field label="Out-of-plane support">
+          <Select
+            value={m.support}
+            options={[
+              { value: "pinned-fixed", label: "Pinned top (diaphragm), fixed base" },
+              { value: "pinned-pinned", label: "Pinned top and base" },
+              { value: "fixed-fixed", label: "Fixed top and base" },
+              { value: "cantilever", label: "Cantilever (free top, fixed base)" },
+            ]}
+            onChange={(v) => upd({ support: v })}
+          />
+        </Field>
+        {cmu && m.cmu ? (
+          <>
+            <Grid cols={4}>
+              <Field label="f'm (psi)">
+                <NumberInput
+                  value={m.cmu.fm}
+                  min={1000}
+                  onChange={(v) => upd({ cmu: { ...m.cmu!, fm: num(v, 2000) } })}
+                />
+              </Field>
+              <Field label="Mortar">
+                <Select
+                  value={m.cmu.mortar}
+                  options={["M", "S", "N"]}
+                  onChange={(v) => upd({ cmu: { ...m.cmu!, mortar: v as "M" | "S" | "N" } })}
+                />
+              </Field>
+              <Field label="F_b / f'm">
+                <NumberInput
+                  value={m.cmu.FbFactor}
+                  min={0.2}
+                  onChange={(v) => upd({ cmu: { ...m.cmu!, FbFactor: num(v, 0.45) } })}
+                />
+              </Field>
+              <Field label="Unit weight (pcf)">
+                <NumberInput
+                  value={m.cmu.block.gammaBlock}
+                  min={60}
+                  onChange={(v) => upd({ cmu: { ...m.cmu!, block: { ...m.cmu!.block, gammaBlock: num(v, 115) } } })}
+                />
+              </Field>
+            </Grid>
+            <Field label="f'm basis">
+              <TextInput value={m.cmu.fmSource} onChange={(v) => upd({ cmu: { ...m.cmu!, fmSource: v } })} />
+            </Field>
+            <Check
+              checked={m.cmu.shearDeformation}
+              onChange={(v) => upd({ cmu: { ...m.cmu!, shearDeformation: v } })}
+              label="Include shear deformation in the panel analysis"
+            />
+          </>
+        ) : m.concrete ? (
+          <Grid cols={3}>
+            <Field label="f'c (psi)">
+              <NumberInput
+                value={m.concrete.fc}
+                min={2500}
+                onChange={(v) => upd({ concrete: { ...m.concrete!, fc: num(v, 2500) } })}
+              />
+            </Field>
+            <Field label="Cover (in)">
+              <NumberInput
+                value={m.concrete.cover}
+                min={0.75}
+                onChange={(v) => upd({ concrete: { ...m.concrete!, cover: num(v, 1.5) } })}
+              />
+            </Field>
+            <Field label="Unit weight (pcf)">
+              <NumberInput
+                value={m.concrete.gamma}
+                min={90}
+                onChange={(v) => upd({ concrete: { ...m.concrete!, gamma: num(v, 150) } })}
+              />
+            </Field>
+          </Grid>
+        ) : null}
+      </Section>
+      <Section title="Reinforcement">
+        <Grid cols={4}>
+          <Field label="Vertical bar">
+            <Select
+              value={m.vertical.size}
+              options={BAR_OPTIONS}
+              onChange={(v) => upd({ vertical: { ...m.vertical, size: v } })}
+            />
+          </Field>
+          <Field label="Spacing (in)">
+            <NumberInput
+              value={m.vertical.spacing}
+              min={4}
+              onChange={(v) => upd({ vertical: { ...m.vertical, spacing: num(v, 16) } })}
+            />
+          </Field>
+          <Field label="Layout">
+            <Select
+              value={m.vertical.layout}
+              options={[
+                { value: "center", label: "Centred" },
+                { value: "offset", label: "Offset (depth d)" },
+                { value: "each-face", label: "Each face" },
+              ]}
+              onChange={(v) => upd({ vertical: { ...m.vertical, layout: v } })}
+            />
+          </Field>
+          {m.vertical.layout === "offset" ? (
+            <Field label="d from interior face (in)">
+              <NumberInput
+                value={m.vertical.d ?? m.t / 2}
+                min={1}
+                onChange={(v) => upd({ vertical: { ...m.vertical, d: v } })}
+              />
+            </Field>
+          ) : null}
+        </Grid>
+        <Grid cols={3}>
+          <Field label="Horizontal bar">
+            <Select
+              value={m.horizontal.size}
+              options={BAR_OPTIONS}
+              onChange={(v) => upd({ horizontal: { ...m.horizontal, size: v } })}
+            />
+          </Field>
+          <Field label="Bars per course / layer">
+            <NumberInput
+              value={m.horizontal.count}
+              min={1}
+              onChange={(v) => upd({ horizontal: { ...m.horizontal, count: Math.max(1, Math.round(num(v, 1))) } })}
+            />
+          </Field>
+          <Field label="Spacing (in)">
+            <NumberInput
+              value={m.horizontal.spacing}
+              min={4}
+              onChange={(v) => upd({ horizontal: { ...m.horizontal, spacing: num(v, 16) } })}
+            />
+          </Field>
+        </Grid>
+        <Field label="Steel f_y (psi)">
+          <NumberInput value={m.fy} min={40000} onChange={(v) => upd({ fy: num(v, 60000) })} />
+        </Field>
+      </Section>
+      <Section title="Loads">
+        <Grid cols={4}>
+          <Field label="Wind W (psf)">
+            <NumberInput value={m.wind.W} min={0} onChange={(v) => upd({ wind: { ...m.wind, W: num(v, 0) } })} />
+          </Field>
+          <Field label="Parapet wind (psf)">
+            <NumberInput value={m.wind.Wp} min={0} onChange={(v) => upd({ wind: { ...m.wind, Wp: num(v, 0) } })} />
+          </Field>
+          <Field label="Added seismic (psf)">
+            <NumberInput
+              value={m.seismic.Eadd}
+              min={0}
+              onChange={(v) => upd({ seismic: { ...m.seismic, Eadd: num(v, 0) } })}
+            />
+          </Field>
+          <Field label="Top load eccentricity (in)">
+            <NumberInput value={m.eccentricity} onChange={(v) => upd({ eccentricity: num(v, 0) })} />
+          </Field>
+        </Grid>
+        <Check
+          checked={m.seismic.include}
+          onChange={(v) => upd({ seismic: { ...m.seismic, include: v } })}
+          label="Seismic out-of-plane load (ASCE 7 §12.11.1)"
+        />
+        <Grid cols={3}>
+          <Field label="Retained soil height (ft)">
+            <NumberInput
+              value={m.soil?.height ?? 0}
+              min={0}
+              onChange={(v) =>
+                upd({ soil: v ? { efp: m.soil?.efp ?? 45, surcharge: m.soil?.surcharge ?? 0, height: v } : undefined })
+              }
+            />
+          </Field>
+          <Field label="Equivalent fluid (pcf)">
+            <NumberInput
+              value={m.soil?.efp ?? 45}
+              min={0}
+              onChange={(v) => m.soil && upd({ soil: { ...m.soil, efp: num(v, 45) } })}
+            />
+          </Field>
+          <Field label="Surcharge (psf)">
+            <NumberInput
+              value={m.soil?.surcharge ?? 0}
+              min={0}
+              onChange={(v) => m.soil && upd({ soil: { ...m.soil, surcharge: num(v, 0) } })}
+            />
+          </Field>
+        </Grid>
+        <Grid cols={3}>
+          <Field label="In-plane wind V (lb)">
+            <NumberInput
+              value={m.inPlane?.W ?? 0}
+              min={0}
+              onChange={(v) => upd({ inPlane: { E: m.inPlane?.E ?? 0, h: m.inPlane?.h, W: num(v, 0) } })}
+            />
+          </Field>
+          <Field label="In-plane seismic V (lb)">
+            <NumberInput
+              value={m.inPlane?.E ?? 0}
+              min={0}
+              onChange={(v) => upd({ inPlane: { W: m.inPlane?.W ?? 0, h: m.inPlane?.h, E: num(v, 0) } })}
+            />
+          </Field>
+        </Grid>
+        <Hint>Top loads arrive by line links from the walls above (load path) or as entered line loads (plf).</Hint>
+        <Collapsible title={`Entered line loads (${m.extra.length})`} open={m.extra.length > 0}>
+          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
+        </Collapsible>
+      </Section>
+    </>
+  );
+}
+
+function HoldownFootingEditor({ p, m, upd }: { p: Project; m: HoldownFootingSpec; upd: Upd<HoldownFootingSpec> }) {
+  const walls = p.members.filter((x) => x.kind === "shearWall");
+  return (
+    <Section title="Shear-wall / hold-down footing">
+      <CommonFields p={p} m={m} upd={upd as Upd<MemberSpec>} />
+      <Field label="Shear wall on the footing">
+        <Select
+          value={m.sourceId}
+          options={[
+            { value: "", label: "— select —" },
+            ...walls.map((w) => ({ value: w.id, label: `${w.mark} ${w.description}` })),
+          ]}
+          onChange={(v) => upd({ sourceId: v })}
+        />
+      </Field>
+      <Grid cols={4}>
+        <Field label="Length L_f (ft)">
+          <NumberInput value={m.Lf} min={1} onChange={(v) => upd({ Lf: v ?? m.Lf })} />
+        </Field>
+        <Field label="Width B (ft)">
+          <NumberInput value={m.B} min={0.75} onChange={(v) => upd({ B: v ?? m.B })} />
+        </Field>
+        <Field label="Thickness (in)">
+          <NumberInput value={m.h} min={6} onChange={(v) => upd({ h: v ?? m.h })} />
+        </Field>
+        <Field label="Bottom below grade (in)">
+          <NumberInput value={m.depth} min={6} onChange={(v) => upd({ depth: v ?? m.depth })} />
+        </Field>
+      </Grid>
+      <Grid cols={3}>
+        <Field label="Longitudinal bar">
+          <Select
+            value={m.longitudinal?.size ?? "plain"}
+            options={[{ value: "plain", label: "None (plain)" }, ...BAR_OPTIONS.map((b) => ({ value: b, label: b }))]}
+            onChange={(v) =>
+              upd({
+                longitudinal:
+                  v === "plain"
+                    ? undefined
+                    : { top: m.longitudinal?.top ?? 2, bottom: m.longitudinal?.bottom ?? 2, size: v },
+              })
+            }
+          />
+        </Field>
+        <Field label="Top bars">
+          <NumberInput
+            value={m.longitudinal?.top ?? 0}
+            min={0}
+            onChange={(v) => m.longitudinal && upd({ longitudinal: { ...m.longitudinal, top: Math.round(v ?? 0) } })}
+          />
+        </Field>
+        <Field label="Bottom bars">
+          <NumberInput
+            value={m.longitudinal?.bottom ?? 0}
+            min={0}
+            onChange={(v) => m.longitudinal && upd({ longitudinal: { ...m.longitudinal, bottom: Math.round(v ?? 0) } })}
+          />
+        </Field>
+      </Grid>
+      <Field
+        label="Allowable soil pressure override (psf)"
+        hint={`Blank = project value ${p.criteria.soil.bearing} psf`}
+      >
+        <NumberInput value={m.qaOverride} allowEmpty min={500} onChange={(v) => upd({ qaOverride: v })} />
+      </Field>
+      <Hint>
+        Wall gravity and in-plane forces come from the shear-wall result; other walls on the footing enter as line
+        loads.
+      </Hint>
+      <Collapsible title={`Entered line loads (${m.extra.length})`} open={m.extra.length > 0}>
+        <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
+      </Collapsible>
+    </Section>
+  );
+}
+
+function TieInEditor({ p, m, upd }: { p: Project; m: TieInSpec; upd: Upd<TieInSpec> }) {
+  const pr = m.product;
+  return (
+    <>
+      <Section title="Tie-in to existing concrete">
+        <CommonFields p={p} m={m} upd={upd as Upd<MemberSpec>} />
+        <Field label="Joint">
+          <TextInput value={m.joint} onChange={(v) => upd({ joint: v })} />
+        </Field>
+        <Grid cols={4}>
+          <Field label="Anchor">
+            <Select
+              value={m.anchor.kind}
+              options={[
+                { value: "rebar", label: "Reinforcing dowel" },
+                { value: "rod", label: "Threaded rod" },
+              ]}
+              onChange={(v) =>
+                upd({
+                  anchor:
+                    v === "rebar"
+                      ? { kind: "rebar", size: "#4", fya: 60000, futa: 90000, steelLabel: "ASTM A615 Grade 60" }
+                      : { kind: "rod", size: "0.625", fya: 36000, futa: 58000, steelLabel: "ASTM F1554 Grade 36" },
+                })
+              }
+            />
+          </Field>
+          <Field label="Size">
+            <Select
+              value={m.anchor.size}
+              options={m.anchor.kind === "rebar" ? BAR_OPTIONS : ["0.5", "0.625", "0.75", "0.875", "1"]}
+              onChange={(v) => upd({ anchor: { ...m.anchor, size: v } })}
+            />
+          </Field>
+          <Field label="f_ya (psi)">
+            <NumberInput
+              value={m.anchor.fya}
+              min={30000}
+              onChange={(v) => upd({ anchor: { ...m.anchor, fya: v ?? m.anchor.fya } })}
+            />
+          </Field>
+          <Field label="f_uta (psi)">
+            <NumberInput
+              value={m.anchor.futa}
+              min={40000}
+              onChange={(v) => upd({ anchor: { ...m.anchor, futa: v ?? m.anchor.futa } })}
+            />
+          </Field>
+        </Grid>
+        <Grid cols={4}>
+          <Field label="Embedment h_ef (in)">
+            <NumberInput value={m.hef} min={2} onChange={(v) => upd({ hef: v ?? m.hef })} />
+          </Field>
+          <Field label="Spacing (in)">
+            <NumberInput value={m.spacing} min={2} onChange={(v) => upd({ spacing: v ?? m.spacing })} />
+          </Field>
+          <Field label="Edge distance c_a1 (in)">
+            <NumberInput value={m.ca1} min={1} onChange={(v) => upd({ ca1: v ?? m.ca1 })} />
+          </Field>
+          <Field label="Member thickness h_a (in)">
+            <NumberInput value={m.ha} min={4} onChange={(v) => upd({ ha: v ?? m.ha })} />
+          </Field>
+        </Grid>
+        <Grid cols={3}>
+          <Field label="Existing f'c (psi)">
+            <NumberInput
+              value={m.existing.fc}
+              min={2000}
+              onChange={(v) => upd({ existing: { ...m.existing, fc: v ?? 2500 } })}
+            />
+          </Field>
+          <Field label="Shear direction">
+            <Select
+              value={m.shearDir}
+              options={[
+                { value: "toward-edge", label: "Toward the edge" },
+                { value: "parallel-edge", label: "Parallel to the edge" },
+              ]}
+              onChange={(v) => upd({ shearDir: v })}
+            />
+          </Field>
+          <span />
+        </Grid>
+        <Check
+          checked={m.existing.cracked}
+          onChange={(v) => upd({ existing: { ...m.existing, cracked: v } })}
+          label="Cracked concrete"
+        />
+        <Check
+          checked={m.existing.verified}
+          onChange={(v) => upd({ existing: { ...m.existing, verified: v } })}
+          label="Existing concrete strength verified (cores / record drawings)"
+        />
+      </Section>
+      <Section title="Adhesive (ICC-ES report values)">
+        <Grid cols={2}>
+          <Field label="Product">
+            <TextInput value={pr.name} onChange={(v) => upd({ product: { ...pr, name: v } })} />
+          </Field>
+          <Field label="Report">
+            <TextInput value={pr.report} onChange={(v) => upd({ product: { ...pr, report: v } })} />
+          </Field>
+        </Grid>
+        <Grid cols={4}>
+          <Field label="τ_cr (psi)">
+            <NumberInput
+              value={pr.tauCr}
+              min={50}
+              onChange={(v) => upd({ product: { ...pr, tauCr: v ?? pr.tauCr } })}
+            />
+          </Field>
+          <Field label="τ_uncr (psi)">
+            <NumberInput
+              value={pr.tauUncr}
+              min={50}
+              onChange={(v) => upd({ product: { ...pr, tauUncr: v ?? pr.tauUncr } })}
+            />
+          </Field>
+          <Field label="φ bond">
+            <NumberInput
+              value={pr.phiBond}
+              min={0.4}
+              max={0.75}
+              onChange={(v) => upd({ product: { ...pr, phiBond: v ?? pr.phiBond } })}
+            />
+          </Field>
+          <Field label="φ concrete">
+            <NumberInput
+              value={pr.phiConcrete}
+              min={0.4}
+              max={0.75}
+              onChange={(v) => upd({ product: { ...pr, phiConcrete: v ?? pr.phiConcrete } })}
+            />
+          </Field>
+        </Grid>
+        <Check
+          checked={pr.verified}
+          onChange={(v) => upd({ product: { ...pr, verified: v } })}
+          label="Values checked against the current report"
+        />
+      </Section>
+      <Section title="Demand (strength level, per ft of joint)">
+        <Grid cols={3}>
+          <Field label="Tension N_u (plf)">
+            <NumberInput value={m.demand.Nu} min={0} onChange={(v) => upd({ demand: { ...m.demand, Nu: v ?? 0 } })} />
+          </Field>
+          <Field label="Shear V_u (plf)">
+            <NumberInput value={m.demand.Vu} min={0} onChange={(v) => upd({ demand: { ...m.demand, Vu: v ?? 0 } })} />
+          </Field>
+          <Field label="Source">
+            <TextInput value={m.demand.source} onChange={(v) => upd({ demand: { ...m.demand, source: v } })} />
+          </Field>
+        </Grid>
+        <Check
+          checked={!!m.shearFriction}
+          onChange={(v) => upd({ shearFriction: v ? { Vu: m.demand.Vu, roughened: false, Ac: 12 * m.ha } : undefined })}
+          label="Check shear friction across the joint (ACI 318 22.9)"
+        />
+        {m.shearFriction ? (
+          <Grid cols={3}>
+            <Field label="V_u along joint (plf)">
+              <NumberInput
+                value={m.shearFriction.Vu}
+                min={0}
+                onChange={(v) => upd({ shearFriction: { ...m.shearFriction!, Vu: v ?? 0 } })}
+              />
+            </Field>
+            <Field label="Contact area A_c (in²/ft)">
+              <NumberInput
+                value={m.shearFriction.Ac}
+                min={1}
+                onChange={(v) => upd({ shearFriction: { ...m.shearFriction!, Ac: v ?? 12 } })}
+              />
+            </Field>
+            <Check
+              checked={m.shearFriction.roughened}
+              onChange={(v) => upd({ shearFriction: { ...m.shearFriction!, roughened: v } })}
+              label="Roughened to ¼ in. amplitude"
+            />
+          </Grid>
+        ) : null}
+      </Section>
+    </>
+  );
+}
+
+function WoodTrussEditor({ p, m, upd }: { p: Project; m: WoodTrussSpec; upd: Upd<WoodTrussSpec> }) {
+  const parallel = m.type === "parallel";
+  const lumber = (key: "tc" | "bc" | "web", title: string) => (
+    <Collapsible title={`${title}: ${m[key].size} ${m[key].species} ${m[key].grade}`} open={false}>
+      <SawnFields
+        species={m[key].species}
+        grade={m[key].grade}
+        size={m[key].size}
+        sizes={DIMENSION_SIZES}
+        onChange={(x) => upd({ [key]: { ...m[key], ...x } } as Partial<WoodTrussSpec>)}
+      />
+    </Collapsible>
+  );
+  return (
+    <>
+      <Section title="Wood truss (designed in HouseCalc)">
+        <CommonFields p={p} m={m} upd={upd as Upd<MemberSpec>} />
+        <Grid cols={4}>
+          <Field label="Configuration">
+            <Select
+              value={m.type}
+              options={[
+                { value: "fink", label: "Fink (W)" },
+                { value: "howe", label: "Howe" },
+                { value: "king", label: "King post" },
+                { value: "queen", label: "Queen post" },
+                { value: "king-queen", label: "King + queen post" },
+                { value: "parallel", label: "Parallel chord" },
+              ]}
+              onChange={(v) =>
+                upd({
+                  type: v,
+                  ...(v === "parallel"
+                    ? { depth: m.depth ?? 2.5, panels: m.panels ?? 8, pattern: m.pattern ?? "warren" }
+                    : {}),
+                })
+              }
+            />
+          </Field>
+          <Field label="Span (ft)">
+            <NumberInput value={m.span} min={4} onChange={(v) => upd({ span: v ?? m.span })} />
+          </Field>
+          {parallel ? (
+            <>
+              <Field label="Depth (ft)">
+                <NumberInput value={m.depth ?? 2.5} min={0.5} onChange={(v) => upd({ depth: v ?? 2.5 })} />
+              </Field>
+              <Field label="Panels">
+                <NumberInput
+                  value={m.panels ?? 8}
+                  min={2}
+                  max={20}
+                  step="1"
+                  onChange={(v) => upd({ panels: Math.round(v ?? 8) })}
+                />
+              </Field>
+            </>
+          ) : (
+            <>
+              <Field label="Pitch (in/12)">
+                <NumberInput value={m.pitch} min={1.5} max={16} onChange={(v) => upd({ pitch: v ?? m.pitch })} />
+              </Field>
+              <Field label="Overhang (ft)">
+                <NumberInput value={m.overhang} min={0} onChange={(v) => upd({ overhang: v ?? 0 })} />
+              </Field>
+            </>
+          )}
+        </Grid>
+        <Grid cols={4}>
+          <Field label="Spacing (in)">
+            <NumberInput value={m.spacing} min={12} onChange={(v) => upd({ spacing: v ?? 24 })} />
+          </Field>
+          <Field label="Heel bearing (in)">
+            <NumberInput value={m.bearingLen} min={1.5} onChange={(v) => upd({ bearingLen: v ?? 3.5 })} />
+          </Field>
+          <Field label="Web bracing">
+            <Select
+              value={m.webBracing}
+              options={[
+                { value: "none", label: "None" },
+                { value: "midpoint", label: "Continuous lateral brace at mid-length" },
+              ]}
+              onChange={(v) => upd({ webBracing: v })}
+            />
+          </Field>
+          {parallel ? (
+            <Field label="Web pattern">
+              <Select
+                value={m.pattern ?? "warren"}
+                options={[
+                  { value: "warren", label: "Warren with verticals" },
+                  { value: "pratt", label: "Pratt" },
+                ]}
+                onChange={(v) => upd({ pattern: v })}
+              />
+            </Field>
+          ) : (
+            <span />
+          )}
+        </Grid>
+        {lumber("tc", "Top chord")}
+        {lumber("bc", "Bottom chord")}
+        {lumber("web", "Webs")}
+      </Section>
+      <Section title="Loads">
+        <DeadField
+          p={p}
+          value={m.roofDead}
+          kinds={["roof"]}
+          roof
+          label="Roof dead load"
+          onChange={(v) => upd({ roofDead: v })}
+        />
+        <DeadField
+          p={p}
+          value={m.ceilingDead}
+          kinds={["ceiling"]}
+          label="Ceiling dead load (bottom chord)"
+          onChange={(v) => upd({ ceilingDead: v })}
+        />
+        <Grid cols={3}>
+          <Field label="Attic storage live (psf)">
+            <NumberInput value={m.atticLive} min={0} onChange={(v) => upd({ atticLive: v ?? 0 })} />
+          </Field>
+          <Field label="Net wind uplift (psf, strength)">
+            <NumberInput value={m.windUplift} min={0} onChange={(v) => upd({ windUplift: v ?? 0 })} />
+          </Field>
+          <Field label="Net section A_n / A_g">
+            <NumberInput value={m.netSection} min={0.5} max={1} onChange={(v) => upd({ netSection: v ?? 0.85 })} />
+          </Field>
+        </Grid>
+        <Check checked={m.roofLive} onChange={(v) => upd({ roofLive: v })} label="Roof live load (project criteria)" />
+        <Check
+          checked={m.snow}
+          onChange={(v) => upd({ snow: v })}
+          label="Snow, balanced and unbalanced (project criteria)"
+        />
+        <DeflField value={m.deflection} onChange={(v) => upd({ deflection: v as typeof m.deflection })} />
+      </Section>
+      <Section title="Joints">
+        <Field label="Joint type">
+          <Select
+            value={m.joint.type}
+            options={[
+              { value: "plate", label: "Metal connector plates (value from the plate manufacturer)" },
+              { value: "nailed", label: "Nailed plywood gussets" },
+              { value: "bolted", label: "Bolted wood gussets" },
+            ]}
+            onChange={(v) =>
+              upd({
+                joint:
+                  v === "plate"
+                    ? { type: "plate", value: 100, zone: 12, source: "truss plate manufacturer ESR — enter the value" }
+                    : v === "nailed"
+                      ? { type: "nailed", nail: "8d-common", gusset: 0.5 }
+                      : { type: "bolted", D: 0.5, gusset: 1.5 },
+              })
+            }
+          />
+        </Field>
+        {m.joint.type === "plate" ? (
+          <Grid cols={3}>
+            <Field label="Plate value (psi per plate)">
+              <NumberInput
+                value={m.joint.value}
+                min={10}
+                onChange={(v) =>
+                  upd({
+                    joint: { ...(m.joint as Extract<WoodTrussSpec["joint"], { type: "plate" }>), value: v ?? 100 },
+                  })
+                }
+              />
+            </Field>
+            <Field label="Joint zone (in)">
+              <NumberInput
+                value={m.joint.zone}
+                min={2}
+                onChange={(v) =>
+                  upd({ joint: { ...(m.joint as Extract<WoodTrussSpec["joint"], { type: "plate" }>), zone: v ?? 12 } })
+                }
+              />
+            </Field>
+            <Field label="Source">
+              <TextInput
+                value={m.joint.source}
+                onChange={(v) =>
+                  upd({ joint: { ...(m.joint as Extract<WoodTrussSpec["joint"], { type: "plate" }>), source: v } })
+                }
+              />
+            </Field>
+          </Grid>
+        ) : m.joint.type === "nailed" ? (
+          <Grid cols={2}>
+            <Field label="Nail">
+              <Select
+                value={m.joint.nail}
+                options={NAILS.map((n) => ({ value: n.key, label: n.label }))}
+                onChange={(v) =>
+                  upd({ joint: { ...(m.joint as Extract<WoodTrussSpec["joint"], { type: "nailed" }>), nail: v } })
+                }
+              />
+            </Field>
+            <Field label="Gusset thickness (in)">
+              <NumberInput
+                value={m.joint.gusset}
+                min={0.25}
+                onChange={(v) =>
+                  upd({
+                    joint: { ...(m.joint as Extract<WoodTrussSpec["joint"], { type: "nailed" }>), gusset: v ?? 0.5 },
+                  })
+                }
+              />
+            </Field>
+          </Grid>
+        ) : (
+          <Grid cols={2}>
+            <Field label="Bolt diameter (in)">
+              <Select
+                value={String(m.joint.D)}
+                options={["0.5", "0.625", "0.75"]}
+                onChange={(v) =>
+                  upd({ joint: { ...(m.joint as Extract<WoodTrussSpec["joint"], { type: "bolted" }>), D: Number(v) } })
+                }
+              />
+            </Field>
+            <Field label="Gusset thickness (in)">
+              <NumberInput
+                value={m.joint.gusset}
+                min={0.75}
+                onChange={(v) =>
+                  upd({
+                    joint: { ...(m.joint as Extract<WoodTrussSpec["joint"], { type: "bolted" }>), gusset: v ?? 1.5 },
+                  })
+                }
+              />
+            </Field>
+          </Grid>
+        )}
       </Section>
     </>
   );

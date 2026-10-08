@@ -208,6 +208,21 @@ export const TABLES: Record<string, TableMeta> = {
     edition: "NDS-2018 / 2024",
     status: "unverified",
   },
+  "tms602-2": {
+    id: "tms602-2",
+    title: "Compressive strength of masonry (unit strength method)",
+    source: "TMS 602 Table 2 (f'm from unit strength and mortar type) or prism tests",
+    edition: "TMS 602-16 / 602-22",
+    status: "unverified",
+    note: "f'm is entered with its basis on each wall; confirm against the specification.",
+  },
+  "tms402-8.3": {
+    id: "tms402-8.3",
+    title: "Allowable stresses, reinforced masonry (ASD)",
+    source: "TMS 402 §8.3 (F_s, F_b, F_v, P_a) and §4.2 (E_m = 900 f'm)",
+    edition: "TMS 402-16 / 402-22",
+    status: "unverified",
+  },
 };
 
 export const tableRef = (id: string) => TABLES[id];

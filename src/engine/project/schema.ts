@@ -342,6 +342,8 @@ export const footingSpecSchema = z.object({
   extra: z.array(extraLoadSchema).default([]),
   qaOverride: pos.optional(),
   stories: z.number().int().min(1).max(3),
+  /** pad under a post cast as a thickened slab-on-grade */
+  thickened: z.boolean().optional(),
 });
 
 export const shearWallSpecSchema = z.object({
@@ -561,6 +563,136 @@ export const ledgerSpecSchema = z.object({
   wetService: z.boolean().optional(),
 });
 
+export const masonryWallSpecSchema = z.object({
+  kind: z.literal("masonryWall"),
+  ...common,
+  material: z.enum(["cmu", "concrete"]),
+  L: pos,
+  h: pos,
+  parapet: nonneg.optional(),
+  support: z.enum(["pinned-fixed", "pinned-pinned", "fixed-fixed", "cantilever"]),
+  t: pos,
+  cmu: z
+    .object({
+      fm: pos,
+      fmSource: z.string(),
+      fcu: pos.optional(),
+      mortar: z.enum(["M", "S", "N"]),
+      block: z.object({
+        hb: pos,
+        lb: pos,
+        tf: pos,
+        tw: pos,
+        te: pos,
+        nWeb: z.number().int().min(0),
+        nEnd: z.number().int().min(0),
+        gammaBlock: pos,
+        gammaGrout: pos,
+      }),
+      FbFactor: pos,
+      shearDeformation: z.boolean(),
+    })
+    .optional(),
+  concrete: z.object({ fc: pos, gamma: pos, cover: pos }).optional(),
+  fy: pos,
+  vertical: z.object({
+    size: z.string(),
+    spacing: pos,
+    layout: z.enum(["center", "offset", "each-face"]),
+    d: pos.optional(),
+  }),
+  horizontal: z.object({ size: z.string(), count: z.number().int().min(1), spacing: pos }),
+  extra: z.array(extraLoadSchema).default([]),
+  eccentricity: num.default(0),
+  wind: z.object({ W: nonneg, Wp: nonneg }),
+  seismic: z.object({ include: z.boolean(), Eadd: nonneg }),
+  soil: z.object({ height: nonneg, efp: nonneg, surcharge: nonneg }).optional(),
+  inPlane: z.object({ W: nonneg, E: nonneg, h: pos.optional() }).optional(),
+});
+
+export const holdownFootingSpecSchema = z.object({
+  kind: z.literal("holdownFooting"),
+  ...common,
+  sourceId: z.string(),
+  Lf: pos,
+  B: pos,
+  h: pos,
+  depth: pos,
+  stem: z.object({ width: pos, height: pos }).optional(),
+  longitudinal: z
+    .object({ size: z.string(), top: z.number().int().min(0), bottom: z.number().int().min(0) })
+    .optional(),
+  extra: z.array(extraLoadSchema).default([]),
+  qaOverride: pos.optional(),
+});
+
+export const adhesiveSchema = z.object({
+  name: z.string(),
+  report: z.string(),
+  tauCr: pos,
+  tauUncr: pos,
+  kcCr: pos,
+  kcUncr: pos,
+  phiBond: pos,
+  phiConcrete: pos,
+  verified: z.boolean().default(false),
+});
+
+export const tieInSpecSchema = z.object({
+  kind: z.literal("tieIn"),
+  ...common,
+  joint: z.string().default(""),
+  anchor: z.object({
+    kind: z.enum(["rebar", "rod"]),
+    size: z.string(),
+    fya: pos,
+    futa: pos,
+    steelLabel: z.string(),
+  }),
+  hef: pos,
+  spacing: pos,
+  ca1: pos,
+  ha: pos,
+  existing: z.object({ fc: pos, cracked: z.boolean(), verified: z.boolean() }),
+  product: adhesiveSchema,
+  shearDir: z.enum(["toward-edge", "parallel-edge"]),
+  demand: z.object({ Nu: nonneg, Vu: nonneg, source: z.string().default("") }),
+  shearFriction: z.object({ Vu: nonneg, roughened: z.boolean(), Ac: pos }).optional(),
+});
+
+const trussLumberSchema = z.object({ species: speciesSchema, grade: gradeSchema, size: z.string() });
+
+export const woodTrussSpecSchema = z.object({
+  kind: z.literal("woodTruss"),
+  ...common,
+  type: z.enum(["fink", "howe", "king", "queen", "king-queen", "parallel"]),
+  span: pos,
+  pitch: nonneg,
+  depth: pos.optional(),
+  panels: z.number().int().min(2).max(20).optional(),
+  pattern: z.enum(["warren", "pratt"]).optional(),
+  overhang: nonneg,
+  spacing: pos,
+  bearingLen: pos,
+  tc: trussLumberSchema,
+  bc: trussLumberSchema,
+  web: trussLumberSchema,
+  webBracing: z.enum(["none", "midpoint"]),
+  roofDead: deadRefSchema,
+  ceilingDead: deadRefSchema,
+  atticLive: nonneg,
+  roofLive: z.boolean(),
+  snow: z.boolean(),
+  windUplift: nonneg,
+  netSection: pos,
+  joint: z.union([
+    z.object({ type: z.literal("plate"), value: pos, zone: pos, source: z.string() }),
+    z.object({ type: z.literal("nailed"), nail: z.string(), gusset: pos }),
+    z.object({ type: z.literal("bolted"), D: pos, gusset: pos }),
+  ]),
+  deflection: deflectionSchema,
+});
+
 export const memberSpecSchema = z.discriminatedUnion("kind", [
   joistSpecSchema,
   rafterSpecSchema,
@@ -580,6 +712,10 @@ export const memberSpecSchema = z.discriminatedUnion("kind", [
   transferSpecSchema,
   upliftSpecSchema,
   ledgerSpecSchema,
+  masonryWallSpecSchema,
+  holdownFootingSpecSchema,
+  tieInSpecSchema,
+  woodTrussSpecSchema,
 ]);
 
 export const hardwareItemSchema = z.object({
@@ -754,6 +890,10 @@ export type DiaphragmSpec = z.infer<typeof diaphragmSpecSchema>;
 export type TransferSpec = z.infer<typeof transferSpecSchema>;
 export type UpliftSpec = z.infer<typeof upliftSpecSchema>;
 export type LedgerSpec = z.infer<typeof ledgerSpecSchema>;
+export type MasonryWallSpec = z.infer<typeof masonryWallSpecSchema>;
+export type HoldownFootingSpec = z.infer<typeof holdownFootingSpecSchema>;
+export type TieInSpec = z.infer<typeof tieInSpecSchema>;
+export type WoodTrussSpec = z.infer<typeof woodTrussSpecSchema>;
 export type LateralSpec = z.infer<typeof lateralSchema>;
 export type HardwareSpec = z.infer<typeof hardwareItemSchema>;
 export type LinkedLoad = z.infer<typeof linkedLoadSchema>;

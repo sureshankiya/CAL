@@ -79,3 +79,62 @@ export const plainOneWayShear = (fc: number, b: number, h: number, lambda = 1) =
 /** Plain concrete two-way shear φV_n = 0.60 × [4/3 + 8/(3β)] λ √f'c b_o h ≤ 0.60 × 2.66 λ √f'c b_o h (Eq. 14.5.5.1b), lb. */
 export const plainTwoWayShear = (fc: number, bo: number, h: number, beta: number, lambda = 1) =>
   0.6 * Math.min(4 / 3 + 8 / (3 * beta), 2.66) * lambda * Math.sqrt(fc) * bo * h;
+
+export interface StrengthBar {
+  /** depth from the compression face, in */
+  d: number;
+  A: number;
+}
+
+/**
+ * Nominal axial / moment strength of a rectangular section b × t for a neutral axis
+ * depth c (22.2: ε_cu = 0.003, Whitney block 0.85 f'c over a = β1 c, steel elastic-plastic
+ * E_s = 29,000 ksi; displaced concrete deducted for bars inside the block). Moment about
+ * mid-depth, φ from the net tensile strain of the extreme tension bar (Table 21.2.2).
+ */
+export function sectionStrength(c: number, b: number, t: number, bars: StrengthBar[], fc: number, fy: number) {
+  const b1 = beta1(fc);
+  const a = Math.min(b1 * c, t);
+  const Cc = 0.85 * fc * a * b;
+  let Pn = Cc;
+  let Mn = Cc * (t / 2 - a / 2);
+  for (const s of bars) {
+    const eps = (0.003 * (s.d - c)) / c; // tension positive
+    let fs = Math.max(-fy, Math.min(fy, 29_000_000 * eps));
+    if (s.d < a && fs < 0) fs += 0.85 * fc; // displaced concrete
+    Pn -= s.A * fs;
+    Mn += s.A * fs * (s.d - t / 2);
+  }
+  const dt = Math.max(...bars.map((x) => x.d));
+  const epsT = (0.003 * (dt - c)) / c;
+  const epsTy = fy / 29_000_000;
+  const phi = Math.min(0.9, Math.max(0.65, 0.65 + (0.25 * (epsT - epsTy)) / 0.003));
+  return { a, Pn, Mn, epsT, phi };
+}
+
+/**
+ * Design moment strength φM_n at a factored axial load P_u (lb, compression positive),
+ * found by bisection on the neutral axis so that φP_n = P_u; capped by
+ * φP_n,max = 0.80 φ [0.85 f'c (A_g − A_st) + f_y A_st] with φ = 0.65 (22.4.2.1).
+ */
+export function momentAtAxial(Pu: number, b: number, t: number, bars: StrengthBar[], fc: number, fy: number) {
+  const Ast = bars.reduce((s, x) => s + x.A, 0);
+  const PnMax = 0.8 * (0.85 * fc * (b * t - Ast) + fy * Ast);
+  const phiPnMax = 0.65 * PnMax;
+  if (Pu > phiPnMax) return { ok: false as const, phiPnMax, c: NaN, phiMn: 0, phi: 0.65, epsT: 0, a: 0 };
+  const f = (c: number) => {
+    const s = sectionStrength(c, b, t, bars, fc, fy);
+    return s.phi * s.Pn;
+  };
+  let lo = 1e-4;
+  let hi = 10 * t;
+  if (f(lo) > Pu) return { ok: false as const, phiPnMax, c: NaN, phiMn: 0, phi: 0.9, epsT: 0, a: 0 };
+  for (let i = 0; i < 200; i++) {
+    const mid = (lo + hi) / 2;
+    if (f(mid) > Pu) hi = mid;
+    else lo = mid;
+  }
+  const c = (lo + hi) / 2;
+  const s = sectionStrength(c, b, t, bars, fc, fy);
+  return { ok: true as const, phiPnMax, c, phiMn: s.phi * s.Mn, phi: s.phi, epsT: s.epsT, a: s.a };
+}

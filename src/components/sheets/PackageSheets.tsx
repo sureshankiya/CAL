@@ -38,6 +38,14 @@ export function spansText(r: AnyResult): string {
       return `${fmtFtIn(r.input.height)} high`;
     case "diaphragm":
       return `${r.input.dir}-direction load`;
+    case "masonryWall":
+      return `${fmtFtIn(r.input.L)} long × ${fmtFtIn(r.input.h)} high`;
+    case "holdownFooting":
+      return `${fmtFtIn(r.input.Lf)} long`;
+    case "tieIn":
+      return "—";
+    case "woodTruss":
+      return fmtFtIn(r.input.span);
   }
   const s = r.kind === "rafter" ? [r.input.run] : r.input.spans;
   const base = s.map((x) => fmtFtIn(x)).join(" + ");
@@ -576,6 +584,7 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
     results.filter((r): r is Extract<AnyResult, { kind: K }> => (k as string[]).includes(r.kind)).sort(byMark);
   const framing = of("joist", "rafter", "ceilingJoist", "ijoist");
   const trusses = of("truss");
+  const wts = of("woodTruss");
   const beams = of("beam");
   const walls = of("wall");
   const posts = of("post");
@@ -589,6 +598,9 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
   const sts = of("transfer");
   const ups = of("uplift");
   const lgs = of("ledger");
+  const cws = of("masonryWall");
+  const hfs = of("holdownFooting");
+  const tis = of("tieIn");
   const usedHw = new Set<string>([
     ...cns.map((c) => c.item.id),
     ...sws.flatMap((x) => (x.holdown ? [x.holdown.item.id] : [])),
@@ -650,6 +662,40 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
             r.reactions.map((x) => `${x.name} ${f0(x.maxDown)}`).join("; "),
             r.reactions.some((x) => x.minNet < 0) ? f0(-Math.min(...r.reactions.map((x) => x.minNet))) : "—",
             r.input.designRef || "—",
+          ])}
+        />
+      ) : null}
+      {wts.length ? (
+        <DataTable
+          caption="Truss schedule (designed in HouseCalc)"
+          head={[
+            "Mark",
+            "Type",
+            "Span",
+            "Spacing",
+            "Top chord",
+            "Bottom chord",
+            "Webs",
+            "Joints",
+            "Max down / uplift (lb)",
+            "Result",
+          ]}
+          small
+          rows={wts.map((r) => [
+            r.mark,
+            r.input.type === "parallel" ? `parallel chord, ${r.input.panels ?? 8} panels` : r.input.type,
+            fmtFtIn(r.input.span),
+            `${f0(r.input.spacing)} in. o.c.`,
+            `${r.input.tc.size} ${r.input.tc.species} ${r.input.tc.grade}`,
+            `${r.input.bc.size} ${r.input.bc.species} ${r.input.bc.grade}`,
+            `${r.input.web.size} ${r.input.web.species} ${r.input.web.grade}${r.input.webBracing === "midpoint" ? ", braced at mid-length" : ""}`,
+            r.input.joint.type === "plate"
+              ? "metal plates (by manufacturer)"
+              : r.input.joint.type === "nailed"
+                ? "nailed gussets"
+                : "bolted gussets",
+            r.reactions.map((x) => `${f0(x.maxDown)}${x.minNet < 0 ? ` / ${f0(-x.minNet)} up` : ""}`).join("; "),
+            pf(r),
           ])}
         />
       ) : null}
@@ -945,6 +991,64 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
             `${fmtInFraction(r.input.fastener.D)}" ${r.input.fastener.type === "bolt" ? "bolts" : "lag screws"} @ ${f0(r.input.fastener.spacing)}" o.c.`,
             r.supportText,
             f3(r.governing.ratio),
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {cws.length ? (
+        <DataTable
+          caption="Concrete / CMU wall schedule"
+          head={["Mark", "Wall", "Height", "Vertical reinf.", "Horizontal reinf.", "Material", "Gov. D/C", "Result"]}
+          small
+          rows={cws.map((r) => [
+            r.mark,
+            `${fmtInFraction(r.input.t)}" ${r.input.material === "cmu" ? "CMU, fully grouted" : "concrete"}`,
+            fmtFtIn(r.input.h) +
+              (r.input.parapet && r.input.support !== "cantilever" ? ` + ${fmtFtIn(r.input.parapet)} parapet` : ""),
+            `${r.input.vertical.size} @ ${f0(r.input.vertical.spacing)}" o.c.${r.input.vertical.layout === "each-face" ? " E.F." : ""}`,
+            `${r.input.horizontal.count > 1 ? `(${r.input.horizontal.count}) ` : ""}${r.input.horizontal.size} @ ${f0(r.input.horizontal.spacing)}" o.c.`,
+            r.input.material === "cmu"
+              ? `f'm ${f0(r.input.cmu!.fm)} psi, Type ${r.input.cmu!.mortar} mortar, Gr. ${f0(r.input.fy / 1000)}`
+              : `f'c ${f0(r.input.concrete!.fc)} psi, Gr. ${f0(r.input.fy / 1000)}`,
+            f3(r.governing.ratio),
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {hfs.length ? (
+        <DataTable
+          caption="Shear-wall / hold-down footing schedule"
+          head={["Mark", "Under", "Footing size", "Reinforcement", "q_max / q_a", "Overturning", "Result"].map((h) =>
+            rich(h),
+          )}
+          small
+          rows={hfs.map((r) => [
+            r.mark,
+            r.wallMark,
+            `${f0(r.input.B * 12)}" W × ${f0(r.input.h)}" D × ${fmtFtIn(r.input.Lf)}`,
+            r.input.longitudinal
+              ? `(${r.input.longitudinal.top}) ${r.input.longitudinal.size} T, (${r.input.longitudinal.bottom}) ${r.input.longitudinal.size} B`
+              : "plain",
+            f3(r.govBearing.qRatio),
+            f3(r.govOT.otRatio),
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {tis.length ? (
+        <DataTable
+          caption="Tie-in to existing concrete schedule"
+          head={["Mark", "Joint", "Dowel / anchor", "Embedment", "Adhesive", "φN_n / φV_n (plf)", "Result"].map((h) =>
+            rich(h),
+          )}
+          small
+          rows={tis.map((r) => [
+            r.mark,
+            r.input.joint,
+            `${r.input.anchor.kind === "rebar" ? r.input.anchor.size : `${fmtInFraction(r.d)}" rod`} @ ${f0(r.input.spacing)}" o.c.`,
+            `${f1(r.input.hef)}"`,
+            `${r.input.product.name} (${r.input.product.report})`,
+            `${f0(r.perFoot.phiNn)} / ${f0(r.perFoot.phiVn)}`,
             pf(r),
           ])}
         />

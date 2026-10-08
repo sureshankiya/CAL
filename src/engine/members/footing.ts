@@ -77,6 +77,8 @@ export interface FootingInput {
   soilDensity: number;
   frostDepth?: number;
   stories: number;
+  /** pad cast as a thickened slab-on-grade under a post or point load */
+  thickened?: boolean;
 }
 
 export interface FootingRow {
@@ -460,14 +462,18 @@ export function designFooting(ctx: DesignContext, f: FootingInput): FootingResul
     flags.push(
       "Allowable soil pressure is a presumptive value — confirm soil class in the field or by a geotechnical report",
     );
+  if (f.thickened && !strip)
+    flags.push(
+      "Thickened slab: monolithic with the slab-on-grade; slab reinforcement continuous through the thickened area; bottom of thickening on undisturbed soil or compacted fill per the soils report",
+    );
   const callout = strip
     ? `${fmt(Bin, 0)} in. W × ${fmt(f.h, 0)} in. D continuous footing${f.rebar ? `, ${f.rebar.size} @ ${fmt(f.rebar.spacing ?? 12, 0)} in. transverse` : ", plain"}${f.longitudinal ? `, (${f.longitudinal.top}) ${f.longitudinal.size} T & (${f.longitudinal.bottom}) B` : ""}`
-    : `${fmt(Bin, 0)} × ${fmt(Lin, 0)} × ${fmt(f.h, 0)} in. pad footing${f.rebar ? `, (${f.rebar.count ?? 2}) ${f.rebar.size} each way` : ", plain"}`;
+    : `${fmt(Bin, 0)} × ${fmt(Lin, 0)} × ${fmt(f.h, 0)} in. ${f.thickened ? "thickened slab" : "pad footing"}${f.rebar ? `, (${f.rebar.count ?? 2}) ${f.rebar.size} each way` : ", plain"}`;
   return {
     id: f.id,
     mark: f.mark,
     kind: "footing",
-    title: strip ? "Continuous footing" : "Pad footing",
+    title: strip ? "Continuous footing" : f.thickened ? "Thickened slab under post" : "Pad footing",
     callout,
     pass: checks.every((c) => c.pass),
     governing: governingCheck(checks),

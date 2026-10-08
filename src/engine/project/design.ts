@@ -40,6 +40,10 @@ import { designTruss, type TrussResult } from "../members/truss";
 import { designWall, type WallResult } from "../members/wall";
 import { designDiaphragm, type DiaphragmDemand, type DiaphragmResult } from "../members/diaphragm";
 import { designLedger, type LedgerResult } from "../members/ledger";
+import { designMasonryWall, type MasonryWallResult } from "../members/masonryWall";
+import { designHoldownFooting, type HoldownFootingResult } from "../members/holdownFooting";
+import { designTieIn, type TieInResult } from "../members/tieIn";
+import { designWoodTruss, type WoodTrussResult } from "../members/woodTruss";
 import {
   designBasePlateMember,
   designSteelBeam,
@@ -70,7 +74,11 @@ export type AnyResult =
   | DiaphragmResult
   | TransferResult
   | UpliftResult
-  | LedgerResult;
+  | LedgerResult
+  | MasonryWallResult
+  | HoldownFootingResult
+  | TieInResult
+  | WoodTrussResult;
 
 export interface DesignOutcome {
   spec: MemberSpec;
@@ -134,6 +142,7 @@ export function dependencies(m: MemberSpec): string[] {
   if (m.kind === "shearWall" && m.upliftFrom) ids.add(m.upliftFrom);
   if (m.kind === "basePlate" && m.sourceId) ids.add(m.sourceId);
   if (m.kind === "uplift") ids.add(m.sourceId);
+  if (m.kind === "holdownFooting") ids.add(m.sourceId);
   if (m.kind === "transfer" && m.source.kind === "wall") ids.add(m.source.id);
   return [...ids];
 }
@@ -161,6 +170,9 @@ export function designOrder(members: MemberSpec[]): { order: string[]; circular:
   const circular = members.filter((m) => !order.includes(m.id)).map((m) => m.id);
   return { order, circular };
 }
+
+/** Seismic importance factor I_e (ASCE 7 Table 1.5-2). */
+const importanceFactor = (rc: string) => ({ I: 1, II: 1, III: 1.25, IV: 1.5 })[rc] ?? 1;
 
 const markOf = (p: Project, id: string) => p.members.find((m) => m.id === id)?.mark ?? id;
 
@@ -376,6 +388,48 @@ function designOne(
     }
     case "ledger":
       return designLedger(ctx, { ...m, extra: [...m.extra, ...linked] });
+    case "masonryWall":
+      return designMasonryWall(ctx, {
+        ...m,
+        extra: [...m.extra, ...linked],
+        seismic: {
+          include: m.seismic.include,
+          Eadd: m.seismic.Eadd,
+          SDC: p.criteria.seismic.SDC,
+          Ie: importanceFactor(p.criteria.riskCategory),
+          SDS: p.criteria.seismic.SDS,
+        },
+      });
+    case "holdownFooting": {
+      const src = outcomes.get(m.sourceId)?.result;
+      if (!src) throw new Error(`Shear wall ${markOf(p, m.sourceId)} has an error or is missing`);
+      if (src.kind !== "shearWall") throw new Error(`${src.mark} is not a shear wall`);
+      const sc = p.criteria.soil.class ? soilClass(p.criteria.soil.class) : undefined;
+      return designHoldownFooting(ctx, {
+        ...m,
+        extra: [...m.extra, ...linked],
+        fc: p.criteria.concrete.fc,
+        fy: p.criteria.concrete.fy,
+        cover: p.criteria.concrete.cover,
+        qa: m.qaOverride ?? p.criteria.soil.bearing,
+        qaSource: m.qaOverride ? "entered on the footing" : p.criteria.soil.source,
+        soilDensity: p.criteria.soil.density,
+        friction: sc ? sc.friction : 0.25,
+        cohesion: sc?.cohesion,
+        lateralBearing: sc ? sc.lateral : 100,
+        soilSource: sc
+          ? `IBC Table 1806.2, class ${sc.id}`
+          : "IBC Table 1806.2 (class not set — 0.25 / 100 psf/ft assumed)",
+        wall: src,
+      });
+    }
+    case "woodTruss":
+      return designWoodTruss(ctx, m);
+    case "tieIn":
+      return designTieIn(ctx, {
+        ...m,
+        seismic: ["C", "D", "E", "F"].includes(p.criteria.seismic.SDC),
+      });
   }
 }
 

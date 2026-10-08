@@ -1,6 +1,7 @@
 /** Renders the house report (all sheets in order) or a single sheet from the package list. */
 
 import type { Project, ProjectDesign } from "@/engine/project";
+import { HoldownFootingSheet, MasonryWallSheet, TieInSheet, WoodTrussSheet } from "../sheets/Phase4Sheets";
 import { metaFor } from "../sheets/common";
 import { IJoistSheet } from "../sheets/IJoistSheet";
 import {
@@ -168,6 +169,14 @@ function SheetBody({
           return <UpliftSheet {...common} r={r} />;
         case "ledger":
           return <LedgerSheet {...common} r={r} />;
+        case "masonryWall":
+          return <MasonryWallSheet {...common} r={r} />;
+        case "holdownFooting":
+          return <HoldownFootingSheet {...common} r={r} />;
+        case "tieIn":
+          return <TieInSheet {...common} r={r} />;
+        case "woodTruss":
+          return <WoodTrussSheet {...common} r={r} />;
         default:
           return (
             <WoodMemberSheet

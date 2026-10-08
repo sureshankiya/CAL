@@ -36,7 +36,7 @@ interface SheetProps<R> {
   connections?: string[];
 }
 
-function Frame({
+export function Frame({
   m,
   r,
   title,
@@ -60,12 +60,12 @@ function Frame({
 
 const kft = (v: number) => `${fmt(v, 3)} kip-ft`;
 const kip = (v: number) => `${fmt(v, 3)} kip`;
-const verifyText = (r: { assumptions: Array<{ verify?: boolean; item: string }> }) => {
+export const verifyText = (r: { assumptions: Array<{ verify?: boolean; item: string }> }) => {
   const v = r.assumptions.filter((a) => a.verify);
   return v.length ? <Flag>{v.map((a) => a.item).join("; ")}</Flag> : "None";
 };
 
-function LoadPath({ received, connections }: { received: string[]; connections?: string[] }) {
+export function LoadPath({ received, connections }: { received: string[]; connections?: string[] }) {
   return (
     <>
       <SectionHead title="Load path" />

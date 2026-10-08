@@ -30,7 +30,10 @@ export type MarkKey =
   | "floorDiaphragm"
   | "transfer"
   | "uplift"
-  | "ledger";
+  | "ledger"
+  | "masonryWall"
+  | "holdownFooting"
+  | "tieIn";
 
 export const DEFAULT_MARKS: Record<MarkKey, string> = {
   joist: "FJ-{n}",
@@ -57,6 +60,9 @@ export const DEFAULT_MARKS: Record<MarkKey, string> = {
   transfer: "ST-{n}",
   uplift: "UP-{n}",
   ledger: "LG-{n}",
+  masonryWall: "CW-{n}",
+  holdownFooting: "HF-{n}",
+  tieIn: "TI-{n}",
 };
 
 export const markKeyOf = (m: Pick<MemberSpec, "kind"> & { role?: string; type?: string; level?: string }): MarkKey =>
@@ -70,7 +76,9 @@ export const markKeyOf = (m: Pick<MemberSpec, "kind"> & { role?: string; type?: 
         ? m.level === "floor"
           ? "floorDiaphragm"
           : "roofDiaphragm"
-        : (m.kind as MarkKey);
+        : m.kind === "woodTruss"
+          ? "truss"
+          : (m.kind as MarkKey);
 
 export function formatMark(template: string, level: number, seq: number): string {
   return template

@@ -172,3 +172,24 @@ export function dowelYieldSingle(i: DowelYieldInput): DowelYieldResult {
     }
   return { Z, mode, modes, Re, Rt, Ktheta: Kt, k1, k2, k3, Rd };
 }
+
+/**
+ * Double-shear yield limit equations (NDS 12.3.1, Table 12.3.1A), D ≥ 1/4 in.: two side
+ * members of thickness l_s on a main member l_m; R_d = 4K_θ (Modes I), 3.2K_θ (III, IV).
+ */
+export function dowelYieldDouble(i: DowelYieldInput) {
+  const { D, Fyb, ls, lm, Fes, Fem } = i;
+  const Kt = 1 + (0.25 * Math.min(90, Math.abs(i.thetaDeg))) / 90;
+  const Rd = { I: 4 * Kt, III: 3.2 * Kt };
+  const Re = Fem / Fes;
+  const k3 = -1 + Math.sqrt((2 * (1 + Re)) / Re + (2 * Fyb * (2 + Re) * D * D) / (3 * Fem * ls * ls));
+  const modes = {
+    Im: (D * lm * Fem) / Rd.I,
+    Is: (2 * D * ls * Fes) / Rd.I,
+    IIIs: (2 * k3 * D * ls * Fem) / ((2 + Re) * Rd.III),
+    IV: ((2 * D * D) / Rd.III) * Math.sqrt((2 * Fem * Fyb) / (3 * (1 + Re))),
+  };
+  let mode: keyof typeof modes = "Im";
+  for (const k of Object.keys(modes) as Array<keyof typeof modes>) if (modes[k] < modes[mode]) mode = k;
+  return { Z: modes[mode], mode, modes, Re, Ktheta: Kt, k3 };
+}

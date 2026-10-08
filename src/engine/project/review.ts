@@ -110,6 +110,34 @@ export function targetFields(m: MemberSpec): TargetField[] {
       ];
     case "transfer":
       return [...common, { field: "spacing", label: "Connector spacing (in)", numeric: true }];
+    case "masonryWall":
+      return [
+        ...common,
+        { field: "L", label: "Wall length (ft)", numeric: true },
+        { field: "h", label: "Wall height (ft)", numeric: true },
+        { field: "t", label: "Wall thickness (in)", numeric: true },
+        { field: "vertical.spacing", label: "Vertical bar spacing (in)", numeric: true },
+      ];
+    case "woodTruss":
+      return [
+        ...common,
+        { field: "span", label: "Truss span (ft)", numeric: true },
+        { field: "pitch", label: "Pitch (in/12)", numeric: true },
+        { field: "spacing", label: "Spacing (in)", numeric: true },
+      ];
+    case "holdownFooting":
+      return [
+        ...common,
+        { field: "Lf", label: "Footing length (ft)", numeric: true },
+        { field: "B", label: "Footing width (ft)", numeric: true },
+        { field: "h", label: "Footing depth (in)", numeric: true },
+      ];
+    case "tieIn":
+      return [
+        ...common,
+        { field: "spacing", label: "Dowel spacing (in)", numeric: true },
+        { field: "hef", label: "Embedment (in)", numeric: true },
+      ];
     case "connector":
     case "diaphragm":
     case "uplift":
