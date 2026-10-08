@@ -4,6 +4,13 @@
  * (drawing, page, sheet), confirmed, then applied to a member input.
  */
 
+import { extractDrawingPage } from "@/lib/aiExtract";
+import {
+  EXTRACTION_MODEL,
+  estimateExtractionCost,
+  extractionMembers,
+  reviewItemsFrom,
+} from "@/engine/project/extraction";
 import { useEffect, useRef, useState } from "react";
 import { applyReviewItem, newId, targetFields, type Project, type ReviewItem } from "@/engine/project";
 import { deletePdf, getPdf, loadPdfJs, putPdf } from "@/lib/pdfStore";
@@ -322,9 +329,120 @@ function Viewer({
             + Add to review table (unconfirmed)
           </AddButton>
           <Hint>Values are applied to members only after you confirm them in the review table.</Hint>
+          <AiExtract p={p} set={set} id={id} page={page} sheet={sheet} />
           <ReviewTable p={{ ...p, review: p.review.filter((r) => r.drawingId === id && r.page === page) }} set={set} />
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Render a page for extraction (long edge ≈ 1,568 px) and read its vector text. */
+async function preparePage(id: string, page: number) {
+  const data = await getPdf(id);
+  if (!data) throw new Error("This drawing is not stored in this browser — upload the PDF again");
+  const pdfjs = await loadPdfJs();
+  const doc = await pdfjs.getDocument({ data: data.slice(0) }).promise;
+  const pg = await doc.getPage(Math.min(Math.max(1, page), doc.numPages));
+  const base = pg.getViewport({ scale: 1 });
+  const vp = pg.getViewport({ scale: 1568 / Math.max(base.width, base.height) });
+  const c = document.createElement("canvas");
+  c.width = Math.round(vp.width);
+  c.height = Math.round(vp.height);
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, c.width, c.height);
+  await pg.render({ canvas: c, canvasContext: ctx, viewport: vp }).promise;
+  const image = c.toDataURL("image/png").split(",")[1];
+  const tc = await pg.getTextContent();
+  const text = tc.items
+    .map((it) => ("str" in it ? it.str + (it.hasEOL ? "\n" : " ") : ""))
+    .join("")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+  return { image, imageWidth: c.width, imageHeight: c.height, text };
+}
+
+function AiExtract({
+  p,
+  set,
+  id,
+  page,
+  sheet,
+}: {
+  p: Project;
+  set: SetProject;
+  id: string;
+  page: number;
+  sheet: string;
+}) {
+  const [prep, setPrep] = useState<Awaited<ReturnType<typeof preparePage>> | undefined>();
+  const [busy, setBusy] = useState<"" | "prepare" | "run">("");
+  const [msg, setMsg] = useState<string>("");
+  useEffect(() => {
+    setPrep(undefined);
+    setMsg("");
+  }, [id, page]);
+  const members = extractionMembers(p);
+  const est = prep ? estimateExtractionCost({ ...prep, members }) : undefined;
+  return (
+    <div className="space-y-2 rounded-md border border-border p-2">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Read this page with AI</div>
+      {!prep ? (
+        <SmallButton
+          onClick={async () => {
+            setBusy("prepare");
+            setMsg("");
+            try {
+              setPrep(await preparePage(id, page));
+            } catch (e) {
+              setMsg(e instanceof Error ? e.message : String(e));
+            } finally {
+              setBusy("");
+            }
+          }}
+        >
+          {busy === "prepare" ? "Preparing page…" : "Estimate cost"}
+        </SmallButton>
+      ) : (
+        <>
+          <Hint>
+            {EXTRACTION_MODEL}: about {est!.input.toLocaleString()} input + {est!.output.toLocaleString()} output tokens
+            ≈ ${est!.cost.toFixed(2)} (estimate). The page image and text are sent for this request only. Results go
+            into the review table unconfirmed.
+          </Hint>
+          <SmallButton
+            onClick={async () => {
+              setBusy("run");
+              setMsg("");
+              try {
+                const res = await extractDrawingPage({ data: { ...prep, sheet, page, members } });
+                const rows = reviewItemsFrom(p, res, id, page, sheet, () => newId("rv"));
+                set((x) => ({
+                  ...x,
+                  review: [...x.review, ...rows],
+                  drawings:
+                    res.sheet && !sheet
+                      ? x.drawings.map((y) =>
+                          y.id === id ? { ...y, sheets: { ...y.sheets, [String(page)]: res.sheet } } : y,
+                        )
+                      : x.drawings,
+                }));
+                setMsg(
+                  `${rows.length} item(s) added for review (${res.usage.input.toLocaleString()} in / ${res.usage.output.toLocaleString()} out tokens, $${res.usage.cost.toFixed(2)}).${res.notes ? ` Notes: ${res.notes}` : ""}`,
+                );
+              } catch (e) {
+                setMsg(e instanceof Error ? e.message : String(e));
+              } finally {
+                setBusy("");
+              }
+            }}
+          >
+            {busy === "run" ? "Reading page…" : `Run extraction (≈ $${est!.cost.toFixed(2)})`}
+          </SmallButton>
+        </>
+      )}
+      {msg ? <p className="text-xs">{msg}</p> : null}
     </div>
   );
 }

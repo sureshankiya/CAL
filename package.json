@@ -17,6 +17,7 @@
     "verify:reference": "python3 -I verification/reference.py && python3 -I verification/reference_p2.py && python3 -I verification/reference_p3.py"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/react-query": "^5.101.1",

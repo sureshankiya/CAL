@@ -6,3 +6,4 @@ export * from "./storage";
 export * from "./templates";
 export * from "./review";
 export * from "./lateral";
+export * from "./extraction";
