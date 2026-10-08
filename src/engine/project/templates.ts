@@ -23,6 +23,8 @@ import type {
   UpliftSpec,
   LedgerSpec,
   MasonryWallSpec,
+  RetainingWallSpec,
+  GuardPostSpec,
   HoldownFootingSpec,
   TieInSpec,
   WoodTrussSpec,
@@ -57,7 +59,9 @@ export type NewMemberKind =
   | "concreteWall"
   | "holdownFooting"
   | "tieIn"
-  | "woodTruss";
+  | "woodTruss"
+  | "retainingWall"
+  | "guardPost";
 
 export const NEW_MEMBER_LABEL: Record<NewMemberKind, string> = {
   joist: "Floor joist (FJ)",
@@ -88,6 +92,8 @@ export const NEW_MEMBER_LABEL: Record<NewMemberKind, string> = {
   holdownFooting: "Shear-wall / hold-down footing (HF)",
   tieIn: "Tie-in to existing concrete — dowels / adhesive anchors (TI)",
   woodTruss: "Wood truss — designed in HouseCalc (T)",
+  retainingWall: "Cantilever retaining wall (RW)",
+  guardPost: "Deck guard post (GP)",
 };
 
 let counter = 0;
@@ -542,6 +548,61 @@ export function newMemberSpec(p: Project, kind: NewMemberKind, structureId: stri
         joint: { type: "plate", value: 100, zone: 12, source: "truss plate manufacturer ESR — enter the value" },
         deflection: { preset: "custom", live: 360, total: 240 },
       } satisfies WoodTrussSpec;
+    case "retainingWall":
+      return {
+        kind: "retainingWall",
+        ...base,
+        Hr: 4,
+        stem: {
+          material: "concrete",
+          height: 4,
+          t: 8,
+          concrete: { fc: p.criteria.concrete.fc, gamma: 150, cover: 2 },
+          fy: 60000,
+          vertical: { size: "#4", spacing: 12, layout: "offset", d: 5.75 },
+          horizontal: { size: "#4", count: 1, spacing: 12 },
+        },
+        footing: {
+          toe: 1,
+          heel: 2,
+          h: 14,
+          coverBottom: 3,
+          coverTop: 2,
+          bottom: { size: "#5", spacing: 12 },
+          top: { size: "#5", spacing: 12 },
+          longitudinal: { size: "#4", count: 6 },
+        },
+        soil: {
+          efp: 35,
+          efpSource: "assumed — confirm with the geotechnical report (IBC 1610.1)",
+          surcharge: 0,
+          toeCover: 1,
+          countToeSoil: false,
+          neglectPassive: 1,
+        },
+        extra: [],
+      } satisfies RetainingWallSpec;
+    case "guardPost":
+      return {
+        kind: "guardPost",
+        ...base,
+        post: { species: "DF-L", grade: "No.1", size: "4x6" },
+        wetService: true,
+        incised: true,
+        guardHeight: 36,
+        topBolt: 2,
+        s: 8,
+        P: 200,
+        rail: { w: 0, spacing: 0 },
+        bolt: { d: 0.5, Fu: 60000, label: "1/2 in. A307 through-bolts" },
+        washer: 2,
+        device: {
+          model: "Tension device — enter the model",
+          capacity: 1500,
+          source: "manufacturer catalogue — enter the allowable tension",
+          verified: false,
+        },
+      } satisfies GuardPostSpec;
   }
 }
 
@@ -571,6 +632,8 @@ export function supportCount(m: MemberSpec): number {
     case "uplift":
     case "holdownFooting":
     case "tieIn":
+    case "retainingWall":
+    case "guardPost":
       return 0;
     case "steelColumn":
       return 2;

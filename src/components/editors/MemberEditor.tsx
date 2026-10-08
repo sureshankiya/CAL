@@ -33,10 +33,12 @@ import {
   type HoldownFootingSpec,
   type TieInSpec,
   type WoodTrussSpec,
+  type RetainingWallSpec,
+  type GuardPostSpec,
 } from "@/engine/project";
 import { C_SHAPES, HSS_NAMES, ROUND_NAMES, STEEL_GRADES, W_SHAPES, steelShape } from "@/engine/data/steel";
 import { DIAPHRAGM_ROWS } from "@/engine/data/diaphragm";
-import { SHEATHING, edgeSpacings } from "@/engine/data/sdpws";
+import { SHEATHING, edgeSpacings, panel1532Shear } from "@/engine/data/sdpws";
 import { ANCHOR_STEELS } from "@/engine/design/anchors";
 import { BARS } from "@/engine/design/concrete";
 import { newId } from "@/engine/project/templates";
@@ -886,6 +888,12 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
       break;
     case "woodTruss":
       body = <WoodTrussEditor p={p} m={m} upd={upd as Upd<WoodTrussSpec>} />;
+      break;
+    case "retainingWall":
+      body = <RetainingWallEditor p={p} m={m} upd={upd as Upd<RetainingWallSpec>} />;
+      break;
+    case "guardPost":
+      body = <GuardPostEditor p={p} m={m} upd={upd as Upd<GuardPostSpec>} />;
       break;
   }
   return (
@@ -1873,6 +1881,13 @@ function ShearWallEditor({ p, m, upd }: { p: Project; m: ShearWallSpec; upd: Upd
                   />
                 </Field>
               </Grid>
+              {panel1532Shear(x.key, x.spacing) ? (
+                <Check
+                  checked={!!x.panel1532}
+                  onChange={(v) => setSide(i, { panel1532: v || undefined })}
+                  label="Use 15/32 in. shear values (SDPWS Table 4.3A note: studs ≤ 16 in. o.c. or panels across studs)"
+                />
+              ) : null}
               <Grid cols={3}>
                 <Field label="v_s override (plf)">
                   <NumberInput
@@ -3811,6 +3826,286 @@ function WoodTrussEditor({ p, m, upd }: { p: Project; m: WoodTrussSpec; upd: Upd
             </Field>
           </Grid>
         )}
+      </Section>
+    </>
+  );
+}
+
+function RetainingWallEditor({ p, m, upd }: { p: Project; m: RetainingWallSpec; upd: Upd<RetainingWallSpec> }) {
+  const num = (v: number | undefined, d: number) => v ?? d;
+  const st = m.stem;
+  const f = m.footing;
+  const s = m.soil;
+  const setStem = (x: Partial<RetainingWallSpec["stem"]>) => upd({ stem: { ...st, ...x } });
+  const setFtg = (x: Partial<RetainingWallSpec["footing"]>) => upd({ footing: { ...f, ...x } });
+  const setSoil = (x: Partial<RetainingWallSpec["soil"]>) => upd({ soil: { ...s, ...x } });
+  return (
+    <>
+      <Section title="Cantilever retaining wall">
+        <CommonFields p={p} m={m} upd={upd as Upd<MemberSpec>} />
+        <Grid cols={4}>
+          <Field label="Retained height H_r (ft)">
+            <NumberInput value={m.Hr} min={0.5} onChange={(v) => upd({ Hr: num(v, 4) })} />
+          </Field>
+          <Field label="Stem height (ft)">
+            <NumberInput value={st.height} min={0.5} onChange={(v) => setStem({ height: num(v, m.Hr) })} />
+          </Field>
+          <Field label="Stem thickness (in)">
+            <NumberInput value={st.t} min={6} onChange={(v) => setStem({ t: num(v, 8) })} />
+          </Field>
+          <Field label="Stem material">
+            <Select
+              value={st.material}
+              options={[
+                { value: "concrete", label: "Concrete" },
+                { value: "cmu", label: "CMU, fully grouted" },
+              ]}
+              onChange={(v) =>
+                setStem(
+                  v === "cmu"
+                    ? {
+                        material: "cmu",
+                        t: 7.625,
+                        concrete: undefined,
+                        cmu: {
+                          fm: 2000,
+                          fmSource: "TMS 602 unit strength method — confirm with the specification",
+                          mortar: "S",
+                          block: {
+                            hb: 7.625,
+                            lb: 15.625,
+                            tf: 1.25,
+                            tw: 1.0,
+                            te: 1.25,
+                            nWeb: 1,
+                            nEnd: 2,
+                            gammaBlock: 115,
+                            gammaGrout: 140,
+                          },
+                          FbFactor: 0.45,
+                          shearDeformation: true,
+                        },
+                      }
+                    : {
+                        material: "concrete",
+                        cmu: undefined,
+                        concrete: { fc: p.criteria.concrete.fc, gamma: 150, cover: 2 },
+                      },
+                )
+              }
+            />
+          </Field>
+        </Grid>
+        <Grid cols={4}>
+          <Field label="Vertical bar">
+            <Select
+              value={st.vertical.size}
+              options={BAR_OPTIONS}
+              onChange={(v) => setStem({ vertical: { ...st.vertical, size: v } })}
+            />
+          </Field>
+          <Field label="Spacing (in)">
+            <NumberInput
+              value={st.vertical.spacing}
+              min={4}
+              onChange={(v) => setStem({ vertical: { ...st.vertical, spacing: num(v, 16) } })}
+            />
+          </Field>
+          <Field label="Depth d to the bars (in)">
+            <NumberInput
+              value={st.vertical.d ?? st.t / 2}
+              min={1}
+              onChange={(v) => setStem({ vertical: { ...st.vertical, layout: "offset", d: v } })}
+            />
+          </Field>
+          <Field label="Horizontal bar / spacing (in)">
+            <NumberInput
+              value={st.horizontal.spacing}
+              min={4}
+              onChange={(v) => setStem({ horizontal: { ...st.horizontal, spacing: num(v, 16) } })}
+            />
+          </Field>
+        </Grid>
+        <Hint>Bars at depth d from the exposed (front) face, on the soil side (tension face).</Hint>
+      </Section>
+      <Section title="Footing">
+        <Grid cols={4}>
+          <Field label="Toe (ft)">
+            <NumberInput value={f.toe} min={0} onChange={(v) => setFtg({ toe: num(v, 1) })} />
+          </Field>
+          <Field label="Heel (ft)">
+            <NumberInput value={f.heel} min={0.5} onChange={(v) => setFtg({ heel: num(v, 2) })} />
+          </Field>
+          <Field label="Thickness (in)">
+            <NumberInput value={f.h} min={8} onChange={(v) => setFtg({ h: num(v, 12) })} />
+          </Field>
+          <Field label="Longitudinal bars (no.)">
+            <NumberInput
+              value={f.longitudinal.count}
+              min={2}
+              onChange={(v) =>
+                setFtg({ longitudinal: { ...f.longitudinal, count: Math.max(2, Math.round(num(v, 4))) } })
+              }
+            />
+          </Field>
+        </Grid>
+        <Grid cols={4}>
+          <Field label="Bottom bar">
+            <Select
+              value={f.bottom.size}
+              options={BAR_OPTIONS}
+              onChange={(v) => setFtg({ bottom: { ...f.bottom, size: v } })}
+            />
+          </Field>
+          <Field label="Bottom spacing (in)">
+            <NumberInput
+              value={f.bottom.spacing}
+              min={4}
+              onChange={(v) => setFtg({ bottom: { ...f.bottom, spacing: num(v, 12) } })}
+            />
+          </Field>
+          <Field label="Top bar">
+            <Select value={f.top.size} options={BAR_OPTIONS} onChange={(v) => setFtg({ top: { ...f.top, size: v } })} />
+          </Field>
+          <Field label="Top spacing (in)">
+            <NumberInput
+              value={f.top.spacing}
+              min={4}
+              onChange={(v) => setFtg({ top: { ...f.top, spacing: num(v, 12) } })}
+            />
+          </Field>
+        </Grid>
+      </Section>
+      <Section title="Soil">
+        <Grid cols={4}>
+          <Field label="Equivalent fluid (pcf)">
+            <NumberInput value={s.efp} min={20} onChange={(v) => setSoil({ efp: num(v, 35) })} />
+          </Field>
+          <Field label="Surcharge q (psf)">
+            <NumberInput value={s.surcharge} min={0} onChange={(v) => setSoil({ surcharge: num(v, 0) })} />
+          </Field>
+          <Field label="Soil over the toe (ft)">
+            <NumberInput value={s.toeCover} min={0} onChange={(v) => setSoil({ toeCover: num(v, 0) })} />
+          </Field>
+          <Field label="Passive ignored, top (ft)">
+            <NumberInput value={s.neglectPassive} min={0} onChange={(v) => setSoil({ neglectPassive: num(v, 1) })} />
+          </Field>
+        </Grid>
+        <Field label="Earth-pressure basis">
+          <TextInput value={s.efpSource} onChange={(v) => setSoil({ efpSource: v })} />
+        </Field>
+        <Grid cols={4}>
+          <Field label="Seismic increment k (pcf)">
+            <NumberInput
+              value={s.seismic?.k ?? 0}
+              min={0}
+              onChange={(v) => setSoil({ seismic: v ? { shape: s.seismic?.shape ?? "inverted", k: v } : undefined })}
+            />
+          </Field>
+          <Field label="Seismic shape">
+            <Select
+              value={s.seismic?.shape ?? "inverted"}
+              options={[
+                { value: "inverted", label: "Inverted triangle" },
+                { value: "uniform", label: "Uniform" },
+              ]}
+              onChange={(v) => setSoil({ seismic: { shape: v, k: s.seismic?.k ?? 0 } })}
+            />
+          </Field>
+          <Field label="q_a override (psf)">
+            <NumberInput value={s.qaOverride} min={500} onChange={(v) => setSoil({ qaOverride: v || undefined })} />
+          </Field>
+        </Grid>
+        <Check
+          checked={s.countToeSoil}
+          onChange={(v) => setSoil({ countToeSoil: v })}
+          label="Count the soil over the toe as resisting sliding and overturning"
+        />
+        <Hint>
+          Unit weight, bearing, friction and lateral bearing come from the foundation criteria (soil class, IBC Table
+          1806.2). Enter the geotechnical values where a soils report exists.
+        </Hint>
+      </Section>
+    </>
+  );
+}
+
+function GuardPostEditor({ p, m, upd }: { p: Project; m: GuardPostSpec; upd: Upd<GuardPostSpec> }) {
+  const num = (v: number | undefined, d: number) => v ?? d;
+  return (
+    <>
+      <Section title="Deck guard post">
+        <CommonFields p={p} m={m} upd={upd as Upd<MemberSpec>} />
+        <SawnFields
+          species={m.post.species}
+          grade={m.post.grade}
+          size={m.post.size}
+          sizes={SAWN_SIZES}
+          onChange={(x) => upd({ post: { ...m.post, ...x } })}
+        />
+        <Grid cols={4}>
+          <Field label="Guard height (in)">
+            <NumberInput value={m.guardHeight} min={30} onChange={(v) => upd({ guardHeight: num(v, 36) })} />
+          </Field>
+          <Field label="Deck to top bolt (in)">
+            <NumberInput value={m.topBolt} min={0} onChange={(v) => upd({ topBolt: num(v, 2) })} />
+          </Field>
+          <Field label="Bolt spacing s (in)">
+            <NumberInput value={m.s} min={2} onChange={(v) => upd({ s: num(v, 6) })} />
+          </Field>
+          <Field label="Plate washer (in sq.)">
+            <NumberInput value={m.washer} min={1} onChange={(v) => upd({ washer: num(v, 2) })} />
+          </Field>
+        </Grid>
+        <Grid cols={4}>
+          <Field label="Concentrated load P (lb)">
+            <NumberInput value={m.P} min={0} onChange={(v) => upd({ P: num(v, 200) })} />
+          </Field>
+          <Field label="Rail load (plf)">
+            <NumberInput value={m.rail.w} min={0} onChange={(v) => upd({ rail: { ...m.rail, w: num(v, 0) } })} />
+          </Field>
+          <Field label="Post spacing (ft)">
+            <NumberInput
+              value={m.rail.spacing}
+              min={0}
+              onChange={(v) => upd({ rail: { ...m.rail, spacing: num(v, 0) } })}
+            />
+          </Field>
+          <Field label="Bolt diameter (in)">
+            <NumberInput value={m.bolt.d} min={0.375} onChange={(v) => upd({ bolt: { ...m.bolt, d: num(v, 0.5) } })} />
+          </Field>
+        </Grid>
+        <Grid cols={2}>
+          <Check checked={m.wetService} onChange={(v) => upd({ wetService: v })} label="Wet service" />
+          <Check checked={m.incised} onChange={(v) => upd({ incised: v })} label="Preservative treated, incised" />
+          <Check
+            checked={!!m.wideFaceToRim}
+            onChange={(v) => upd({ wideFaceToRim: v })}
+            label="Wide face against the rim (weak-axis bending)"
+          />
+        </Grid>
+      </Section>
+      <Section title="Tension device at the top bolt">
+        <Grid cols={2}>
+          <Field label="Model">
+            <TextInput value={m.device.model} onChange={(v) => upd({ device: { ...m.device, model: v } })} />
+          </Field>
+          <Field label="Allowable tension (lb)">
+            <NumberInput
+              value={m.device.capacity}
+              min={1}
+              onChange={(v) => upd({ device: { ...m.device, capacity: num(v, 1500) } })}
+            />
+          </Field>
+        </Grid>
+        <Field label="Source (catalogue / ESR)">
+          <TextInput value={m.device.source} onChange={(v) => upd({ device: { ...m.device, source: v } })} />
+        </Field>
+        <Check
+          checked={m.device.verified}
+          onChange={(v) => upd({ device: { ...m.device, verified: v } })}
+          label="Value checked against the current catalogue"
+        />
       </Section>
     </>
   );

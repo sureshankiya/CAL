@@ -33,7 +33,9 @@ export type MarkKey =
   | "ledger"
   | "masonryWall"
   | "holdownFooting"
-  | "tieIn";
+  | "tieIn"
+  | "retainingWall"
+  | "guardPost";
 
 export const DEFAULT_MARKS: Record<MarkKey, string> = {
   joist: "FJ-{n}",
@@ -63,6 +65,8 @@ export const DEFAULT_MARKS: Record<MarkKey, string> = {
   masonryWall: "CW-{n}",
   holdownFooting: "HF-{n}",
   tieIn: "TI-{n}",
+  retainingWall: "RW-{n}",
+  guardPost: "GP-{n}",
 };
 
 export const markKeyOf = (m: Pick<MemberSpec, "kind"> & { role?: string; type?: string; level?: string }): MarkKey =>

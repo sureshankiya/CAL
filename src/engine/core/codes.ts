@@ -7,6 +7,8 @@
  * must be confirmed against IBC Chapter 35 of the adopted edition.
  */
 
+import { DATA_VERSION } from "../version";
+
 export type CycleId = "2025" | "2022";
 
 export interface CodeCycle {
@@ -67,6 +69,6 @@ export const CYCLE_LIST = [CODE_CYCLES["2025"], CODE_CYCLES["2022"]];
 
 export const getCycle = (id?: string): CodeCycle => CODE_CYCLES[(id as CycleId) ?? "2025"] ?? CODE_CYCLES["2025"];
 
-/** Engine and data-library versions printed on every sheet. */
-export const ENGINE_VERSION = "0.1.0";
-export const dataLibraryVersion = (id: CycleId) => `${id}-cycle v0.1`;
+/** Engine and data-library versions printed on every sheet (src/engine/version.ts). */
+export { ENGINE_VERSION } from "../version";
+export const dataLibraryVersion = (id: CycleId) => `${id}-cycle v${DATA_VERSION}`;

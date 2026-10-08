@@ -44,6 +44,8 @@ import { designMasonryWall, type MasonryWallResult } from "../members/masonryWal
 import { designHoldownFooting, type HoldownFootingResult } from "../members/holdownFooting";
 import { designTieIn, type TieInResult } from "../members/tieIn";
 import { designWoodTruss, type WoodTrussResult } from "../members/woodTruss";
+import { designRetainingWall, type RetainingWallResult } from "../members/retainingWall";
+import { designGuardPost, type GuardPostResult } from "../members/guardPost";
 import {
   designBasePlateMember,
   designSteelBeam,
@@ -78,7 +80,9 @@ export type AnyResult =
   | MasonryWallResult
   | HoldownFootingResult
   | TieInResult
-  | WoodTrussResult;
+  | WoodTrussResult
+  | RetainingWallResult
+  | GuardPostResult;
 
 export interface DesignOutcome {
   spec: MemberSpec;
@@ -425,6 +429,29 @@ function designOne(
     }
     case "woodTruss":
       return designWoodTruss(ctx, m);
+    case "retainingWall": {
+      const sc = p.criteria.soil.class ? soilClass(p.criteria.soil.class) : undefined;
+      return designRetainingWall(ctx, {
+        ...m,
+        footing: { ...m.footing, fc: p.criteria.concrete.fc, fy: p.criteria.concrete.fy },
+        soil: {
+          ...m.soil,
+          gamma: p.criteria.soil.density,
+          passive: sc ? sc.lateral : 100,
+          friction: sc ? sc.friction : 0.25,
+          cohesion: sc?.cohesion,
+          qa: m.soil.qaOverride ?? p.criteria.soil.bearing,
+          qaSource: m.soil.qaOverride ? "entered on the wall" : p.criteria.soil.source,
+          soilSource: sc
+            ? `IBC Table 1806.2, class ${sc.id}`
+            : "IBC Table 1806.2 (class not set — 0.25 / 100 psf/ft assumed)",
+        },
+        extra: [...m.extra, ...linked],
+        seismicSDC: p.criteria.seismic.SDC,
+      });
+    }
+    case "guardPost":
+      return designGuardPost(ctx, m);
     case "tieIn":
       return designTieIn(ctx, {
         ...m,

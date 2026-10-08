@@ -64,7 +64,7 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
   sections.push({
     title: "Codes and design criteria",
     notes: [
-      `Codes: ${c.building}; ${c.residential}; ${c.asce7}; ANSI/AWC ${c.nds} with ${c.ndsSupplement}; ${c.sdpws}${has("footing", "masonryWall", "holdownFooting", "tieIn", "basePlate") ? `; ${c.aci318}` : ""}${of("masonryWall").some((r) => r.input.material === "cmu") ? `; ${c.tms402}` : ""}${has("steelBeam", "steelColumn", "basePlate") ? `; ${c.aisc360}` : ""}.`,
+      `Codes: ${c.building}; ${c.residential}; ${c.asce7}; ANSI/AWC ${c.nds} with ${c.ndsSupplement}; ${c.sdpws}${has("footing", "masonryWall", "holdownFooting", "tieIn", "basePlate", "retainingWall") ? `; ${c.aci318}` : ""}${of("masonryWall").some((r) => r.input.material === "cmu") || of("retainingWall").some((r) => r.input.stem.material === "cmu") ? `; ${c.tms402}` : ""}${has("guardPost") ? `; ${c.aisc360} (bolts)` : ""}${has("steelBeam", "steelColumn", "basePlate") ? `; ${c.aisc360}` : ""}.`,
       `Risk Category ${crit.riskCategory}. Roof live load ${fmt(crit.roofLive.L0, 0)} psf${crit.roofLive.reduce ? " (reduced per ASCE 7 §4.8 where permitted)" : ""}; ground snow load p_g = ${fmt(crit.snow.pg, 0)} psf.`,
       `Wind: V = ${fmt(crit.wind.V, 0)} mph (ultimate), Exposure ${crit.wind.exposure}, K_zt = ${fmt(crit.wind.Kzt, 2)}.`,
       `Seismic: S_DS = ${fmt(crit.seismic.SDS, 3)}, S_D1 = ${fmt(crit.seismic.SD1, 3)}, Site Class ${crit.seismic.siteClass}, Seismic Design Category ${crit.seismic.SDC}${d.lateral ? `; ${d.lateral.system.label}, R = ${fmt(d.lateral.system.R, 1)}, Ω0 = ${fmt(d.lateral.system.Omega0, 1)}, C_d = ${fmt(d.lateral.system.Cd, 1)}` : ""}.`,
@@ -73,7 +73,7 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
     ],
   });
 
-  if (has("footing", "holdownFooting", "masonryWall", "tieIn", "basePlate")) {
+  if (has("footing", "holdownFooting", "masonryWall", "tieIn", "basePlate", "retainingWall")) {
     const conc = of("masonryWall").filter((r) => r.input.material === "concrete");
     sections.push({
       title: "Foundations and concrete",
@@ -100,6 +100,37 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
     });
   }
 
+  const rws = of("retainingWall");
+  if (rws.length) {
+    const seis = rws.filter((r) => r.input.soil.seismic && r.input.soil.seismic.k > 0);
+    sections.push({
+      title: "Retaining walls",
+      notes: [
+        `Retaining walls ${rws.map((r) => r.mark).join(", ")} are designed for an active equivalent fluid pressure of ${[...new Set(rws.map((r) => fmt(r.input.soil.efp, 0)))].join(" / ")} pcf with level, free-draining backfill${rws.some((r) => r.input.soil.surcharge > 0) ? ` and the surcharge shown on the sheets` : ""}${seis.length ? `, plus the seismic earth-pressure increment from the geotechnical report (${seis.map((r) => r.mark).join(", ")})` : ""}. No hydrostatic pressure is included.`,
+        "Provide a 12 in. minimum width of free-draining gravel behind the stem, filter fabric, and a 4 in. perforated drain pipe at the heel sloped to daylight or weep holes at 8 ft o.c. maximum; waterproof the retained face where it encloses usable space.",
+        "Do not place backfill until the stem concrete has reached 75 % of f'c (or the grout has cured 7 days for CMU stems) and any bracing or the restraining floor is in place; compact backfill in 8 in. lifts with hand-operated equipment within 3 ft of the stem.",
+        "Stem dowels with standard hooks into the footing as scheduled, lapped with the stem bars; shear keys are not used unless shown.",
+      ],
+    });
+  }
+
+  const deck =
+    has("guardPost") ||
+    rs.some(
+      (r) =>
+        (r.kind === "joist" || r.kind === "beam" || r.kind === "ledger") && JSON.stringify(r.input).includes('"deck"'),
+    );
+  if (deck)
+    sections.push({
+      title: "Exterior decks",
+      notes: [
+        "Deck framing: preservative-treated lumber per AWPA U1 (UC4A for posts and members in ground contact), incised where so noted on the sheets; design values include wet service and incising factors.",
+        `Fasteners and connectors in treated wood: hot-dip galvanized (ASTM A153 / A653 G185) or stainless steel (${c.residential} R317.3).`,
+        `Ledger: flashed at the house rim, attached with the bolts / lags and spacing on the ledger sheet; no attachment through siding or to brick veneer; deck lateral load connection per ${c.residential} R507.9.2 or as detailed.`,
+        "Guard posts: through-bolted to the rim / end joist with the tension devices scheduled on the guard post sheets; do not notch guard posts.",
+      ],
+    });
+
   const cmu = of("masonryWall").filter((r) => r.input.material === "cmu");
   if (cmu.length)
     sections.push({
@@ -124,6 +155,7 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
     "ledger",
     "woodTruss",
     "diaphragm",
+    "guardPost",
   );
   if (wood)
     sections.push({
@@ -187,12 +219,19 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
 
   // special inspections (IBC Ch. 17)
   const inspections: InspectionRow[] = [];
-  if (has("footing", "holdownFooting", "masonryWall"))
+  if (has("footing", "holdownFooting", "masonryWall", "retainingWall"))
     inspections.push({
       item: "Concrete: reinforcement placement, anchor bolts / hold-down anchors before placement, concrete sampling",
       basis: "IBC 1705.3 and Table 1705.3 (exceptions for light-frame footings per 1705.3 to be confirmed)",
       type: "Periodic",
-      members: marks(["footing", "holdownFooting", "masonryWall"]),
+      members: marks(["footing", "holdownFooting", "masonryWall", "retainingWall"]),
+    });
+  if (rws.length)
+    inspections.push({
+      item: "Soils: bearing material under retaining-wall footings, backfill placement and compaction, drainage",
+      basis: "IBC 1705.6 and Table 1705.6 (geotechnical engineer of record)",
+      type: "Periodic",
+      members: rws.map((r) => r.mark).join(", "),
     });
   if (cmu.length)
     inspections.push({

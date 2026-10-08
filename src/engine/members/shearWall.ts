@@ -34,7 +34,7 @@ import {
 } from "../design/anchors";
 import { designColumn, type ColumnResult } from "../design/column";
 import { governingCheck, resolveWood, type Check, type ResolvedWood } from "../design/wood";
-import { aspectFactor, sideValues, type SheathingRow } from "../data/sdpws";
+import { aspectFactor, panel1532Shear, sideValues, type SheathingRow } from "../data/sdpws";
 import { type HardwareItem } from "../data/hardware";
 import type { Grade, Species } from "../data/sawn";
 import { SPECIFIC_GRAVITY } from "../data/sawn";
@@ -45,6 +45,8 @@ export interface ShearWallSide {
   key: string;
   /** panel edge nail spacing, in */
   spacing: number;
+  /** 3/8 or 7/16 in. panels: use the 15/32 in. shear values (SDPWS Table 4.3A footnote; studs ≤ 16 in. o.c. or panels across studs) */
+  panel1532?: boolean;
   /** nominal values entered over the table (override, flagged) */
   vsOverride?: number;
   GaOverride?: number;
@@ -156,6 +158,8 @@ export interface ShearWallResult extends MemberResultBase {
   sides: Array<{ row: SheathingRow; vs: number; vw: number; Ga: number; spacing: number; override: boolean }>;
   vsc: number;
   vwc: number;
+  /** wind: WSP + gypsum wallboard on opposite faces combined additively (SDPWS 4.3.3.2.1 exception) */
+  windSum: boolean;
   Gac: number;
   aspect: number;
   maxAspect: number;
@@ -199,15 +203,23 @@ export interface ShearWallResult extends MemberResultBase {
   ftao?: FtaoResult;
 }
 
+/**
+ * Two-sided walls (SDPWS 4.3.3.2): same construction both faces — additive; dissimilar —
+ * the greater of twice the smaller and the larger. Exception (wind): wood structural panels
+ * (Table 4.3A) on one face and gypsum wallboard on the other are additive.
+ */
 function combineSides(sides: Array<{ row: SheathingRow; vs: number; vw: number; Ga: number }>) {
-  if (sides.length === 1) return { vsc: sides[0].vs, vwc: sides[0].vw, Gac: sides[0].Ga };
+  if (sides.length === 1) return { vsc: sides[0].vs, vwc: sides[0].vw, Gac: sides[0].Ga, windSum: false };
   const [a, b] = sides;
   const same = a.row.key === b.row.key && a.vs === b.vs;
-  if (same) return { vsc: a.vs + b.vs, vwc: a.vw + b.vw, Gac: a.Ga + b.Ga };
+  if (same) return { vsc: a.vs + b.vs, vwc: a.vw + b.vw, Gac: a.Ga + b.Ga, windSum: false };
+  const wspGwb = (x: SheathingRow, y: SheathingRow) => x.table === "4.3A" && y.key.startsWith("GWB");
+  const windSum = wspGwb(a.row, b.row) || wspGwb(b.row, a.row);
   return {
     vsc: Math.max(2 * Math.min(a.vs, b.vs), a.vs, b.vs),
-    vwc: Math.max(2 * Math.min(a.vw, b.vw), a.vw, b.vw),
+    vwc: windSum ? a.vw + b.vw : Math.max(2 * Math.min(a.vw, b.vw), a.vw, b.vw),
     Gac: a.Ga + b.Ga,
+    windSum,
   };
 }
 
@@ -234,7 +246,23 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   const assumptions: AssumptionEntry[] = [];
   const flags: string[] = [];
   const sides = s.sides.map((x) => {
-    const v = sideValues(x.key, x.spacing);
+    const v0 = sideValues(x.key, x.spacing);
+    let v = v0;
+    if (x.panel1532) {
+      const alt = panel1532Shear(x.key, x.spacing);
+      if (!alt) throw new Error(`${v0.row.label}: no 15/32 in. row with the same nailing (SDPWS Table 4.3A footnote)`);
+      if (s.stud.spacing > 16 && !x.key.endsWith("-across"))
+        throw new Error(`${v0.row.label}: 15/32 in. values need studs at 16 in. o.c. or less, or panels across studs`);
+      v = { ...v0, vs: alt.vs, vw: Math.round((1.4 * alt.vs) / 5) * 5 };
+      assumptions.push(
+        fromDefault(
+          `Sheathing values — ${v0.row.label}`,
+          `15/32 in. panel shear v_s = ${fmt(alt.vs, 0)} plf (studs ${fmt(s.stud.spacing, 0)} in. o.c.); G_a of the ${v0.row.label}`,
+          "SDPWS Table 4.3A footnote — confirm in the adopted edition",
+          true,
+        ),
+      );
+    }
     const override = x.vsOverride !== undefined || x.GaOverride !== undefined;
     if (override)
       assumptions.push(
@@ -248,7 +276,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     const vw = v.row.family === "wsp" ? Math.round((1.4 * vs) / 5) * 5 : vs;
     return { row: v.row, vs, vw, Ga: x.GaOverride ?? v.Ga, spacing: x.spacing, override };
   });
-  const { vsc, vwc, Gac } = combineSides(sides);
+  const { vsc, vwc, Gac, windSum } = combineSides(sides);
   const family = sides.some((x) => x.row.family === "gypsum") ? "gypsum" : "wsp";
   let aspect = s.h / s.b;
   let maxAspect = Math.min(...sides.map((x) => x.row.maxAspect));
@@ -746,6 +774,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     sides,
     vsc,
     vwc,
+    windSum,
     Gac,
     aspect,
     maxAspect,

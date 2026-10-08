@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { CD_TABLE_NOTE, asdCombinations, loadDurationFactor } from "@/engine/core/combos";
-import { ENGINE_VERSION, dataLibraryVersion } from "@/engine/core/codes";
+import { softwareText } from "@/engine/version";
 import { fmt, fmtFtIn } from "@/engine/core/fmt";
 import { provenanceLabel } from "@/engine/core/provenance";
 import { assemblyDesignValue, assemblySum, needsVerify } from "@/engine/loads/dead";
@@ -46,6 +46,10 @@ export function spansText(r: AnyResult): string {
       return "—";
     case "woodTruss":
       return fmtFtIn(r.input.span);
+    case "retainingWall":
+      return `${fmtFtIn(r.input.Hr)} retained`;
+    case "guardPost":
+      return `${fmt(r.input.guardHeight, 0)} in. guard`;
   }
   const s = r.kind === "rafter" ? [r.input.run] : r.input.spans;
   const base = s.map((x) => fmtFtIn(x)).join(" + ");
@@ -99,7 +103,7 @@ export function CoverSheet({ m, design, entries }: { m: SheetMeta; design: Proje
             "Referenced standards",
             `${c.asce7}; ANSI/AWC ${c.nds} and ${c.ndsSupplement}; ${c.sdpws}; ${c.aci318}; ${c.aisc360}; ${c.tms402}`,
           ],
-          ["Software", `HouseCalc engine ${ENGINE_VERSION}; data library ${dataLibraryVersion(c.id)}`],
+          ["Software", softwareText(c.id)],
           ["Scope of this package", [...counts.entries()].map(([k, n]) => `${k} × ${n}`).join("; ") || "—"],
           ["Sheets in this package", String(entries.length)],
         ]}
@@ -601,6 +605,8 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
   const cws = of("masonryWall");
   const hfs = of("holdownFooting");
   const tis = of("tieIn");
+  const rws = of("retainingWall");
+  const gps = of("guardPost");
   const usedHw = new Set<string>([
     ...cns.map((c) => c.item.id),
     ...sws.flatMap((x) => (x.holdown ? [x.holdown.item.id] : [])),
@@ -1049,6 +1055,58 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
             `${f1(r.input.hef)}"`,
             `${r.input.product.name} (${r.input.product.report})`,
             `${f0(r.perFoot.phiNn)} / ${f0(r.perFoot.phiVn)}`,
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {rws.length ? (
+        <DataTable
+          caption="Retaining wall schedule"
+          head={[
+            "Mark",
+            "Retained",
+            "Stem",
+            "Stem reinforcement",
+            "Footing B × h",
+            "Toe / heel",
+            "Footing bars",
+            "FS sliding / OT",
+            "q_max (psf)",
+            "Result",
+          ].map((h) => rich(h))}
+          small
+          rows={rws.map((r) => {
+            const w = r.input;
+            const minS = Math.min(...r.stability.map((x) => x.FSs));
+            const minO = Math.min(...r.stability.map((x) => x.FSo));
+            return [
+              r.mark,
+              fmtFtIn(w.Hr),
+              `${fmtFtIn(w.stem.height)} × ${fmt(w.stem.t, 3).replace(/0+$/, "").replace(/\.$/, "")}" ${w.stem.material === "cmu" ? "CMU" : "conc."}`,
+              `${w.stem.vertical.size} @ ${f0(w.stem.vertical.spacing)}" vert., ${w.stem.horizontal.size} @ ${f0(w.stem.horizontal.spacing)}" horiz.; dowels ${w.stem.vertical.size} std. hook`,
+              `${fmtFtIn(r.geo.B)} × ${f0(w.footing.h)}"`,
+              `${fmtFtIn(w.footing.toe)} / ${fmtFtIn(w.footing.heel)}`,
+              `${w.footing.bottom.size} @ ${f0(w.footing.bottom.spacing)}" bot., ${w.footing.top.size} @ ${f0(w.footing.top.spacing)}" top, (${w.footing.longitudinal.count}) ${w.footing.longitudinal.size} long.`,
+              `${f2(minS)} / ${f2(minO)}`,
+              Number.isFinite(r.bearingGov.qmax) ? f0(r.bearingGov.qmax) : "—",
+              pf(r),
+            ];
+          })}
+        />
+      ) : null}
+      {gps.length ? (
+        <DataTable
+          caption="Deck guard post schedule"
+          head={["Mark", "Post", "Guard height", "Bolts", "Plate washer", "Tension device", "T (lb)", "Result"]}
+          small
+          rows={gps.map((r) => [
+            r.mark,
+            `${r.input.post.size} ${r.input.post.species} ${r.input.post.grade}${r.input.incised ? " PT" : ""}`,
+            `${f0(r.input.guardHeight)}"`,
+            `(2) ${r.input.bolt.label} @ ${f1(r.input.s)}"`,
+            `${f2(r.input.washer)}" sq.`,
+            r.input.device.model,
+            f0(r.T),
             pf(r),
           ])}
         />

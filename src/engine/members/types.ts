@@ -27,7 +27,9 @@ export type MemberKind =
   | "masonryWall"
   | "holdownFooting"
   | "tieIn"
-  | "woodTruss";
+  | "woodTruss"
+  | "retainingWall"
+  | "guardPost";
 
 export interface MemberReaction {
   support: number;

@@ -44,7 +44,7 @@ const txt: React.CSSProperties = { fontFamily: "Arial, Helvetica, sans-serif", f
 const line = { stroke: "black", fill: "none", strokeWidth: 1 } as const;
 
 /** Axial, shear and moment along the wall height for the governing combination (black and white). */
-function WallDiagrams({ d, unitM }: { d: MasonryWallResult["diagram"]; unitM: string }) {
+export function WallDiagrams({ d, unitM }: { d: MasonryWallResult["diagram"]; unitM: string }) {
   const Wd = 470;
   const Hd = 150;
   const top = 16;

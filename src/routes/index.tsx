@@ -92,7 +92,14 @@ function Index() {
       setProject(r.project);
       setActiveId(r.project.members[0]?.id);
       setSheetKey("cover");
-      setMessage({ tone: "info", text: `Opened ${f.name}.` });
+      setMessage(
+        r.warnings.length
+          ? {
+              tone: "error",
+              text: `Opened ${f.name}. Saved with different software — ${r.warnings.join("; ")}. Re-check every sheet before issue.`,
+            }
+          : { tone: "info", text: `Opened ${f.name}.` },
+      );
     });
   }
 

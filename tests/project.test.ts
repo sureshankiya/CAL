@@ -17,7 +17,12 @@ describe("project model", () => {
     expect(projectSchema.safeParse(p).success).toBe(true);
     const back = parseProject(serializeProject(p));
     expect(back.ok).toBe(true);
-    if (back.ok) expect(back.project).toEqual(p);
+    if (back.ok) {
+      // the saved file adds the software stamp (engine / data-library versions)
+      const { software, ...rest } = back.project;
+      expect(software?.engine).toBeDefined();
+      expect(rest).toEqual(p);
+    }
   });
 
   it("rejects malformed files with readable messages", () => {

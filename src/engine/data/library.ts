@@ -114,6 +114,14 @@ export const TABLES: Record<string, TableMeta> = {
     status: "unverified",
     note: "Cells shown on the engineer's Tedds sheets match; other cells to be confirmed against the printed table.",
   },
+  "sdpws-4.3B": {
+    id: "sdpws-4.3B",
+    title: "Nominal unit shear capacities — particleboard shear walls",
+    source: "SDPWS Table 4.3B",
+    edition: "SDPWS-2021",
+    status: "unverified",
+    note: "Cell entered from the value printed on the portfolio Tedds sheets.",
+  },
   "sdpws-4.3C": {
     id: "sdpws-4.3C",
     title: "Nominal unit shear capacities — gypsum shear walls",

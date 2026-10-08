@@ -1,7 +1,7 @@
 /**
  * SDPWS nominal unit shear capacities and apparent shear stiffness for
  * wood-frame shear walls (SDPWS Table 4.3A wood structural panels, blocked;
- * Table 4.3C gypsum). Nominal values: ASD capacity = v / 2.0 (SDPWS 4.3.3).
+ * Table 4.3B particleboard; Table 4.3C gypsum). Nominal values: ASD capacity = v / 2.0 (SDPWS 4.3.3).
  *
  * Wind capacity v_w = 1.4 v_s for wood structural panels (Table 4.3A);
  * gypsum v_w = v_s (Table 4.3C).
@@ -32,7 +32,7 @@ export interface SheathingRow {
   maxAspect: number;
   /** cells taken from the engineer's Tedds sheets, as "spacing" keys */
   portfolio?: Array<6 | 4 | 3 | 2>;
-  table: "4.3A" | "4.3C";
+  table: "4.3A" | "4.3B" | "4.3C";
   note?: string;
 }
 
@@ -162,6 +162,20 @@ export const SHEATHING: SheathingRow[] = [
     [22, 29, 36, 51],
   ),
   {
+    key: "PB-5/8-10d",
+    family: "wsp",
+    label: "5/8 in. particleboard sheathing",
+    nail: "10d common",
+    penetration: 1.5,
+    t: 0.625,
+    vs: { 4: 610 },
+    Ga: { 4: 23 },
+    maxAspect: 2,
+    portfolio: [4],
+    table: "4.3B",
+    note: "Particleboard (SDPWS Table 4.3B); v_w = 1.4 v_s; maximum aspect ratio 2:1 as printed on the portfolio Tedds sheets",
+  },
+  {
     key: "PS-3/8-8dcasing",
     family: "wsp",
     label: "3/8 in. plywood panel siding",
@@ -183,6 +197,33 @@ export const SHEATHING: SheathingRow[] = [
     t: 0.5,
     vs: { 4: 250 },
     Ga: { 4: 6.5 },
+    maxAspect: 1.5,
+    portfolio: [4],
+    table: "4.3C",
+    note: "Unblocked gypsum: maximum aspect ratio 1.5:1 (SDPWS Table 4.3.4, as printed on the portfolio Tedds sheets)",
+  },
+  {
+    key: "GSH-1/2-2x8-4",
+    family: "gypsum",
+    label: "1/2 in. × 2 ft × 8 ft gypsum sheathing, unblocked",
+    nail: "0.120 in. nail",
+    penetration: 1,
+    t: 0.5,
+    vs: { 4: 150 },
+    Ga: { 4: 4 },
+    maxAspect: 1.5,
+    portfolio: [4],
+    table: "4.3C",
+  },
+  {
+    key: "GSH-1/2-4-blocked",
+    family: "gypsum",
+    label: "1/2 in. × 4 ft gypsum sheathing, blocked",
+    nail: "0.120 in. nail",
+    penetration: 1,
+    t: 0.5,
+    vs: { 4: 350 },
+    Ga: { 4: 8.5 },
     maxAspect: 2,
     portfolio: [4],
     table: "4.3C",
@@ -232,6 +273,22 @@ export function sideValues(key: string, spacing: number): { vs: number; vw: numb
   if (vs === undefined || Ga === undefined) throw new Error(`${row.label}: ${spacing} in. edge spacing not tabulated`);
   const vw = row.family === "wsp" ? Math.round((1.4 * vs) / 5) * 5 : vs;
   return { vs, vw, Ga, row };
+}
+
+/**
+ * SDPWS Table 4.3A footnote: 3/8 in. and 7/16 in. wood structural panels on studs spaced
+ * 16 in. o.c. or less, or applied with the long dimension across studs, may use the shear
+ * values of 15/32 in. panels with the same nailing. Returns the 15/32 in. v_s, or undefined
+ * when the row does not qualify or no 15/32 in. row has the same nail (VERIFY the footnote
+ * in the adopted edition).
+ */
+export function panel1532Shear(key: string, spacing: number): { vs: number; key: string } | undefined {
+  const row = sheathingRow(key);
+  if (row.table !== "4.3A" || !(row.t === 0.375 || row.t === 0.4375)) return undefined;
+  const k = key.replace(/-(3\/8|7\/16)-/, "-15/32-").replace(/-across$/, "");
+  const alt = SHEATHING.find((r) => r.key === k);
+  const vs = alt?.vs[spacing as 6 | 4 | 3 | 2];
+  return alt && vs !== undefined ? { vs, key: k } : undefined;
 }
 
 /**

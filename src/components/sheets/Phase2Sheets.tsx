@@ -850,7 +850,7 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
             {m.cycle.sdpws}; ANSI/AWC {m.cycle.nds}; {m.cycle.aci318} Ch. 17
           </>
         }
-        tables={[r.sides[0].row.table === "4.3A" ? "sdpws-4.3A" : "sdpws-4.3C", r.post.tableId, "hardware"]}
+        tables={[...new Set(r.sides.map((x) => `sdpws-${x.row.table}`)), r.post.tableId, "hardware"]}
       />
       <SectionHead title="Panel details" />
       <TR desc="Member" expr={<B>{`${r.mark} — ${r.title}`}</B>} />
@@ -917,7 +917,9 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         desc="Combined nominal capacities (SDPWS 4.3.3.2)"
         expr={
           <>
-            v<sub>sc</sub> = {f0(r.vsc)} plf; v<sub>wc</sub> = {f0(r.vwc)} plf; G<sub>ac</sub> = {f1(r.Gac)} kips/in
+            v<sub>sc</sub> = {f0(r.vsc)} plf; v<sub>wc</sub> = {f0(r.vwc)} plf
+            {r.windSum ? " (wind: wood structural panel + gypsum wallboard, additive — 4.3.3.2.1 exception)" : ""}; G
+            <sub>ac</sub> = {f1(r.Gac)} kips/in
           </>
         }
       />

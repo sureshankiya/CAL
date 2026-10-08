@@ -100,7 +100,7 @@ export function fmtDemand(c: Check) {
         ? f3(c.demand)
         : c.unit === "nails"
           ? f2(c.demand)
-          : fmt(c.demand, c.unit === "lb" || c.unit === "lb-ft" ? 0 : 1);
+          : fmt(c.demand, c.unit === "lb" || c.unit === "lb-ft" ? 0 : c.unit.startsWith("in²") ? 3 : 1);
   return u ? `${d} ${u}` : d;
 }
 
@@ -113,7 +113,7 @@ export function fmtCapacity(c: Check) {
         ? fmt(c.capacity, c.capacity >= 10 ? 0 : 2)
         : c.unit === "nails"
           ? f0(c.capacity)
-          : fmt(c.capacity, c.unit === "lb" || c.unit === "lb-ft" ? 0 : 1);
+          : fmt(c.capacity, c.unit === "lb" || c.unit === "lb-ft" ? 0 : c.unit.startsWith("in²") ? 3 : 1);
   return u ? `${d} ${u}` : d;
 }
 

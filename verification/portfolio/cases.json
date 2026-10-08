@@ -1,0 +1,10080 @@
+{
+ "cases": [
+  {
+   "id": "1002-3rd-st-jadu/SW1",
+   "set": "1002-3rd-st-jadu",
+   "kind": "shearWall",
+   "section": "SW1",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 9.0,
+   "b": 24.913,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel structural I oriented strandboard sheathing",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SI-7/16-8d",
+     "spacing": 4,
+     "vs": 860.0,
+     "vw": 1205.0,
+     "Ga": 21.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 860.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1205.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 501.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.19,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 478.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 10713.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 15010.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 344.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -64.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.002,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.002,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "1002-3rd-st-jadu/SW2",
+   "set": "1002-3rd-st-jadu",
+   "kind": "shearWall",
+   "section": "SW2",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 9.0,
+   "b": 19.33,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel structural I oriented strandboard sheathing",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SI-7/16-8d",
+     "spacing": 4,
+     "vs": 860.0,
+     "vw": 1205.0,
+     "Ga": 21.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 860.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1205.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 501.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.19,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 478.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 8312.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 11646.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 350.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -59.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.002,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.002,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "1002-3rd-st-jadu/SW3",
+   "set": "1002-3rd-st-jadu",
+   "kind": "shearWall",
+   "section": "SW3",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 9.0,
+   "b": 14.667,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel structural I oriented strandboard sheathing",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SI-7/16-8d",
+     "spacing": 4,
+     "vs": 860.0,
+     "vw": 1205.0,
+     "Ga": 21.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 860.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1205.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 501.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.19,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 478.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 6307.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 8837.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 359.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -47.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.003,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.003,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "10269-madrid-way-framing/2X6 WALL (W1)",
+   "set": "10269-madrid-way-framing",
+   "kind": "shearWall",
+   "section": "2X6 WALL (W1)",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 9.0,
+   "b": 22.104,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "1/2'' gypsum wallboard",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-1/2-4",
+     "spacing": 4,
+     "vs": 250.0,
+     "vw": 250.0,
+     "Ga": 6.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1315.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 28.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1236.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.45,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 1064.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1196.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 8400.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 14533.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 117.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -29.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.0,
+     "dec": 0
+    },
+    "dsws": {
+     "v": 0.002,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "10269-madrid-way-framing/2X6 WALL (W2)",
+   "set": "10269-madrid-way-framing",
+   "kind": "shearWall",
+   "section": "2X6 WALL (W2)",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 9.0,
+   "b": 17.25,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "1/2'' gypsum wallboard",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-1/2-4",
+     "spacing": 4,
+     "vs": 250.0,
+     "vw": 250.0,
+     "Ga": 6.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1315.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 28.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1236.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.45,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 1064.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1196.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 6555.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 11342.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 119.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -26.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.0,
+     "dec": 0
+    },
+    "dsws": {
+     "v": 0.002,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "10269-madrid-way-framing/2X6 WALL (W3)",
+   "set": "10269-madrid-way-framing",
+   "kind": "shearWall",
+   "section": "2X6 WALL (W3)",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 9.0,
+   "b": 29.667,
+   "segments": [
+    6.667,
+    6.667,
+    1.333
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "1/2'' gypsum wallboard",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-1/2-4",
+     "spacing": 4,
+     "vs": 250.0,
+     "vw": 250.0,
+     "Ga": 6.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1315.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 28.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1236.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.45,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 1064.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1196.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 5067.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 8767.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "10269-madrid-way-framing/2X6 WALL (W4)",
+   "set": "10269-madrid-way-framing",
+   "kind": "shearWall",
+   "section": "2X6 WALL (W4)",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 9.0,
+   "b": 39.333,
+   "segments": [
+    6.167,
+    6.0,
+    3.167
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "1/2'' gypsum wallboard",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-1/2-4",
+     "spacing": 4,
+     "vs": 250.0,
+     "vw": 250.0,
+     "Ga": 6.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1315.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 28.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1236.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.45,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 1064.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1196.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 4623.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 8000.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "10269-madrid-way-framing/2X6 WALL (W5)",
+   "set": "10269-madrid-way-framing",
+   "kind": "shearWall",
+   "section": "2X6 WALL (W5)",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 9.0,
+   "b": 29.667,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "1/2'' gypsum wallboard",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-1/2-4",
+     "spacing": 4,
+     "vs": 250.0,
+     "vw": 250.0,
+     "Ga": 6.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1315.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 28.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 501.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.19,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 478.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 11273.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 19506.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 114.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -32.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.0,
+     "dec": 0
+    },
+    "dsws": {
+     "v": 0.001,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "10269-madrid-way-framing/STRIP FOOTING BELOW WALLS",
+   "set": "10269-madrid-way-framing",
+   "kind": "footing",
+   "type": "strip",
+   "section": "STRIP FOOTING BELOW WALLS",
+   "Lx": 1.0,
+   "Ly": 2.0,
+   "h": 18.0,
+   "hsoil": 24.0,
+   "wall": 6.0,
+   "col": [
+    0,
+    6.0
+   ],
+   "qallow": 3.5,
+   "fc": 3000.0,
+   "fy": 60000.0,
+   "cover": 3.0,
+   "gammaSoil": 120.0,
+   "bars": "No.5 bars at 8.0 in c/c bottom",
+   "loads": {
+    "D": 1500.0,
+    "L": 2500.0,
+    "Lr": 900.0,
+    "S": 800.0
+   },
+   "expected": {
+    "qmax": {
+     "v": 2490.0,
+     "dec": 0
+    },
+    "d": {
+     "v": 14.688,
+     "dec": 3
+    },
+    "a": {
+     "v": 0.912,
+     "dec": 3
+    },
+    "epsT": {
+     "v": 0.03808,
+     "dec": 5
+    },
+    "phiMn": {
+     "v": 357360.0,
+     "dec": 0
+    },
+    "AsMin": {
+     "v": 0.389,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "1165-goldenrod-st-adu/W1",
+   "set": "1165-goldenrod-st-adu",
+   "kind": "shearWall",
+   "section": "W1",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3C"
+   ],
+   "h": 8.0,
+   "b": 22.0,
+   "segments": [
+    2.0,
+    11.17,
+    2.83
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 1
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 50.0,
+    "Lf": 10.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 20.0,
+    "Eq": 15.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.0,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.0,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1376.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1360.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.7,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 945.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 720.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 1676.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 1676.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1165-goldenrod-st-adu/W2",
+   "set": "1165-goldenrod-st-adu",
+   "kind": "shearWall",
+   "section": "W2",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3C"
+   ],
+   "h": 8.0,
+   "b": 22.0,
+   "segments": [
+    18.667,
+    0.453
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 557.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.35,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 503.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 2800.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 2800.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1165-goldenrod-st-adu/W3",
+   "set": "1165-goldenrod-st-adu",
+   "kind": "shearWall",
+   "section": "W3",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3C"
+   ],
+   "h": 8.0,
+   "b": 22.0,
+   "segments": [
+    6.17,
+    5.0,
+    2.83
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 557.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.35,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 503.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 926.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 926.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1165-goldenrod-st-adu/W4",
+   "set": "1165-goldenrod-st-adu",
+   "kind": "shearWall",
+   "section": "W4",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3C"
+   ],
+   "h": 8.0,
+   "b": 22.0,
+   "segments": [
+    2.5,
+    4.5,
+    3.0
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 557.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.35,
+     "dec": 2
+    }
+   }
+  },
+  {
+   "id": "1165-goldenrod-st-adu/W5",
+   "set": "1165-goldenrod-st-adu",
+   "kind": "shearWall",
+   "section": "W5",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3C"
+   ],
+   "h": 8.0,
+   "b": 12.333,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 557.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.35,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 503.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 1850.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 1850.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 283.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -40.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.011,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.009,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "1165-goldenrod-st-adu/W6",
+   "set": "1165-goldenrod-st-adu",
+   "kind": "shearWall",
+   "section": "W6",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3C"
+   ],
+   "h": 8.0,
+   "b": 10.333,
+   "segments": [
+    5.17,
+    2.497
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 20.0,
+    "Lf": 10.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 0,
+    "Eq": 5.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 557.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.35,
+     "dec": 2
+    }
+   }
+  },
+  {
+   "id": "1165-goldenrod-st-adu/W7",
+   "set": "1165-goldenrod-st-adu",
+   "kind": "shearWall",
+   "section": "W7",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3C"
+   ],
+   "h": 8.0,
+   "b": 10.333,
+   "segments": [
+    7.0,
+    0.445
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 557.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.35,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 503.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 1050.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 1050.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1165-goldenrod-st-adu/W8",
+   "set": "1165-goldenrod-st-adu",
+   "kind": "shearWall",
+   "section": "W8",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3C"
+   ],
+   "h": 8.0,
+   "b": 10.333,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 557.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.35,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 503.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 1550.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 1550.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 291.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -30.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.014,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.011,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "1320-la-presa-2-storey-house-with-garage/1SW1",
+   "set": "1320-la-presa-2-storey-house-with-garage",
+   "kind": "shearWall",
+   "section": "1SW1",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 9.167,
+   "b": 35.0,
+   "segments": [
+    6.083,
+    10.897,
+    5.02
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 483.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.19,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 462.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 8360.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 15565.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1320-la-presa-2-storey-house-with-garage/1SW2",
+   "set": "1320-la-presa-2-storey-house-with-garage",
+   "kind": "shearWall",
+   "section": "1SW2",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 9.167,
+   "b": 40.0,
+   "segments": [
+    6.33,
+    29.09
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 483.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.19,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 462.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 13460.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 25060.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1320-la-presa-2-storey-house-with-garage/1SW3",
+   "set": "1320-la-presa-2-storey-house-with-garage",
+   "kind": "shearWall",
+   "section": "1SW3",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 9.167,
+   "b": 35.0,
+   "segments": [
+    5.0,
+    8.5,
+    4.5
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 483.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.19,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 462.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 5130.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 9551.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1320-la-presa-2-storey-house-with-garage/1SW4",
+   "set": "1320-la-presa-2-storey-house-with-garage",
+   "kind": "shearWall",
+   "section": "1SW4",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 9.167,
+   "b": 40.0,
+   "segments": [
+    5.0,
+    3.933,
+    6.567,
+    4.5
+   ],
+   "openings": 3,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 483.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.19,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 462.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 4395.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 8183.999999999999,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1320-la-presa-2-storey-house-with-garage/2SW1",
+   "set": "1320-la-presa-2-storey-house-with-garage",
+   "kind": "shearWall",
+   "section": "2SW1",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 8.5,
+   "b": 35.0,
+   "segments": [
+    5.0,
+    6.83,
+    5.5,
+    7.17
+   ],
+   "openings": 3,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 561.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 532.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 9310.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 17334.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1320-la-presa-2-storey-house-with-garage/2SW2",
+   "set": "1320-la-presa-2-storey-house-with-garage",
+   "kind": "shearWall",
+   "section": "2SW2",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 8.5,
+   "b": 40.0,
+   "segments": [
+    12.667,
+    4.333,
+    10.0,
+    2.5
+   ],
+   "openings": 3,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 561.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 532.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 10260.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 19103.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1320-la-presa-2-storey-house-with-garage/2SW3",
+   "set": "1320-la-presa-2-storey-house-with-garage",
+   "kind": "shearWall",
+   "section": "2SW3",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 8.5,
+   "b": 35.0,
+   "segments": [
+    5.0,
+    2.75,
+    6.17,
+    4.5
+   ],
+   "openings": 3,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 561.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 532.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 5955.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 11087.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1320-la-presa-2-storey-house-with-garage/2SW4",
+   "set": "1320-la-presa-2-storey-house-with-garage",
+   "kind": "shearWall",
+   "section": "2SW4",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 8.5,
+   "b": 40.0,
+   "segments": [
+    7.0,
+    6.667,
+    9.163,
+    5.51
+   ],
+   "openings": 3,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 561.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 532.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 10769.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 20051.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1550-bluebird-lane-house-remoulding/SW1",
+   "set": "1550-bluebird-lane-house-remoulding",
+   "kind": "shearWall",
+   "section": "SW1",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From IBC 2018 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 9.0,
+   "b": 12.833,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/16'' wood panel structural I oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SI-5/16-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 18.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 840.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1236.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.45,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 1064.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1196.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 5133.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 5390.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 365.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -40.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.004,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.003,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "1550-bluebird-lane-house-remoulding/SW2",
+   "set": "1550-bluebird-lane-house-remoulding",
+   "kind": "shearWall",
+   "section": "SW2",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From IBC 2018 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 9.0,
+   "b": 9.333,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/16'' wood panel structural I oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SI-5/16-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 18.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 840.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1236.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.45,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 1064.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1196.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 3733.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 3920.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 381.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -19.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.006,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.005,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "1550-bluebird-lane-house-remoulding/SW3",
+   "set": "1550-bluebird-lane-house-remoulding",
+   "kind": "shearWall",
+   "section": "SW3",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From IBC 2018 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 9.0,
+   "b": 7.833,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/16'' wood panel structural I oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SI-5/16-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 18.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 840.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1236.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.45,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 1064.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1196.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 3133.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 3290.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 392.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -4.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.008,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.006,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "1550-bluebird-lane-house-remoulding/1SW1",
+   "set": "1550-bluebird-lane-house-remoulding",
+   "kind": "shearWall",
+   "section": "1SW1",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From IBC 2018 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 17.0,
+   "b": 22.913,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/16'' wood panel structural I oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SI-5/16-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 18.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 840.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 347.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.14,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 336.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1196.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 9165.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 9624.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 431.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -76.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.004,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.004,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "1550-bluebird-lane-house-remoulding/1SW2",
+   "set": "1550-bluebird-lane-house-remoulding",
+   "kind": "shearWall",
+   "section": "1SW2",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From IBC 2018 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 17.0,
+   "b": 19.5,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/16'' wood panel structural I oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SI-5/16-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 18.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 840.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 347.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.14,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 336.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1196.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 7800.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 8189.999999999999,
+     "dec": 0
+    },
+    "C": {
+     "v": 439.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -65.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.005,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.005,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "1550-bluebird-lane-house-remoulding/1SW3",
+   "set": "1550-bluebird-lane-house-remoulding",
+   "kind": "shearWall",
+   "section": "1SW3",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From IBC 2018 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 17.0,
+   "b": 28.25,
+   "segments": [
+    8.083,
+    13.167
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/16'' wood panel structural I oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SI-5/16-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 18.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 840.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 347.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.14,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 336.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1196.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 5267.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 5530.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1550-bluebird-lane-house-remoulding/2SW1",
+   "set": "1550-bluebird-lane-house-remoulding",
+   "kind": "shearWall",
+   "section": "2SW1",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From IBC 2018 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 14.33,
+   "b": 53.33,
+   "segments": [
+    8.083,
+    38.247
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/16'' wood panel structural I oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SI-5/16-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 18.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 840.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 488.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.2,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 465.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1196.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 16881.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 17725.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "1550-bluebird-lane-house-remoulding/2SW2",
+   "set": "1550-bluebird-lane-house-remoulding",
+   "kind": "shearWall",
+   "section": "2SW2",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From IBC 2018 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 14.33,
+   "b": 17.33,
+   "segments": [
+    1.833,
+    11.497
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/16'' wood panel structural I oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SI-5/16-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 18.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 840.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 488.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.2,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 465.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1196.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 4599.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 4829.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "16619-orchard-art-studio-to-adu/W1",
+   "set": "16619-orchard-art-studio-to-adu",
+   "kind": "shearWall",
+   "section": "W1",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From ASCE 7-16 - cl.2.4.1 and cl. 2.4.5 Basic combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 20.917,
+   "segments": [
+    2.5,
+    5.0,
+    3.667
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' particleboard sheathing",
+     "fastener": "10d common nails at 4''centers",
+     "key": "PB-5/8-10d",
+     "spacing": 4,
+     "vs": 610.0,
+     "vw": 855.0,
+     "Ga": 23.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 1525.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 2138.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "16619-orchard-art-studio-to-adu/W2",
+   "set": "16619-orchard-art-studio-to-adu",
+   "kind": "shearWall",
+   "section": "W2",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From ASCE 7-16 - cl.2.4.1 and cl. 2.4.5 Basic combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 37.33,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' particleboard sheathing",
+     "fastener": "10d common nails at 4''centers",
+     "key": "PB-5/8-10d",
+     "spacing": 4,
+     "vs": 610.0,
+     "vw": 855.0,
+     "Ga": 23.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 11386.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 15959.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 327.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -65.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.001,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.001,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "16619-orchard-art-studio-to-adu/W3",
+   "set": "16619-orchard-art-studio-to-adu",
+   "kind": "shearWall",
+   "section": "W3",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From ASCE 7-16 - cl.2.4.1 and cl. 2.4.5 Basic combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 20.917,
+   "segments": [
+    3.917,
+    13.083
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' particleboard sheathing",
+     "fastener": "10d common nails at 4''centers",
+     "key": "PB-5/8-10d",
+     "spacing": 4,
+     "vs": 610.0,
+     "vw": 855.0,
+     "Ga": 23.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 3990.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 5593.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "16619-orchard-art-studio-to-adu/W4",
+   "set": "16619-orchard-art-studio-to-adu",
+   "kind": "shearWall",
+   "section": "W4",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From ASCE 7-16 - cl.2.4.1 and cl. 2.4.5 Basic combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 37.33,
+   "segments": [
+    4.25,
+    4.75,
+    9.167,
+    5.33
+   ],
+   "openings": 3,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' particleboard sheathing",
+     "fastener": "10d common nails at 4''centers",
+     "key": "PB-5/8-10d",
+     "spacing": 4,
+     "vs": 610.0,
+     "vw": 855.0,
+     "Ga": 23.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 5944.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 8331.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "16619-orchard-art-studio-to-adu/IW",
+   "set": "16619-orchard-art-studio-to-adu",
+   "kind": "shearWall",
+   "section": "IW",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From ASCE 7-16 - cl.2.4.1 and cl. 2.4.5 Basic combinations",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 9.75,
+   "segments": [
+    0.5,
+    6.583
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' particleboard sheathing",
+     "fastener": "10d common nails at 4''centers",
+     "key": "PB-5/8-10d",
+     "spacing": 4,
+     "vs": 610.0,
+     "vw": 855.0,
+     "Ga": 23.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 2008.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 2814.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "16619-orchard-art-studio-to-adu/F1-12X12",
+   "set": "16619-orchard-art-studio-to-adu",
+   "kind": "footing",
+   "type": "strip",
+   "section": "F1-12X12",
+   "Lx": 1.0,
+   "Ly": 1.0,
+   "h": 12.0,
+   "hsoil": 12.0,
+   "wall": 4.0,
+   "col": [
+    0,
+    4.0
+   ],
+   "qallow": 3.5,
+   "fc": 4000.0,
+   "fy": 60000.0,
+   "cover": 2.0,
+   "gammaSoil": 120.0,
+   "bars": "No.4 bars at 6.0 in c/c bottom",
+   "loads": {
+    "D": 1200.0,
+    "L": 1000.0,
+    "E": 1400.0
+   },
+   "expected": {
+    "qmax": {
+     "v": 3076.0,
+     "dec": 0
+    },
+    "d": {
+     "v": 9.75,
+     "dec": 3
+    },
+    "a": {
+     "v": 0.588,
+     "dec": 3
+    },
+    "epsT": {
+     "v": 0.03927,
+     "dec": 5
+    },
+    "phiMn": {
+     "v": 204252.0,
+     "dec": 0
+    },
+    "AsMin": {
+     "v": 0.259,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "16619-orchard-art-studio-to-adu/F2-18X18X12",
+   "set": "16619-orchard-art-studio-to-adu",
+   "kind": "footing",
+   "type": "pad",
+   "section": "F2-18X18X12",
+   "Lx": 1.5,
+   "Ly": 1.5,
+   "h": 12.0,
+   "hsoil": 12.0,
+   "wall": 6.0,
+   "col": [
+    6.0,
+    6.0
+   ],
+   "qallow": 5.0,
+   "fc": 4000.0,
+   "fy": 60000.0,
+   "cover": 3.0,
+   "gammaSoil": 120.0,
+   "bars": "2 No.4 bottom bars (11.5 in c/c)",
+   "loads": {
+    "D": 4800.0,
+    "L": 3100.0,
+    "E": 1200.0
+   },
+   "expected": {
+    "qmax": {
+     "v": 3957.0,
+     "dec": 0
+    },
+    "d": {
+     "v": 8.75,
+     "dec": 3
+    },
+    "a": {
+     "v": 0.392,
+     "dec": 3
+    },
+    "epsT": {
+     "v": 0.0539,
+     "dec": 5
+    },
+    "phiMn": {
+     "v": 184764.0,
+     "dec": 0
+    },
+    "AsMin": {
+     "v": 0.389,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "16619-orchard-art-studio-to-adu/6X6 POST/POST - 1",
+   "set": "16619-orchard-art-studio-to-adu",
+   "kind": "post",
+   "section": "6X6 POST POST - 1",
+   "species": "DF-L",
+   "grade": "No.2",
+   "size": "6x6",
+   "b": 5.5,
+   "d": 5.5,
+   "Lx": 8.0,
+   "duration": "ten years",
+   "type": "L",
+   "P": 6750.0,
+   "Mx": 400.0,
+   "expected": {
+    "CD": {
+     "v": 1.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 700.0,
+     "dec": 0
+    },
+    "FcE": {
+     "v": 1268.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.85,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 595.0,
+     "dec": 0
+    },
+    "fc": {
+     "v": 223.0,
+     "dec": 0
+    },
+    "FbPrime": {
+     "v": 748.0,
+     "dec": 0
+    },
+    "fb": {
+     "v": 173.0,
+     "dec": 0
+    },
+    "interaction": {
+     "v": 0.421,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "16619-orchard-art-studio-to-adu/6X6 POST/POST - 2",
+   "set": "16619-orchard-art-studio-to-adu",
+   "kind": "post",
+   "section": "6X6 POST POST - 2",
+   "species": "DF-L",
+   "grade": "No.2",
+   "size": "6x6",
+   "b": 5.5,
+   "d": 5.5,
+   "Lx": 10.0,
+   "duration": "ten years",
+   "type": "L",
+   "P": 6567.0,
+   "Mx": 457.0,
+   "expected": {
+    "CD": {
+     "v": 1.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 700.0,
+     "dec": 0
+    },
+    "FcE": {
+     "v": 812.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.74,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 518.0,
+     "dec": 0
+    },
+    "fc": {
+     "v": 217.0,
+     "dec": 0
+    },
+    "FbPrime": {
+     "v": 750.0,
+     "dec": 0
+    },
+    "fb": {
+     "v": 198.0,
+     "dec": 0
+    },
+    "interaction": {
+     "v": 0.536,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "16619-orchard-art-studio-to-adu/6X6 POST/POST - 3",
+   "set": "16619-orchard-art-studio-to-adu",
+   "kind": "post",
+   "section": "6X6 POST POST - 3",
+   "species": "DF-L",
+   "grade": "No.2",
+   "size": "6x6",
+   "b": 5.5,
+   "d": 5.5,
+   "Lx": 10.0,
+   "duration": "ten years",
+   "type": "L",
+   "P": 675.0,
+   "Mx": 453.0,
+   "expected": {
+    "CD": {
+     "v": 1.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 700.0,
+     "dec": 0
+    },
+    "FcE": {
+     "v": 812.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.74,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 518.0,
+     "dec": 0
+    },
+    "fc": {
+     "v": 22.0,
+     "dec": 0
+    },
+    "FbPrime": {
+     "v": 750.0,
+     "dec": 0
+    },
+    "fb": {
+     "v": 196.0,
+     "dec": 0
+    },
+    "interaction": {
+     "v": 0.271,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/W1",
+   "set": "215-alvarado-st-adu",
+   "kind": "shearWall",
+   "section": "W1",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From IBC 2015 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 10.5,
+   "b": 20.33,
+   "segments": [
+    4.0,
+    8.33,
+    2.0
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 323.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 307.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 1249.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 1249.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/W2",
+   "set": "215-alvarado-st-adu",
+   "kind": "shearWall",
+   "section": "W2",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From IBC 2015 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 10.5,
+   "b": 12.33,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 323.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 307.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 1850.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 1850.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 316.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -35.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.015,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.012,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/W3",
+   "set": "215-alvarado-st-adu",
+   "kind": "shearWall",
+   "section": "W3",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From IBC 2015 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 10.5,
+   "b": 14.0,
+   "segments": [
+    0.33,
+    7.67
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 323.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 307.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 1150.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 1150.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/W4",
+   "set": "215-alvarado-st-adu",
+   "kind": "shearWall",
+   "section": "W4",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From IBC 2015 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 10.5,
+   "b": 27.667,
+   "segments": [
+    5.0,
+    9.125,
+    1.542
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 323.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 307.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 1369.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 1369.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/W5",
+   "set": "215-alvarado-st-adu",
+   "kind": "shearWall",
+   "section": "W5",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From IBC 2015 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 10.5,
+   "b": 33.33,
+   "segments": [
+    16.0,
+    14.33
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 323.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 307.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 4550.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 4550.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/W6",
+   "set": "215-alvarado-st-adu",
+   "kind": "shearWall",
+   "section": "W6",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From IBC 2015 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 10.5,
+   "b": 33.33,
+   "segments": [
+    14.77,
+    13.56
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 323.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 307.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 4249.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 4249.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/W7",
+   "set": "215-alvarado-st-adu",
+   "kind": "shearWall",
+   "section": "W7",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From IBC 2015 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 10.5,
+   "b": 25.0,
+   "segments": [
+    4.0,
+    5.666,
+    1.834,
+    0.5
+   ],
+   "openings": 3,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 323.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/W8",
+   "set": "215-alvarado-st-adu",
+   "kind": "shearWall",
+   "section": "W8",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From IBC 2015 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 10.5,
+   "b": 15.0,
+   "segments": [
+    4.25,
+    1.75
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 323.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/W9",
+   "set": "215-alvarado-st-adu",
+   "kind": "shearWall",
+   "section": "W9",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From IBC 2015 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 10.5,
+   "b": 14.0,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    },
+    {
+     "material": "1/2'' x 2' x 8' gypsum sheathing",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-2x8-4",
+     "spacing": 4,
+     "vs": 150.0,
+     "vw": 150.0,
+     "Ga": 4.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 300.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 8.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 323.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 307.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 2100.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 2100.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 310.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -44.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.013,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.011,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/(blank — header prints \"Section Sheet no./rev.\" with no name; Project \"ADU FOOTING\")",
+   "set": "215-alvarado-st-adu",
+   "kind": "footing",
+   "type": "strip",
+   "section": "(blank — header prints \"Section Sheet no./rev.\" with no name; Project \"ADU FOOTING\")",
+   "Lx": 1.0,
+   "Ly": 2.0,
+   "h": 24.0,
+   "hsoil": 30.0,
+   "wall": 8.0,
+   "col": [
+    0,
+    8.0
+   ],
+   "qallow": 3.5,
+   "fc": 4000.0,
+   "fy": 60000.0,
+   "cover": 3.0,
+   "gammaSoil": 120.0,
+   "bars": "No.6 bars at 8.0 in c/c bottom",
+   "loads": {
+    "D": 1500.0,
+    "L": 2500.0,
+    "Lr": 900.0,
+    "S": 800.0
+   },
+   "expected": {
+    "qmax": {
+     "v": 2697.0,
+     "dec": 0
+    },
+    "d": {
+     "v": 20.625,
+     "dec": 3
+    },
+    "a": {
+     "v": 0.971,
+     "dec": 3
+    },
+    "epsT": {
+     "v": 0.05119,
+     "dec": 5
+    },
+    "phiMn": {
+     "v": 717780.0,
+     "dec": 0
+    },
+    "AsMin": {
+     "v": 0.518,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/2W-1",
+   "set": "215-alvarado-st-adu",
+   "kind": "shearWall",
+   "section": "2W-1",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From IBC 2015 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 10.5,
+   "b": 24.0,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 24.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    },
+    {
+     "material": "1/2'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 400.0,
+    "Lf": 150.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 40.0,
+    "Eq": 50.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 700.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 700.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 17.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 323.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 307.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 8400.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 8400.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 705.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -227.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.001,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.004,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/2W-2",
+   "set": "215-alvarado-st-adu",
+   "kind": "shearWall",
+   "section": "2W-2",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From IBC 2018 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 8.667,
+   "b": 24.0,
+   "segments": [
+    4.0,
+    4.0
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 3
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 20.0,
+    "Lf": 10.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 10.0,
+    "Eq": 15.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 19.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 475.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.31,
+     "dec": 2
+    }
+   }
+  },
+  {
+   "id": "215-alvarado-st-adu/2W-3",
+   "set": "215-alvarado-st-adu",
+   "kind": "shearWall",
+   "section": "2W-3",
+   "codeRefs": [
+    "In accordance with NDS2018 allowable stress design and the segmented shear wall method",
+    "From IBC 2018 cl.1605.3.1 Basic load combinations",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 8.666,
+   "b": 20.0,
+   "segments": [
+    8.0,
+    8.0
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 24.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "1/2'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    },
+    {
+     "material": "1/2'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GSH-1/2-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 20.0,
+    "Lf": 10.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 10.0,
+    "Eq": 25.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 700.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 700.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 17.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 475.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.31,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 436.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 5600.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 5600.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "215-paden-drive-adu/SHEET PAD FOUNDATION",
+   "set": "215-paden-drive-adu",
+   "kind": "footing",
+   "type": "pad",
+   "section": "SHEET PAD FOUNDATION",
+   "Lx": 4.0,
+   "Ly": 4.0,
+   "h": 15.0,
+   "hsoil": 18.0,
+   "wall": 6.0,
+   "col": [
+    6.0,
+    6.0
+   ],
+   "qallow": 5.0,
+   "fc": 4000.0,
+   "fy": 60000.0,
+   "cover": 3.0,
+   "gammaSoil": 150.0,
+   "bars": "6 No.5 bottom bars (8.2 in c/c)",
+   "loads": {
+    "D": 30000.0,
+    "L": 35000.0,
+    "E": 12000.0
+   },
+   "expected": {
+    "qmax": {
+     "v": 4759.0,
+     "dec": 0
+    },
+    "d": {
+     "v": 11.688,
+     "dec": 3
+    },
+    "a": {
+     "v": 0.684,
+     "dec": 3
+    },
+    "epsT": {
+     "v": 0.04058,
+     "dec": 5
+    },
+    "phiMn": {
+     "v": 1139556.0,
+     "dec": 0
+    },
+    "AsMin": {
+     "v": 1.296,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "215-paden-drive-adu/6X6 POSTS/POST 1",
+   "set": "215-paden-drive-adu",
+   "kind": "post",
+   "section": "6X6 POSTS POST 1",
+   "species": "DF-L",
+   "grade": "No.1",
+   "size": "6x6",
+   "b": 5.5,
+   "d": 5.5,
+   "Lx": 8.0,
+   "duration": "permanent",
+   "type": "D",
+   "P": 16120.0,
+   "Mx": 805.0,
+   "expected": {
+    "CD": {
+     "v": 0.9,
+     "dec": 1
+    },
+    "FcStar": {
+     "v": 900.0,
+     "dec": 0
+    },
+    "FcE": {
+     "v": 1565.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.84,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 758.0,
+     "dec": 0
+    },
+    "fc": {
+     "v": 533.0,
+     "dec": 0
+    },
+    "FbPrime": {
+     "v": 1080.0,
+     "dec": 0
+    },
+    "fb": {
+     "v": 348.0,
+     "dec": 0
+    },
+    "interaction": {
+     "v": 0.984,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "215-paden-drive-adu/6X6 POSTS/POST 2",
+   "set": "215-paden-drive-adu",
+   "kind": "post",
+   "section": "6X6 POSTS POST 2",
+   "species": null,
+   "grade": "No.1",
+   "size": "6x6",
+   "b": 5.5,
+   "d": 5.5,
+   "Lx": 8.0,
+   "duration": "permanent",
+   "type": "D",
+   "P": 15180.0,
+   "Mx": 633.0,
+   "expected": {
+    "CD": {
+     "v": 0.9,
+     "dec": 1
+    },
+    "FcStar": {
+     "v": 900.0,
+     "dec": 0
+    },
+    "FcE": {
+     "v": 1183.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.78,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 699.0,
+     "dec": 0
+    },
+    "fc": {
+     "v": 502.0,
+     "dec": 0
+    },
+    "FbPrime": {
+     "v": 1077.0,
+     "dec": 0
+    },
+    "fb": {
+     "v": 147.0,
+     "dec": 0
+    },
+    "interaction": {
+     "v": 0.717,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "215-paden-drive-adu/6X6 POSTS/POST 3",
+   "set": "215-paden-drive-adu",
+   "kind": "post",
+   "section": "6X6 POSTS POST 3",
+   "species": "DF-L",
+   "grade": "No.1",
+   "size": "6x6",
+   "b": 5.5,
+   "d": 5.5,
+   "Lx": 8.0,
+   "duration": "permanent",
+   "type": "D",
+   "P": 12420.0,
+   "Mx": 518.0,
+   "expected": {
+    "CD": {
+     "v": 0.9,
+     "dec": 1
+    },
+    "FcStar": {
+     "v": 900.0,
+     "dec": 0
+    },
+    "FcE": {
+     "v": 1565.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.84,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 758.0,
+     "dec": 0
+    },
+    "fc": {
+     "v": 411.0,
+     "dec": 0
+    },
+    "FbPrime": {
+     "v": 1080.0,
+     "dec": 0
+    },
+    "fb": {
+     "v": 224.0,
+     "dec": 0
+    },
+    "interaction": {
+     "v": 0.575,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "215-paden-drive-adu/6X6 POSTS/POST 4",
+   "set": "215-paden-drive-adu",
+   "kind": "post",
+   "section": "6X6 POSTS POST 4",
+   "species": "DF-L",
+   "grade": "No.1",
+   "size": "6x6",
+   "b": 5.5,
+   "d": 5.5,
+   "Lx": 8.0,
+   "duration": "permanent",
+   "type": "D",
+   "P": 11040.0,
+   "Mx": 460.0,
+   "expected": {
+    "CD": {
+     "v": 0.9,
+     "dec": 1
+    },
+    "FcStar": {
+     "v": 900.0,
+     "dec": 0
+    },
+    "FcE": {
+     "v": 1565.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.84,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 758.0,
+     "dec": 0
+    },
+    "fc": {
+     "v": 365.0,
+     "dec": 0
+    },
+    "FbPrime": {
+     "v": 1080.0,
+     "dec": 0
+    },
+    "fb": {
+     "v": 199.0,
+     "dec": 0
+    },
+    "interaction": {
+     "v": 0.472,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "2163-controllata-street-garage-to-adu-wi/W1",
+   "set": "2163-controllata-street-garage-to-adu-wi",
+   "kind": "shearWall",
+   "section": "W1",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 8.833,
+   "b": 37.5,
+   "segments": [
+    3.5,
+    2.0,
+    4.5,
+    9.5,
+    3.0
+   ],
+   "openings": 4,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    },
+    {
+     "material": "3/8'' plywood siding",
+     "fastener": "8d glavanized casing nails at 4''centers",
+     "key": "PS-3/8-8dcasing",
+     "spacing": 4,
+     "vs": 480.0,
+     "vw": 670.0,
+     "Ga": 18.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 457.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.3,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 422.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 4962.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 4962.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "2163-controllata-street-garage-to-adu-wi/W2",
+   "set": "2163-controllata-street-garage-to-adu-wi",
+   "kind": "shearWall",
+   "section": "W2",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 8.833,
+   "b": 16.25,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    },
+    {
+     "material": "3/8'' plywood siding",
+     "fastener": "8d glavanized casing nails at 4''centers",
+     "key": "PS-3/8-8dcasing",
+     "spacing": 4,
+     "vs": 480.0,
+     "vw": 670.0,
+     "Ga": 18.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 457.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.3,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 422.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 6500.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 6500.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 284.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -52.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.003,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.002,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "2163-controllata-street-garage-to-adu-wi/W3",
+   "set": "2163-controllata-street-garage-to-adu-wi",
+   "kind": "shearWall",
+   "section": "W3",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 8.833,
+   "b": 16.25,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    },
+    {
+     "material": "3/8'' plywood siding",
+     "fastener": "8d glavanized casing nails at 4''centers",
+     "key": "PS-3/8-8dcasing",
+     "spacing": 4,
+     "vs": 480.0,
+     "vw": 670.0,
+     "Ga": 18.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 457.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.3,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 422.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 6500.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 6500.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 284.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -52.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.003,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.002,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "2163-controllata-street-garage-to-adu-wi/W4",
+   "set": "2163-controllata-street-garage-to-adu-wi",
+   "kind": "shearWall",
+   "section": "W4",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 8.833,
+   "b": 7.5,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    },
+    {
+     "material": "3/8'' plywood siding",
+     "fastener": "8d glavanized casing nails at 4''centers",
+     "key": "PS-3/8-8dcasing",
+     "spacing": 4,
+     "vs": 480.0,
+     "vw": 670.0,
+     "Ga": 18.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 457.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.3,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 422.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 3000.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 3000.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 322.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -1.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.009,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.006,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "2163-controllata-street-garage-to-adu-wi/LW1",
+   "set": "2163-controllata-street-garage-to-adu-wi",
+   "kind": "shearWall",
+   "section": "LW1",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 7.5,
+   "b": 37.5,
+   "segments": [
+    5.167,
+    28.333
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    },
+    {
+     "material": "3/8'' plywood siding",
+     "fastener": "8d glavanized casing nails at 4''centers",
+     "key": "PS-3/8-8dcasing",
+     "spacing": 4,
+     "vs": 480.0,
+     "vw": 670.0,
+     "Ga": 18.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.39,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 561.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 12388.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 12388.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "2163-controllata-street-garage-to-adu-wi/LW2",
+   "set": "2163-controllata-street-garage-to-adu-wi",
+   "kind": "shearWall",
+   "section": "LW2",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 7.5,
+   "b": 16.25,
+   "segments": [
+    2.0,
+    4.167,
+    2.083
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    },
+    {
+     "material": "3/8'' plywood siding",
+     "fastener": "8d glavanized casing nails at 4''centers",
+     "key": "PS-3/8-8dcasing",
+     "spacing": 4,
+     "vs": 480.0,
+     "vw": 670.0,
+     "Ga": 18.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.39,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 561.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 1667.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 1667.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "2163-controllata-street-garage-to-adu-wi/LW3",
+   "set": "2163-controllata-street-garage-to-adu-wi",
+   "kind": "shearWall",
+   "section": "LW3",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 7.5,
+   "b": 16.25,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    },
+    {
+     "material": "3/8'' plywood siding",
+     "fastener": "8d glavanized casing nails at 4''centers",
+     "key": "PS-3/8-8dcasing",
+     "spacing": 4,
+     "vs": 480.0,
+     "vw": 670.0,
+     "Ga": 18.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.39,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 561.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 6500.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 6500.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 268.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -53.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.002,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.002,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "2163-controllata-street-garage-to-adu-wi/LW4",
+   "set": "2163-controllata-street-garage-to-adu-wi",
+   "kind": "shearWall",
+   "section": "LW4",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3C"
+   ],
+   "h": 7.5,
+   "b": 7.5,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "Stud",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 450.0,
+    "Fc": 850.0,
+    "E": 1400000.0,
+    "Emin": 510000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    },
+    {
+     "material": "3/8'' plywood siding",
+     "fastener": "8d glavanized casing nails at 4''centers",
+     "key": "PS-3/8-8dcasing",
+     "spacing": 4,
+     "vs": 480.0,
+     "vw": 670.0,
+     "Ga": 18.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 60.0,
+    "Lr": 120.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 35.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 27.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.05,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 1428.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.39,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 561.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 792.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 3000.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 3000.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 301.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -9.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.007,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.005,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "2844-baily-ave-2-storey-detached-adu/1W1",
+   "set": "2844-baily-ave-2-storey-detached-adu",
+   "kind": "shearWall",
+   "section": "1W1",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 16.5,
+   "segments": [
+    8.75,
+    1.583,
+    1.333
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 15.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 100.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 35.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 2625.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 3675.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "2844-baily-ave-2-storey-detached-adu/1W2",
+   "set": "2844-baily-ave-2-storey-detached-adu",
+   "kind": "shearWall",
+   "section": "1W2",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 16.0,
+   "segments": [
+    7.167,
+    0.833
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 15.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 100.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 35.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 2150.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 3010.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "2844-baily-ave-2-storey-detached-adu/1W3",
+   "set": "2844-baily-ave-2-storey-detached-adu",
+   "kind": "shearWall",
+   "section": "1W3",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 16.0,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 15.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 100.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 35.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 4800.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 6720.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 231.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -57.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.001,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.004,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "2844-baily-ave-2-storey-detached-adu/1W4",
+   "set": "2844-baily-ave-2-storey-detached-adu",
+   "kind": "shearWall",
+   "section": "1W4",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 16.5,
+   "segments": [
+    8.5,
+    6.0
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 15.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 100.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 35.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 4350.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 6090.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "2844-baily-ave-2-storey-detached-adu/2W1",
+   "set": "2844-baily-ave-2-storey-detached-adu",
+   "kind": "shearWall",
+   "section": "2W1",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 16.5,
+   "segments": [
+    8.5,
+    3.0
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 15.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 100.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 35.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 3102.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 4343.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "2844-baily-ave-2-storey-detached-adu/2W2",
+   "set": "2844-baily-ave-2-storey-detached-adu",
+   "kind": "shearWall",
+   "section": "2W2",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 10.0,
+   "segments": [
+    2.0,
+    3.0
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 15.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 100.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 35.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 825.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 1155.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "2844-baily-ave-2-storey-detached-adu/2W3",
+   "set": "2844-baily-ave-2-storey-detached-adu",
+   "kind": "shearWall",
+   "section": "2W3",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 7.0,
+   "segments": [
+    3.833,
+    0.333
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 15.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 100.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 35.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 1137.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 1592.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "2844-baily-ave-2-storey-detached-adu/2W4",
+   "set": "2844-baily-ave-2-storey-detached-adu",
+   "kind": "shearWall",
+   "section": "2W4",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 6.0,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 15.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 100.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 35.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 1800.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 2520.0,
+     "dec": 0
+    },
+    "C": {
+     "v": 248.0,
+     "dec": 0
+    },
+    "T": {
+     "v": -34.0,
+     "dec": 0
+    },
+    "dsww": {
+     "v": 0.003,
+     "dec": 3
+    },
+    "dsws": {
+     "v": 0.012,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "2844-baily-ave-2-storey-detached-adu/2W5",
+   "set": "2844-baily-ave-2-storey-detached-adu",
+   "kind": "shearWall",
+   "section": "2W5",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 8.5,
+   "segments": [
+    1.0,
+    2.5
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 15.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 100.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 35.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 469.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 656.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "2844-baily-ave-2-storey-detached-adu/2W6",
+   "set": "2844-baily-ave-2-storey-detached-adu",
+   "kind": "shearWall",
+   "section": "2W6",
+   "codeRefs": [
+    "In accordance with NDS2015 allowable stress design and the segmented shear wall method",
+    "From NDS Supplement Table 4A",
+    "From SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 16.0,
+   "segments": [
+    6.0,
+    4.0
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 4''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 4,
+     "vs": 600.0,
+     "vw": 840.0,
+     "Ga": 15.0
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 100.0,
+    "Lr": 0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 35.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 634.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.24,
+     "dec": 2
+    },
+    "FcPrime": {
+     "v": 596.0,
+     "dec": 0
+    },
+    "FtPrime": {
+     "v": 1380.0,
+     "dec": 0
+    },
+    "Vs": {
+     "v": 3000.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 4200.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "2844-baily-ave-2-storey-detached-adu/FOUNDATION",
+   "set": "2844-baily-ave-2-storey-detached-adu",
+   "kind": "footing",
+   "type": "strip",
+   "section": "FOUNDATION",
+   "Lx": 1.0,
+   "Ly": 2.0,
+   "h": 18.0,
+   "hsoil": 18.0,
+   "wall": 8.0,
+   "col": [
+    0,
+    8.0
+   ],
+   "qallow": 3.5,
+   "fc": 4000.0,
+   "fy": 60000.0,
+   "cover": 3.0,
+   "gammaSoil": 120.0,
+   "bars": "No.4 bars at 6.0 in c/c bottom",
+   "loads": {
+    "D": 2000.0,
+    "L": 2500.0,
+    "Lr": 900.0,
+    "S": 800.0
+   },
+   "expected": {
+    "qmax": {
+     "v": 2752.0,
+     "dec": 0
+    },
+    "d": {
+     "v": 14.75,
+     "dec": 3
+    },
+    "a": {
+     "v": 0.588,
+     "dec": 3
+    },
+    "epsT": {
+     "v": 0.06094,
+     "dec": 5
+    },
+    "phiMn": {
+     "v": 312252.0,
+     "dec": 0
+    },
+    "AsMin": {
+     "v": 0.389,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "336-east-grand-interior-remodeling/F1-18\"W X 12\"D",
+   "set": "336-east-grand-interior-remodeling",
+   "kind": "footing",
+   "type": "strip",
+   "section": "F1-18\"W X 12\"D",
+   "Lx": 1.0,
+   "Ly": 1.5,
+   "h": 12.0,
+   "hsoil": 8.0,
+   "wall": 6.0,
+   "col": [
+    0,
+    6.0
+   ],
+   "qallow": 3.5,
+   "fc": 4000.0,
+   "fy": 60000.0,
+   "cover": 2.0,
+   "gammaSoil": 120.0,
+   "bars": "No.4 bars at 8.0 in c/c bottom",
+   "loads": {
+    "D": 1200.0,
+    "L": 1000.0,
+    "E": 1400.0
+   },
+   "expected": {
+    "qmax": {
+     "v": 2105.0,
+     "dec": 0
+    },
+    "d": {
+     "v": 9.75,
+     "dec": 3
+    },
+    "a": {
+     "v": 0.441,
+     "dec": 3
+    },
+    "epsT": {
+     "v": 0.05335,
+     "dec": 5
+    },
+    "phiMn": {
+     "v": 154380.0,
+     "dec": 0
+    },
+    "AsMin": {
+     "v": 0.259,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "336-east-grand-interior-remodeling/F2-3'X3'X1'",
+   "set": "336-east-grand-interior-remodeling",
+   "kind": "footing",
+   "type": "pad",
+   "section": "F2-3'X3'X1'",
+   "Lx": 3.0,
+   "Ly": 3.0,
+   "h": 12.0,
+   "hsoil": 12.0,
+   "wall": 12.0,
+   "col": [
+    12.0,
+    12.0
+   ],
+   "qallow": 5.0,
+   "fc": 4000.0,
+   "fy": 60000.0,
+   "cover": 3.0,
+   "gammaSoil": 120.0,
+   "bars": "4 No.4 bottom bars (9.8 in c/c)",
+   "loads": {
+    "D": 3500.0,
+    "L": 2100.0,
+    "E": 1200.0
+   },
+   "expected": {
+    "qmax": {
+     "v": 970.0,
+     "dec": 0
+    },
+    "d": {
+     "v": 8.75,
+     "dec": 3
+    },
+    "a": {
+     "v": 0.392,
+     "dec": 3
+    },
+    "epsT": {
+     "v": 0.0539,
+     "dec": 5
+    },
+    "phiMn": {
+     "v": 369528.0,
+     "dec": 0
+    },
+    "AsMin": {
+     "v": 0.778,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "45324-indian-well-covered-carport/F1- 18\"X10\"",
+   "set": "45324-indian-well-covered-carport",
+   "kind": "footing",
+   "type": "strip",
+   "section": "F1- 18\"X10\"",
+   "Lx": 1.0,
+   "Ly": 1.6,
+   "h": 10.0,
+   "hsoil": 24.0,
+   "wall": 8.0,
+   "col": [
+    0,
+    8.0
+   ],
+   "qallow": 3.5,
+   "fc": 3000.0,
+   "fy": 60000.0,
+   "cover": 3.0,
+   "gammaSoil": 120.0,
+   "bars": "No.4 bars at 6.0 in c/c bottom",
+   "loads": {
+    "D": 1500.0,
+    "L": 1300.0
+   },
+   "expected": {
+    "qmax": {
+     "v": 2084.0,
+     "dec": 0
+    },
+    "d": {
+     "v": 6.75,
+     "dec": 3
+    },
+    "a": {
+     "v": 0.784,
+     "dec": 3
+    },
+    "epsT": {
+     "v": 0.01895,
+     "dec": 5
+    },
+    "phiMn": {
+     "v": 137328.0,
+     "dec": 0
+    },
+    "AsMin": {
+     "v": 0.216,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "4609-bancroft-drive-grage-addition/W1",
+   "set": "4609-bancroft-drive-grage-addition",
+   "kind": "shearWall",
+   "section": "W1",
+   "codeRefs": [
+    "NDS2018 allowable stress design",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": null,
+   "b": null,
+   "segments": [
+    3.083,
+    17.917
+   ],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": null,
+   "spacing": null,
+   "post": {
+    "size": null,
+    "plies": null
+   },
+   "holeDia": null,
+   "ka": null,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 6''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 6,
+     "vs": 400.0,
+     "vw": 560.0,
+     "Ga": 11.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 20.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 561.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "Vs": {
+     "v": 7167.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 7167.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "4609-bancroft-drive-grage-addition/W2",
+   "set": "4609-bancroft-drive-grage-addition",
+   "kind": "shearWall",
+   "section": "W2",
+   "codeRefs": [
+    "NDS2018 allowable stress design",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 8.5,
+   "b": 20.0,
+   "segments": [
+    7.75,
+    9.25
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 6''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 6,
+     "vs": 400.0,
+     "vw": 560.0,
+     "Ga": 11.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 20.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 561.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "Vs": {
+     "v": 6570.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 6570.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "4609-bancroft-drive-grage-addition/W3",
+   "set": "4609-bancroft-drive-grage-addition",
+   "kind": "shearWall",
+   "section": "W3",
+   "codeRefs": [
+    "NDS2018 allowable stress design",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 8.5,
+   "b": 22.0,
+   "segments": [
+    7.75,
+    9.25
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "3/8'' wood panel oriented strandboard sheathing",
+     "fastener": "6d common nails at 6''centers",
+     "key": "SH-3/8-6d",
+     "spacing": 6,
+     "vs": 400.0,
+     "vw": 560.0,
+     "Ga": 11.0
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 20.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 561.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "Vs": {
+     "v": 6570.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 6570.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "4609-bancroft-drive-grage-addition/IW",
+   "set": "4609-bancroft-drive-grage-addition",
+   "kind": "shearWall",
+   "section": "IW",
+   "codeRefs": [
+    "NDS2018 allowable stress design",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 8.5,
+   "b": 6.0,
+   "segments": [],
+   "openings": 0,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x4",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x4",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    },
+    {
+     "material": "5/8'' x 4' gypsum sheathing with blocking",
+     "fastener": "0.120'' nails at 4''/7''centers",
+     "key": "GSH-5/8-4/7-blocked",
+     "spacing": 4,
+     "vs": 400.0,
+     "vw": 400.0,
+     "Ga": 9.5
+    }
+   ],
+   "loads": {
+    "D": 135.0,
+    "Lf": 140.0,
+    "Lr": 180.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 135.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 800.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 19.0,
+     "dec": 0
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.15,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.5,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 561.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2484.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.21,
+     "dec": 2
+    },
+    "Vs": {
+     "v": 2400.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 2400.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "4609-bancroft-drive-grage-addition/FOOTING",
+   "set": "4609-bancroft-drive-grage-addition",
+   "kind": "footing",
+   "type": "strip",
+   "section": "FOOTING",
+   "Lx": 1.0,
+   "Ly": 1.0,
+   "h": 18.0,
+   "hsoil": 6.0,
+   "wall": 6.0,
+   "col": [
+    0,
+    6.0
+   ],
+   "qallow": 3.5,
+   "fc": 4000.0,
+   "fy": 60000.0,
+   "cover": 2.0,
+   "gammaSoil": 120.0,
+   "bars": "No.4 bars at 6.0 in c/c bottom",
+   "loads": {
+    "D": 1200.0,
+    "L": 1000.0,
+    "E": 1400.0
+   },
+   "expected": {
+    "qmax": {
+     "v": 3092.0,
+     "dec": 0
+    },
+    "d": {
+     "v": 15.75,
+     "dec": 3
+    },
+    "a": {
+     "v": 0.588,
+     "dec": 3
+    },
+    "epsT": {
+     "v": 0.06528,
+     "dec": 5
+    },
+    "phiMn": {
+     "v": 333852.0,
+     "dec": 0
+    },
+    "AsMin": {
+     "v": 0.389,
+     "dec": 3
+    }
+   }
+  },
+  {
+   "id": "792-blackthorne-ave-detached-adu/SW1",
+   "set": "792-blackthorne-ave-detached-adu",
+   "kind": "shearWall",
+   "section": "SW1",
+   "codeRefs": [
+    "NDS2018 allowable stress design",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 25.0,
+   "segments": [
+    3.417,
+    11.833,
+    2.75
+   ],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1565.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.54,
+     "dec": 2
+    },
+    "Vs": {
+     "v": 4497.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 8372.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "792-blackthorne-ave-detached-adu/SW2",
+   "set": "792-blackthorne-ave-detached-adu",
+   "kind": "shearWall",
+   "section": "SW2",
+   "codeRefs": [
+    "NDS2018 allowable stress design",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 16.5,
+   "segments": [
+    8.5,
+    3.0
+   ],
+   "openings": 1,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1565.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.54,
+     "dec": 2
+    },
+    "Vs": {
+     "v": 3230.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 6014.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "792-blackthorne-ave-detached-adu/SW3",
+   "set": "792-blackthorne-ave-detached-adu",
+   "kind": "shearWall",
+   "section": "SW3",
+   "codeRefs": [
+    "NDS2018 allowable stress design",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 33.5,
+   "segments": [
+    8.583,
+    0.747,
+    2.58,
+    6.923,
+    0.667
+   ],
+   "openings": 4,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": null,
+   "Ie": null,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1565.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.54,
+     "dec": 2
+    },
+    "Vs": {
+     "v": 0.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 0.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "792-blackthorne-ave-detached-adu/SW4",
+   "set": "792-blackthorne-ave-detached-adu",
+   "kind": "shearWall",
+   "section": "SW4",
+   "codeRefs": [
+    "NDS2018 allowable stress design",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 17.5,
+   "segments": [],
+   "openings": 2,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1565.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.54,
+     "dec": 2
+    },
+    "Vs": {
+     "v": 4560.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 8490.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "792-blackthorne-ave-detached-adu/SW5",
+   "set": "792-blackthorne-ave-detached-adu",
+   "kind": "shearWall",
+   "section": "SW5",
+   "codeRefs": [
+    "NDS2018 allowable stress design",
+    "NDS Supplement Table 4A",
+    "SDPWS Table 4.3A"
+   ],
+   "h": 8.0,
+   "b": 50.0,
+   "segments": [
+    4.91,
+    6.757,
+    6.416,
+    19.917
+   ],
+   "openings": 3,
+   "species": "DF-L",
+   "grade": "No.2",
+   "stud": "2x6",
+   "spacing": 16.0,
+   "post": {
+    "size": "2x6",
+    "plies": 2
+   },
+   "holeDia": 1.0,
+   "ka": 30000.0,
+   "ref": {
+    "Ft": 575.0,
+    "Fc": 1350.0,
+    "E": 1600000.0,
+    "Emin": 580000.0
+   },
+   "sides": [
+    {
+     "material": "7/16'' wood panel oriented strandboard sheathing with long dimension across studs",
+     "fastener": "8d common nails at 4''centers",
+     "key": "SH-7/16-8d-across",
+     "spacing": 4,
+     "vs": 760.0,
+     "vw": 1065.0,
+     "Ga": 22.0
+    },
+    {
+     "material": "5/8'' gypsum wallboard with blocking",
+     "fastener": "0.120'' nails at 4''centers",
+     "key": "GWB-5/8-4-blocked",
+     "spacing": 4,
+     "vs": 350.0,
+     "vw": 350.0,
+     "Ga": 8.5
+    }
+   ],
+   "loads": {
+    "D": 25.0,
+    "Lf": 20.0,
+    "Lr": 10.0,
+    "S": 0,
+    "Swt": 12.0,
+    "W": 18.0,
+    "Eq": 40.0,
+    "SDS": 1.0
+   },
+   "fWserv": 1.0,
+   "Cd": 4.0,
+   "Ie": 1.25,
+   "expected": {
+    "vsc": {
+     "v": 760.0,
+     "dec": 0
+    },
+    "vwc": {
+     "v": 1415.0,
+     "dec": 0
+    },
+    "Gac": {
+     "v": 30.5,
+     "dec": 1
+    },
+    "CD": {
+     "v": 1.6,
+     "dec": 2
+    },
+    "CFc": {
+     "v": 1.1,
+     "dec": 2
+    },
+    "CFt": {
+     "v": 1.3,
+     "dec": 2
+    },
+    "FcE": {
+     "v": 1565.0,
+     "dec": 0
+    },
+    "FcStar": {
+     "v": 2376.0,
+     "dec": 0
+    },
+    "CP": {
+     "v": 0.54,
+     "dec": 2
+    },
+    "Vs": {
+     "v": 11632.0,
+     "dec": 0
+    },
+    "Vw": {
+     "v": 21657.0,
+     "dec": 0
+    }
+   }
+  },
+  {
+   "id": "792-blackthorne-ave-detached-adu/F1- 15\"X18\"",
+   "set": "792-blackthorne-ave-detached-adu",
+   "kind": "footing",
+   "type": "strip",
+   "section": "F1- 15\"X18\"",
+   "Lx": 1.0,
+   "Ly": 1.25,
+   "h": 18.0,
+   "hsoil": 8.0,
+   "wall": 6.0,
+   "col": [
+    0,
+    6.0
+   ],
+   "qallow": 3.5,
+   "fc": 3000.0,
+   "fy": 60000.0,
+   "cover": 3.0,
+   "gammaSoil": 120.0,
+   "bars": "No.4 bars at 6.0 in c/c bottom",
+   "loads": {
+    "D": 1500.0,
+    "L": 1300.0
+   },
+   "expected": {
+    "qmax": {
+     "v": 2505.0,
+     "dec": 0
+    },
+    "d": {
+     "v": 14.75,
+     "dec": 3
+    },
+    "a": {
+     "v": 0.784,
+     "dec": 3
+    },
+    "epsT": {
+     "v": 0.04496,
+     "dec": 5
+    },
+    "phiMn": {
+     "v": 310128.0,
+     "dec": 0
+    },
+    "AsMin": {
+     "v": 0.389,
+     "dec": 3
+    }
+   }
+  }
+ ],
+ "notAutomated": [
+  "1002-3rd-st-jadu/Report Sec. 2-3 (seismicReport)",
+  "1002-3rd-st-jadu/Report Sec. 4 (windReport)",
+  "1002-3rd-st-jadu/Report Sec. 5 (upliftReport)",
+  "1002-3rd-st-jadu/Report Sec. 6 (anchor)",
+  "1002-3rd-st-jadu/Report Sec. 7 (other)",
+  "1002-3rd-st-jadu/Report Sec. 8 (diaphragmReport)",
+  "1002-3rd-st-jadu/Report Sec. 9.2 Interior Header (woodBeam)",
+  "1002-3rd-st-jadu/Report Sec. 9.3 Exterior Header (woodBeam)",
+  "1002-3rd-st-jadu/Report Sec. 10 (other)",
+  "10269-madrid-way-framing/CMU WALL (cmuWall)",
+  "10269-madrid-way-framing/Roof Joist (Report Sec. 1-4) (joist)",
+  "10269-madrid-way-framing/Roof Sheathing (Report Sec. 5) (other)",
+  "10269-madrid-way-framing/Roof Diaphragm (Report Sec. 6-9) (diaphragmReport)",
+  "1165-goldenrod-st-adu/Roof Report (truss)",
+  "1165-goldenrod-st-adu/Stair Stringer (woodBeam)",
+  "1165-goldenrod-st-adu/Stair Tread (woodBeam)",
+  "1165-goldenrod-st-adu/Stair Post (woodPost)",
+  "1165-goldenrod-st-adu/Stair Footing (footingPad)",
+  "16619-orchard-art-studio-to-adu/6X8 BEAM (woodBeam)",
+  "16619-orchard-art-studio-to-adu/ROOF/CEILING JOIST (rafter)",
+  "16619-orchard-art-studio-to-adu/ROOF/CEILING JOIST (joist)",
+  "215-paden-drive-adu/STRUCTURAL CALCULATIONS §2 Floor Joists (joist)",
+  "215-paden-drive-adu/STRUCTURAL CALCULATIONS §3 Roof Trusses (truss)",
+  "215-paden-drive-adu/STRUCTURAL CALCULATIONS §4 Rafters (rafter)",
+  "2163-controllata-street-garage-to-adu-wi/3. Loft Floor Joists – 2x10 @16\" o.c. (joist)",
+  "2163-controllata-street-garage-to-adu-wi/4. Rafters – 2x10 @16\" o.c., 4:12 (rafter)",
+  "2163-controllata-street-garage-to-adu-wi/5. Ridge Beam – 2x14 (posts @ ~8 ft o.c.) (woodBeam)",
+  "2163-controllata-street-garage-to-adu-wi/Timber Staircase (Total Rise = 9'-0\") (other)",
+  "2844-baily-ave-2-storey-detached-adu/REPORT NO. 01 - Floor Joists (1st & 2nd Floor) (joist)",
+  "336-east-grand-interior-remodeling/W10X22 STEEL LINTEL (steelBeam)",
+  "336-east-grand-interior-remodeling/HSS 6X6X1/4 POST (steelColumn)",
+  "336-east-grand-interior-remodeling/STUD WALLS (cfsStud)",
+  "336-east-grand-interior-remodeling/12X12X3/4 BASE PLATE (basePlate)",
+  "336-east-grand-interior-remodeling/12X12X3/4 BASE PLATE (anchor)",
+  "336-east-grand-interior-remodeling/ANCHOR BOLT (anchor)",
+  "45324-indian-well-covered-carport/8x16 CMU WALL (cmuWall)",
+  "45324-indian-well-covered-carport/2-2X10\" HEADER (woodBeam)",
+  "45324-indian-well-covered-carport/2X12\" LEDGER (ledger)",
+  "4609-bancroft-drive-grage-addition/T1A (truss)",
+  "4609-bancroft-drive-grage-addition/T1B (truss)",
+  "4609-bancroft-drive-grage-addition/T1C (truss)",
+  "792-blackthorne-ave-detached-adu/Roof Rafter Design (rafter)"
+ ]
+}

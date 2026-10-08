@@ -353,7 +353,15 @@ export const shearWallSpecSchema = z.object({
   b: pos,
   h: pos,
   sides: z
-    .array(z.object({ key: z.string(), spacing: pos, vsOverride: pos.optional(), GaOverride: pos.optional() }))
+    .array(
+      z.object({
+        key: z.string(),
+        spacing: pos,
+        panel1532: z.boolean().optional(),
+        vsOverride: pos.optional(),
+        GaOverride: pos.optional(),
+      }),
+    )
     .min(1)
     .max(2),
   stud: z.object({ species: speciesSchema, grade: gradeSchema, size: z.string(), spacing: pos }),
@@ -606,7 +614,14 @@ export const masonryWallSpecSchema = z.object({
   eccentricity: num.default(0),
   wind: z.object({ W: nonneg, Wp: nonneg }),
   seismic: z.object({ include: z.boolean(), Eadd: nonneg }),
-  soil: z.object({ height: nonneg, efp: nonneg, surcharge: nonneg }).optional(),
+  soil: z
+    .object({
+      height: nonneg,
+      efp: nonneg,
+      surcharge: nonneg,
+      seismic: z.object({ shape: z.enum(["uniform", "inverted"]), k: nonneg }).optional(),
+    })
+    .optional(),
   inPlane: z.object({ W: nonneg, E: nonneg, h: pos.optional() }).optional(),
 });
 
@@ -662,6 +677,60 @@ export const tieInSpecSchema = z.object({
 
 const trussLumberSchema = z.object({ species: speciesSchema, grade: gradeSchema, size: z.string() });
 
+export const retainingWallSpecSchema = z.object({
+  kind: z.literal("retainingWall"),
+  ...common,
+  Hr: pos,
+  stem: z.object({
+    material: z.enum(["cmu", "concrete"]),
+    height: pos,
+    t: pos,
+    cmu: masonryWallSpecSchema.shape.cmu,
+    concrete: masonryWallSpecSchema.shape.concrete,
+    fy: pos,
+    vertical: masonryWallSpecSchema.shape.vertical,
+    horizontal: masonryWallSpecSchema.shape.horizontal,
+  }),
+  footing: z.object({
+    toe: nonneg,
+    heel: pos,
+    h: pos,
+    coverBottom: pos.default(3),
+    coverTop: pos.default(2),
+    bottom: z.object({ size: z.string(), spacing: pos }),
+    top: z.object({ size: z.string(), spacing: pos }),
+    longitudinal: z.object({ size: z.string(), count: z.number().int().min(2) }),
+  }),
+  soil: z.object({
+    efp: pos,
+    efpSource: z.string(),
+    surcharge: nonneg.default(0),
+    seismic: z.object({ shape: z.enum(["uniform", "inverted"]), k: nonneg }).optional(),
+    toeCover: nonneg.default(0),
+    countToeSoil: z.boolean().default(false),
+    neglectPassive: nonneg.default(1),
+    qaOverride: pos.optional(),
+  }),
+  extra: z.array(extraLoadSchema).default([]),
+});
+
+export const guardPostSpecSchema = z.object({
+  kind: z.literal("guardPost"),
+  ...common,
+  post: z.object({ species: speciesSchema, grade: gradeSchema, size: z.string() }),
+  wideFaceToRim: z.boolean().optional(),
+  wetService: z.boolean().default(true),
+  incised: z.boolean().default(true),
+  guardHeight: pos,
+  topBolt: nonneg,
+  s: pos,
+  P: pos.default(200),
+  rail: z.object({ w: nonneg, spacing: nonneg }).default({ w: 0, spacing: 0 }),
+  bolt: z.object({ d: pos, Fu: pos, label: z.string() }),
+  washer: pos,
+  device: z.object({ model: z.string(), capacity: pos, source: z.string(), verified: z.boolean() }),
+});
+
 export const woodTrussSpecSchema = z.object({
   kind: z.literal("woodTruss"),
   ...common,
@@ -716,6 +785,8 @@ export const memberSpecSchema = z.discriminatedUnion("kind", [
   holdownFootingSpecSchema,
   tieInSpecSchema,
   woodTrussSpecSchema,
+  retainingWallSpecSchema,
+  guardPostSpecSchema,
 ]);
 
 export const hardwareItemSchema = z.object({
@@ -829,6 +900,16 @@ export const reviewItemSchema = z.object({
 
 export const projectSchema = z.object({
   schemaVersion: z.literal(1),
+  /** Software the file was last saved with (src/engine/version.ts). */
+  software: z
+    .object({
+      engine: z.string(),
+      engineHash: z.string(),
+      data: z.string(),
+      dataHash: z.string(),
+      locked: z.boolean(),
+    })
+    .optional(),
   info: z.object({
     name: z.string(),
     address: z.string().default(""),
@@ -904,6 +985,8 @@ export type MasonryWallSpec = z.infer<typeof masonryWallSpecSchema>;
 export type HoldownFootingSpec = z.infer<typeof holdownFootingSpecSchema>;
 export type TieInSpec = z.infer<typeof tieInSpecSchema>;
 export type WoodTrussSpec = z.infer<typeof woodTrussSpecSchema>;
+export type RetainingWallSpec = z.infer<typeof retainingWallSpecSchema>;
+export type GuardPostSpec = z.infer<typeof guardPostSpecSchema>;
 export type LateralSpec = z.infer<typeof lateralSchema>;
 export type HardwareSpec = z.infer<typeof hardwareItemSchema>;
 export type LinkedLoad = z.infer<typeof linkedLoadSchema>;

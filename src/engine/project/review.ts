@@ -138,6 +138,23 @@ export function targetFields(m: MemberSpec): TargetField[] {
         { field: "spacing", label: "Dowel spacing (in)", numeric: true },
         { field: "hef", label: "Embedment (in)", numeric: true },
       ];
+    case "retainingWall":
+      return [
+        ...common,
+        { field: "Hr", label: "Retained height (ft)", numeric: true },
+        { field: "stem.t", label: "Stem thickness (in)", numeric: true },
+        { field: "stem.vertical.spacing", label: "Stem vertical bar spacing (in)", numeric: true },
+        { field: "footing.toe", label: "Toe length (ft)", numeric: true },
+        { field: "footing.heel", label: "Heel length (ft)", numeric: true },
+        { field: "footing.h", label: "Footing thickness (in)", numeric: true },
+      ];
+    case "guardPost":
+      return [
+        ...common,
+        { field: "post.size", label: "Post size", numeric: false },
+        { field: "guardHeight", label: "Guard height (in)", numeric: true },
+        { field: "s", label: "Bolt spacing (in)", numeric: true },
+      ];
     case "connector":
     case "diaphragm":
     case "uplift":

@@ -5,16 +5,19 @@
  * access is guarded and the app works without it.
  */
 
+import { softwareStamp, stampDifferences } from "../version";
 import { projectSchema, type Project } from "./schema";
 
 export const FILE_EXT = ".housecalc.json";
 const AUTOSAVE_KEY = "housecalc:autosave:v1";
 
+/** The file records the engine / data-library versions and fingerprints it was saved with. */
 export function serializeProject(p: Project): string {
-  return JSON.stringify(p, null, 2);
+  return JSON.stringify({ ...p, software: softwareStamp() }, null, 2);
 }
 
-export type ParseOutcome = { ok: true; project: Project } | { ok: false; errors: string[] };
+/** warnings: the file was saved with a different engine or data library — results may differ. */
+export type ParseOutcome = { ok: true; project: Project; warnings: string[] } | { ok: false; errors: string[] };
 
 export function parseProject(text: string): ParseOutcome {
   let raw: unknown;
@@ -24,7 +27,7 @@ export function parseProject(text: string): ParseOutcome {
     return { ok: false, errors: [`Not a JSON file: ${e instanceof Error ? e.message : String(e)}`] };
   }
   const res = projectSchema.safeParse(raw);
-  if (res.success) return { ok: true, project: res.data };
+  if (res.success) return { ok: true, project: res.data, warnings: stampDifferences(res.data.software) };
   return {
     ok: false,
     errors: res.error.issues.slice(0, 8).map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`),

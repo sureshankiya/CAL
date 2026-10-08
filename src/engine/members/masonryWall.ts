@@ -78,13 +78,26 @@ export interface MasonryWallInput {
   eccentricity: number;
   wind: { W: number; Wp: number };
   seismic: { include: boolean; Eadd: number; SDC: string; Ie: number; SDS: number };
-  soil?: { height: number; efp: number; surcharge: number };
+  /**
+   * Lateral earth pressure: equivalent fluid efp (pcf) to `height` above the base plus a
+   * uniform surcharge pressure (psf); `seismic` is the dynamic earth-pressure increment from
+   * the geotechnical report (IBC 1803.5.12), k × height psf — uniform, or an inverted
+   * triangle with the maximum at the top of the soil — carried as E.
+   */
+  soil?: {
+    height: number;
+    efp: number;
+    surcharge: number;
+    seismic?: { shape: "uniform" | "inverted"; k: number };
+  };
   inPlane?: { W: number; E: number; h?: number };
 }
 
 export interface PanelCase {
   type: LoadType | "H";
   r: PanelResult;
+  /** acts in one direction only (seismic earth-pressure increment) */
+  oneWay?: boolean;
 }
 
 export interface WallSectionCheck {
@@ -320,6 +333,24 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
       unit: "psf",
     });
   }
+  const Esoil = soil?.seismic && soil.seismic.k > 0 ? { ...soil.seismic, hs: Math.min(soil.height, Htot) } : undefined;
+  if (Esoil) {
+    const q = Esoil.k * Esoil.hs;
+    cases.push({
+      type: "E",
+      oneWay: true,
+      r: analysePanel(geo, [
+        Esoil.shape === "uniform" ? { x1: 0, x2: Esoil.hs, q1: q, q2: q } : { x1: 0, x2: Esoil.hs, q1: 0, q2: q },
+      ]),
+    });
+    lines.push({
+      type: "E",
+      label: "Seismic earth-pressure increment (geotechnical report)",
+      expr: `${fmt(Esoil.k, 1)} pcf × ${fmt(Esoil.hs, 2)} ft, ${Esoil.shape === "uniform" ? "uniform" : "inverted triangle, maximum at the top"}`,
+      value: q,
+      unit: "psf",
+    });
+  }
   // eccentric top load: moment per type (lb-in per ft), + toward the interior → exterior face in tension
   for (const tp of LOAD_TYPES) {
     if (!top[tp] || !w.eccentricity || w.support === "cantilever") continue;
@@ -330,7 +361,7 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
   const present: Partial<Record<LoadType, boolean>> = { D: true };
   for (const tp of LOAD_TYPES) if (Math.abs(top[tp]) > 1e-9) present[tp] = true;
   if (windLoads.length || w.inPlane?.W) present.W = true;
-  if (E || w.inPlane?.E) present.E = true;
+  if (E || Esoil || w.inPlane?.E) present.E = true;
   const combos = relevantCombinations(
     (cmu ? asdCombinations : strengthCombinations)({
       SDS: ctx.SDS,
@@ -351,7 +382,7 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
     for (const cs of cases) {
       const f = cs.type === "H" ? Hfactor(c) : (c.factors[cs.type] ?? 0);
       if (!f) continue;
-      const s = cs.type === "W" || cs.type === "E" ? sign : 1;
+      const s = (cs.type === "W" || cs.type === "E") && !cs.oneWay ? sign : 1;
       M += s * f * cs.r.M[i];
       V += s * f * cs.r.V[i];
     }

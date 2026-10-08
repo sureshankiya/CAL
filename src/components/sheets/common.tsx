@@ -1,7 +1,8 @@
 /** Sheet metadata, title-block fields, footers and the design-basis (code-cycle) block. */
 
 import type React from "react";
-import { ENGINE_VERSION, dataLibraryVersion, getCycle, type CodeCycle } from "@/engine/core/codes";
+import { getCycle, type CodeCycle } from "@/engine/core/codes";
+import { VERSION_LOCKED, softwareText } from "@/engine/version";
 import { fmt } from "@/engine/core/fmt";
 import { TABLES } from "@/engine/data/library";
 import type { Project } from "@/engine/project";
@@ -94,14 +95,7 @@ export function DesignBasis({
           }
         />
       ) : null}
-      <TR
-        desc="Engine / data library"
-        expr={
-          <>
-            HouseCalc engine {ENGINE_VERSION}; data library {dataLibraryVersion(c.id)}
-          </>
-        }
-      />
+      <TR desc="Engine / data library" expr={VERSION_LOCKED ? softwareText(c.id) : <Flag>{softwareText(c.id)}</Flag>} />
     </>
   );
 }
