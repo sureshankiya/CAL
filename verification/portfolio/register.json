@@ -1,6 +1,6 @@
 {
- "engine": "1.0.0",
- "data": "1.0",
+ "engine": "0.9.0",
+ "data": "0.9",
  "rows": [
   {
    "case": "1002-3rd-st-jadu/SW1",
@@ -1549,7 +1549,7 @@
    "housecalc": 2430,
    "diff": -60,
    "status": "documented",
-   "note": "Tedds applies the soil overburden over the full footing width (no deduction under the wall): 2,025 + 225 + 240 = 2,490 psf; HouseCalc deducts the wall width: 2,025 + 225 + 180 = 2,430 psf (governing D + 0.75L + 0.75Lr)."
+   "note": "Tedds applies the soil overburden over the full footing width (no deduction under the wall); HouseCalc deducts the wall width. The difference equals the soil pressure × wall width / B exactly (240 psf × 0.5 ft / 2 ft = 60 psf)."
   },
   {
    "case": "10269-madrid-way-framing/STRIP FOOTING BELOW WALLS",
@@ -8127,10 +8127,10 @@
    "quantity": "qmax",
    "tedds": 2697,
    "dec": 0,
-   "housecalc": 2525,
-   "diff": -172,
+   "housecalc": 2597.5,
+   "diff": -99.5,
    "status": "documented",
-   "note": "Tedds base pressure 3–7 % higher than the loads printed on the sheet give: Tedds adds soil over the full width and a wall / pedestal weight not listed in the sheet inputs (F_dz printed but not itemised). HouseCalc value from the printed loads, footing and soil over the projection."
+   "note": "Tedds applies the soil overburden over the full footing width (no deduction under the wall); HouseCalc deducts the wall width. The difference equals the soil pressure × wall width / B exactly (300 psf × 0.667 ft / 2 ft = 100 psf)."
   },
   {
    "case": "215-alvarado-st-adu/(blank — header prints \"Section Sheet no./rev.\" with no name; Project \"ADU FOOTING\")",
@@ -8668,10 +8668,10 @@
    "quantity": "qmax",
    "tedds": 4759,
    "dec": 0,
-   "housecalc": 4562.0625,
-   "diff": -196.9375,
+   "housecalc": 4586.1375,
+   "diff": -172.86250000000018,
    "status": "documented",
-   "note": "Tedds base pressure 3–7 % higher than the loads printed on the sheet give: Tedds adds soil over the full width and a wall / pedestal weight not listed in the sheet inputs (F_dz printed but not itemised). HouseCalc value from the printed loads, footing and soil over the projection."
+   "note": "Tedds includes the moment of the horizontal seismic column force (F_Ex × h = 3.0 kips × 15 in.) in the governing combination; the register gives HouseCalc the vertical loads only (HouseCalc pads take the post's vertical reaction; lateral column shear goes to a base-plate / pier check)."
   },
   {
    "case": "215-paden-drive-adu/SHEET PAD FOUNDATION",
@@ -11857,10 +11857,10 @@
    "quantity": "qmax",
    "tedds": 2752,
    "dec": 0,
-   "housecalc": 2620,
-   "diff": -132,
+   "housecalc": 2692.5,
+   "diff": -59.5,
    "status": "documented",
-   "note": "Tedds base pressure 3–7 % higher than the loads printed on the sheet give: Tedds adds soil over the full width and a wall / pedestal weight not listed in the sheet inputs (F_dz printed but not itemised). HouseCalc value from the printed loads, footing and soil over the projection."
+   "note": "Tedds applies the soil overburden over the full footing width (no deduction under the wall); HouseCalc deducts the wall width. The difference equals the soil pressure × wall width / B exactly (180 psf × 0.667 ft / 2 ft = 60 psf)."
   },
   {
    "case": "2844-baily-ave-2-storey-detached-adu/FOUNDATION",
@@ -12077,7 +12077,7 @@
    "housecalc": 2015,
    "diff": -69,
    "status": "documented",
-   "note": "Tedds base pressure 3–7 % higher than the loads printed on the sheet give: Tedds adds soil over the full width and a wall / pedestal weight not listed in the sheet inputs (F_dz printed but not itemised). HouseCalc value from the printed loads, footing and soil over the projection."
+   "note": "Not reconciled from the printed inputs: Tedds F_dz = 3.334 kips implies soil over 1.39 ft of the 1.6 ft width (wall printed as 8 in.); HouseCalc 2,015 psf with the soil over the projection beyond the wall. Tedds is 3.4 % higher (conservative)."
   },
   {
    "case": "45324-indian-well-covered-carport/F1- 18\"X10\"",

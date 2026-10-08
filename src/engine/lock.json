@@ -1,10 +1,10 @@
 {
   "engine": {
-    "version": "0.9.0",
-    "hash": "90e29bcc21b5"
+    "version": "1.0.0",
+    "hash": "5a2888bb1c71"
   },
   "data": {
-    "version": "0.9",
+    "version": "1.0",
     "hash": "c391cc58e338"
   },
   "lockedOn": "2026-10-08",
@@ -13,6 +13,13 @@
       "engine": "0.9.0",
       "engineHash": "90e29bcc21b5",
       "data": "0.9",
+      "dataHash": "c391cc58e338",
+      "lockedOn": "2026-10-08"
+    },
+    {
+      "engine": "1.0.0",
+      "engineHash": "5a2888bb1c71",
+      "data": "1.0",
       "dataHash": "c391cc58e338",
       "lockedOn": "2026-10-08"
     }

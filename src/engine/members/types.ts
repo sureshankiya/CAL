@@ -29,7 +29,8 @@ export type MemberKind =
   | "tieIn"
   | "woodTruss"
   | "retainingWall"
-  | "guardPost";
+  | "guardPost"
+  | "cfsWall";
 
 export interface MemberReaction {
   support: number;

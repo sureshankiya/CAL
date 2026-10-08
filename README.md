@@ -56,6 +56,18 @@ noted and stamped by the Engineer of Record.
 
 AI extraction needs an Anthropic API key set as `ANTHROPIC_API_KEY` in the environment that runs the server (never in the browser or the project file).
 
+## Phase 5
+
+| Area | Included |
+|---|---|
+| Validation | 14 portfolio permit sets transcribed (verification/portfolio/sets) and normalised to 94 cases; 1,110 printed Tedds values recomputed by the engine — 1,083 match, 27 documented differences, 0 unexplained (VALIDATION.md, `tests/validation.test.ts`, regenerate with `UPDATE_REGISTER=1 bunx vitest run tests/validation.test.ts`) |
+| Fixes from validation | SDPWS 4.3.3.2.1 wind exception (WSP + gypsum wallboard additive), unblocked gypsum aspect 1.5:1, 1/2 in. gypsum sheathing and particleboard rows, opt-in 15/32 in. shear values (Table 4.3A footnote) |
+| Locked versions | Engine 1.0.0 / data library 1.0 fingerprints (`src/engine/lock.json`) stamped on every sheet; project files record the build; `bun run lock` refuses a changed source under an unchanged version; modified builds print "UNLOCKED" |
+| Retaining walls | RW-# cantilever walls, concrete or CMU stem: IBC 1807.2.3 sliding / overturning (1.5, 1.1 with 0.7E), bearing with partial contact, stem by the CW engine (one-way slab minimums for concrete stems, ACI 318-19 13.3.7.1), toe and heel flexure / shear per combination, minimum and longitudinal steel, dowel hook development |
+| Decks | GP-# guard posts (200 lb, bending, shear, washer bearing, bolt tension, tension device); deck framing uses the joist / beam / post / ledger / pad modules with the 40 psf deck live load, wet service and incising; deck and retaining-wall notes; **Deck + RW** options project |
+| Cold-formed steel | CS-# stud walls (optional): allowables from the manufacturer / SSMA table, demands, AISI S100-16 H1.2 with B₁ amplification, deflection |
+| Sign-off | SIGNOFF.md — release checklist; items for the Engineer of Record are listed there |
+
 ## Use
 
 ```bash
@@ -63,7 +75,7 @@ bun install
 bun run dev          # http://localhost:8080 (in a container without IPv6: bunx vite dev --host 127.0.0.1)
 ```
 
-- **Example** loads a one-story example house; **San Miguel** and **Truss check** load the Phase 4 validation projects; **New** / **Open… / Save** manage project files (`*.housecalc.json`).
+- **Example** loads a one-story example house; **San Miguel** and **Truss check** load the Phase 4 validation projects; **Deck + RW** loads the Phase 5 options project; **New** / **Open… / Save** manage project files (`*.housecalc.json`).
 - The sidebar holds the project, criteria, dead-load assemblies, levels, members and drawings; the preview shows one sheet or the full package.
 - **Print / Save PDF** prints the full package (US Letter). Printing is blocked while any member has an error.
 - Values in red are overrides or data marked VERIFY; the cover prints a DRAFT banner until they are resolved.
@@ -77,9 +89,10 @@ bun run test                 # unit tests + engine vs. independent reference
 bun run verify:reference     # regenerate verification/reference.json (Python, closed form)
 bun run print-check          # with the dev server running: PDF of the example package, page / footer checks
 bun run build
+bun run lock                 # release only: lock the engine / data-library fingerprints (bump src/engine/version.ts first)
 ```
 
-`verification/reference.py`, `reference_p2.py`, `reference_p3.py` and `reference_p4.py` are independent implementations (closed-form beam
+`verification/reference.py`, `reference_p2.py` … `reference_p5.py` are independent implementations (closed-form beam
 formulas, three-moment equation, NDS, AISC 360 / DG1, ACI 318 Ch. 17, SDPWS and ASCE 7 provisions written from the
 code text) — they do not use the TypeScript engine. `tests/reference*.test.ts` compare the engine with them.
 

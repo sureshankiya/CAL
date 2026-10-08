@@ -62,6 +62,7 @@ const KIND_ORDER: Record<string, number> = {
   woodTruss: 1,
   retainingWall: 10.9,
   guardPost: 4.6,
+  cfsWall: 6.5,
 };
 
 function orderKey(m: MemberSpec): number {

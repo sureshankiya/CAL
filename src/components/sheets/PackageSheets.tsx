@@ -50,6 +50,8 @@ export function spansText(r: AnyResult): string {
       return `${fmtFtIn(r.input.Hr)} retained`;
     case "guardPost":
       return `${fmt(r.input.guardHeight, 0)} in. guard`;
+    case "cfsWall":
+      return `${fmtFtIn(r.input.height)} high`;
   }
   const s = r.kind === "rafter" ? [r.input.run] : r.input.spans;
   const base = s.map((x) => fmtFtIn(x)).join(" + ");
@@ -607,6 +609,7 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
   const tis = of("tieIn");
   const rws = of("retainingWall");
   const gps = of("guardPost");
+  const css = of("cfsWall");
   const usedHw = new Set<string>([
     ...cns.map((c) => c.item.id),
     ...sws.flatMap((x) => (x.holdown ? [x.holdown.item.id] : [])),
@@ -1092,6 +1095,26 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
               pf(r),
             ];
           })}
+        />
+      ) : null}
+      {css.length ? (
+        <DataTable
+          caption="Cold-formed steel stud wall schedule"
+          head={["Mark", "Stud", "F_y", "Spacing", "Height", "Wind (psf)", "Table P_a / M_a", "Combined", "Result"].map(
+            (h) => rich(h),
+          )}
+          small
+          rows={css.map((r) => [
+            r.mark,
+            r.input.designation,
+            `${f0(r.input.Fy / 1000)} ksi`,
+            `${f0(r.input.spacing)}" o.c.`,
+            fmtFtIn(r.input.height),
+            f1(r.input.W),
+            `${f0(r.input.table.Pa)} lb / ${f0(r.input.table.Ma)} lb-in`,
+            f3(r.gov.ratio),
+            pf(r),
+          ])}
         />
       ) : null}
       {gps.length ? (

@@ -369,7 +369,7 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
       includeSeismic: !!present.E,
     }),
     present,
-  );
+  ).map((c) => (soil ? { ...c, label: `${c.label} + ${cmu ? "" : "1.6"}H` } : c));
   const axialAt = (c: Combination, x: number) => {
     let P = 0;
     for (const tp of LOAD_TYPES) P += (c.factors[tp] ?? 0) * top[tp];

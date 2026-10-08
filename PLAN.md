@@ -1,6 +1,6 @@
 # HouseCalc — Wood-Frame House Structural Calculator
 
-Merged build plan · Rev. I · 2026-10-08 · Phase 4 delivered — see Revision I; decisions in §13 approved
+Merged build plan · Rev. J · 2026-10-08 · Phase 5 delivered, release 1.0.0 locked — see Revision J; sign-off items in SIGNOFF.md
 
 Sources merged:
 - **Rev. A plan** — review of your Lovable apps JoistCalc, StudCalc and TrussCalc. STRUTURA (steel truss) is excluded.
@@ -10,6 +10,30 @@ Sources merged:
 Where the sources differ, the BUILD_PLAN decisions govern. Conflicts that need your decision are in §13.
 
 ---
+
+## Revision J — Phase 5 delivered (release 1.0.0)
+
+| Item | Status |
+|---|---|
+| Portfolio validation | All 14 remaining permit sets transcribed verbatim (verification/portfolio/sets — 110 calc sheets: 76 shear walls, 11 footings, 8 posts, beams, joists, rafters, CMU, steel, CFS, ledgers, trusses, reports) and normalised (normalize.py) to 94 automated cases. **1,110 printed Tedds values recomputed with the sheets' own inputs: 1,083 match (½ unit of the last printed digit or 0.5 %), 27 documented differences, 0 unexplained** — VALIDATION.md. Documented: segmented walls with openings (Tedds equal-deflection segment limit, 18 values), Tedds sheet errors (Blackthorne SW3 zero capacity, SW4 results of another wall), footing base pressure (Tedds applies the soil over the full width — 3 footings, explained exactly; lateral column-force moment — 1; one 3.4 % difference not reconciled from the printed inputs, Tedds higher), two sheets not runnable (Paden POST 2 contradictory, Bancroft W1 incomplete). 135 package QC observations (drawing vs calc, editions, placeholder loads) are listed per set for the EOR |
+| Fixes from validation | **SDPWS 4.3.3.2.1 exception** — WSP + gypsum wallboard additive for wind (HouseCalc used the dissimilar-material rule: conservative, now corrected; La Presa / Madrid / Blackthorne walls); unblocked gypsum maximum aspect 1.5:1 (was 2:1 — unconservative); portfolio rows added (1/2 in. gypsum sheathing unblocked 150 plf / blocked 350 plf, 5/8 in. particleboard 610 plf, Table 4.3B); opt-in 15/32 in. values for 3/8 / 7/16 in. panels (Table 4.3A footnote, as Tedds applies); in² checks printed to three decimals |
+| Locked versions | Engine 1.0.0 / data library 1.0 locked with source fingerprints (src/engine/lock.json, scripts/lock.mjs); fingerprint and lock state printed on every sheet ("UNLOCKED build — not for issue" otherwise); project files record the software and warn on a different build; lock test enforces a version bump for any calculation change |
+| Retaining walls (RW) | Cantilever wall, concrete or CMU stem: equivalent-fluid earth pressure on the heel plane, surcharge K_a q, seismic increment from the geotechnical report (uniform / inverted triangle); IBC 1807.2.3 sliding and overturning for every case with variable loads off (FS 1.5, 1.1 with 0.7E), passive below the neglected depth, friction or cohesion ≤ ½D; bearing per ASCE 7 §2.4 with partial contact; stem by the CW engine (concrete stem as one-way slab, ACI 318-19 13.3.7.1); toe / heel flexure and shear per strength combination with 1.6H, A_s,min, longitudinal steel, standard-hook development of the dowels; flag when SDC D–F with more than 6 ft of backfill lacks a dynamic pressure (IBC 1803.5.12) |
+| Decks | GP guard posts (200 lb or rail load; bending, shear, washer bearing, A307 bolt tension, tension device); deck framing through the existing joist / beam / post / ledger / pad modules (40 psf deck live load, wet service, incising); deck and retaining-wall general notes, soils special inspection; **Deck + RW** options project (all members pass; LG-1 needs a doubled rim and bolts at 8 in. — 1/2 in. bolts at 16 in. into a single 2x rim give D/C 2.72 by the NDS yield equations, mode II, wet service) |
+| Cold-formed steel (CS, optional) | SSMA designation → gross section; allowables from the stud load table (entered, VERIFY); ASD combinations, P / P_a, M / M_a, AISI S100-16 H1.2 with B₁ = 1 / (1 − 1.6P / P_e), deflection with 0.42W; East Grand: P / P_a = 1.76 / 2.44 = 0.721 reproduced (the sheet is an SSMA table lookup — no AISI calculation to compare) |
+| Verification | 155 tests. Independent Python reference for Phase 5 (verification/reference_p5.py: RW stability four cases, bearing, toe / heel per combination, hook, stem moment; guard post; CFS Ix, P_e, B₁, interaction, deflection) — all within 0.1 %. Print check: example house, San Miguel, truss check, deck + RW |
+| Sign-off | SIGNOFF.md — software, verification, data-library, code-provision and phase items; the items left for the EOR are the second-pass data check (29 tables), 11 provisions marked VERIFY, and the Phase 3 hand-checked lateral calcs |
+
+**Findings while validating**
+- The portfolio's 76 shear-wall sheets confirm the HouseCalc capacity, end-post and chord calculations for identical inputs; the demands on those sheets remain placeholders (§2B Q1 — W = 18–135 lb, E = 35–40 lb), so the sheets cannot validate demand.
+- Tedds limits segments of a wall with openings to the equal-deflection shear (SDPWS 4.3.3.4.1); HouseCalc's line distribution offers equal-deflection as an option. Choose the default (SIGNOFF D11).
+- Hand-written reports in the packages were not automated; they are listed in VALIDATION.md for the EOR (for example the Controllata loft joists, fb = 1,344 psi > 875 psi, marked NG in the report while the drawings show TJI 210 joists, and the Paden pad footing designed for 30 + 35 kips against post loads of about 16 kips).
+
+**Needed from you**
+1. Sign-off items in SIGNOFF.md (B7, C1–C7, D1–D11).
+2. Default for shear-wall segment distribution (equal deflection or capacity-proportional).
+3. Stud manufacturer / SSMA load tables you use for CFS walls, and the guard-post tension device you specify.
+4. Open Phase 4 items 1–7 (Revision I) still apply.
 
 ## Revision I — Phase 4 delivered
 

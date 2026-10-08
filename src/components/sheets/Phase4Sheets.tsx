@@ -57,45 +57,47 @@ export function WallDiagrams({ d, unitM }: { d: MasonryWallResult["diagram"]; un
   const H = d.x[d.x.length - 1] || 1;
   const y = (x: number) => top + Hd - (x / H) * Hd;
   return (
-    <div className="avoid-break mb-1 block">
-      <svg width="100%" viewBox={`0 0 ${Wd} ${Hd + top + 14}`} role="img" aria-label="Wall force diagrams">
-        {panels.map((p, k) => {
-          const x0 = k * pw + pw / 2;
-          const max = Math.max(1e-9, ...p.v.map((v) => Math.abs(v)));
-          const sc = (pw / 2 - 42) / max;
-          const pts = d.x.map((x, i) => `${x0 + p.v[i] * sc},${y(x)}`).join(" ");
-          const iPos = p.v.reduce((a, v, i) => (v > p.v[a] ? i : a), 0);
-          const iNeg = p.v.reduce((a, v, i) => (v < p.v[a] ? i : a), 0);
-          const iTop = p.v.length - 1;
-          const marks = [...new Set([iPos, iNeg, iTop])].filter((i) => Math.abs(p.v[i]) > max * 0.02);
-          const yLab = (i: number) => (i === 0 ? y(0) - 4 : i === iTop ? y(H) + 9 : y(d.x[i]) + 3);
-          return (
-            <g key={k}>
-              <text x={k * pw + 6} y={10} style={{ ...txt, fontWeight: 700, fontSize: 8.5 }}>
-                {p.title} ({p.unit})
-              </text>
-              <line x1={x0} y1={y(0)} x2={x0} y2={y(H)} {...line} />
-              <polygon points={`${x0},${y(0)} ${pts} ${x0},${y(H)}`} {...line} strokeWidth={0.8} />
-              {marks.map((i) => (
-                <text
-                  key={i}
-                  x={x0 + p.v[i] * sc + (p.v[i] >= 0 ? 3 : -3)}
-                  y={yLab(i)}
-                  style={txt}
-                  textAnchor={p.v[i] >= 0 ? "start" : "end"}
-                >
-                  {fmt(p.v[i], 1)}
+    <tr className="avoid-break">
+      <td colSpan={2} className="px-3 pb-2">
+        <svg width="100%" viewBox={`0 0 ${Wd} ${Hd + top + 14}`} role="img" aria-label="Wall force diagrams">
+          {panels.map((p, k) => {
+            const x0 = k * pw + pw / 2;
+            const max = Math.max(1e-9, ...p.v.map((v) => Math.abs(v)));
+            const sc = (pw / 2 - 42) / max;
+            const pts = d.x.map((x, i) => `${x0 + p.v[i] * sc},${y(x)}`).join(" ");
+            const iPos = p.v.reduce((a, v, i) => (v > p.v[a] ? i : a), 0);
+            const iNeg = p.v.reduce((a, v, i) => (v < p.v[a] ? i : a), 0);
+            const iTop = p.v.length - 1;
+            const marks = [...new Set([iPos, iNeg, iTop])].filter((i) => Math.abs(p.v[i]) > max * 0.02);
+            const yLab = (i: number) => (i === 0 ? y(0) - 4 : i === iTop ? y(H) + 9 : y(d.x[i]) + 3);
+            return (
+              <g key={k}>
+                <text x={k * pw + 6} y={10} style={{ ...txt, fontWeight: 700, fontSize: 8.5 }}>
+                  {p.title} ({p.unit})
                 </text>
-              ))}
-            </g>
-          );
-        })}
-        <line x1={0} y1={y(0)} x2={Wd} y2={y(0)} {...line} strokeWidth={0.5} />
-        <text x={2} y={y(0) + 10} style={txt}>
-          base
-        </text>
-      </svg>
-    </div>
+                <line x1={x0} y1={y(0)} x2={x0} y2={y(H)} {...line} />
+                <polygon points={`${x0},${y(0)} ${pts} ${x0},${y(H)}`} {...line} strokeWidth={0.8} />
+                {marks.map((i) => (
+                  <text
+                    key={i}
+                    x={x0 + p.v[i] * sc + (p.v[i] >= 0 ? 3 : -3)}
+                    y={yLab(i)}
+                    style={txt}
+                    textAnchor={p.v[i] >= 0 ? "start" : "end"}
+                  >
+                    {fmt(p.v[i], 1)}
+                  </text>
+                ))}
+              </g>
+            );
+          })}
+          <line x1={0} y1={y(0)} x2={Wd} y2={y(0)} {...line} strokeWidth={0.5} />
+          <text x={2} y={y(0) + 10} style={txt}>
+            base
+          </text>
+        </svg>
+      </td>
+    </tr>
   );
 }
 
@@ -910,76 +912,78 @@ function TrussElevation({ r }: { r: WoodTrussResult }) {
   const X = (x: number) => pad + (x - xmin) * sc;
   const Y = (y: number) => Hd - 24 - y * scY;
   return (
-    <div className="avoid-break mb-1 block">
-      <svg width="100%" viewBox={`0 0 ${Wd} ${Hd}`} role="img" aria-label="Truss elevation">
-        {g.tailLeft ? (
-          <line
-            x1={X(g.tailLeft.x)}
-            y1={Y(g.tailLeft.y)}
-            x2={X(g.nodes[g.topChordNodes[0]].x)}
-            y2={Y(g.nodes[g.topChordNodes[0]].y)}
-            {...line}
-          />
-        ) : null}
-        {g.tailRight ? (
-          <line
-            x1={X(g.tailRight.x)}
-            y1={Y(g.tailRight.y)}
-            x2={X(g.nodes[g.topChordNodes[g.topChordNodes.length - 1]].x)}
-            y2={Y(g.nodes[g.topChordNodes[g.topChordNodes.length - 1]].y)}
-            {...line}
-          />
-        ) : null}
-        {g.members.map((m, i) => {
-          const a = g.nodes[m.a];
-          const b = g.nodes[m.b];
-          const row = r.rows[i];
-          const F = row.mode === "compression" ? -row.Cmax : row.Tmax;
-          const mx = (X(a.x) + X(b.x)) / 2;
-          const my = (Y(a.y) + Y(b.y)) / 2;
-          return (
-            <g key={i}>
-              <line
-                x1={X(a.x)}
-                y1={Y(a.y)}
-                x2={X(b.x)}
-                y2={Y(b.y)}
-                {...line}
-                strokeWidth={m.group === "WEB" || m.group === "EV" ? 0.8 : 1.4}
-                strokeDasharray={row.mode === "compression" ? undefined : row.mode === "zero" ? "1 2" : "4 2"}
-              />
-              {row.mode !== "zero" ? (
-                <text x={mx} y={my - 2} style={{ ...txt, fontSize: 6.5 }} textAnchor="middle">
-                  {fmt(Math.abs(F), 0)}
-                  {row.mode === "compression" ? "C" : "T"}
-                </text>
-              ) : null}
-            </g>
-          );
-        })}
-        {g.nodes.map((n) => (
-          <text
-            key={n.id}
-            x={X(n.x) + 2}
-            y={Y(n.y) + (n.onBottomChord ? 9 : -4)}
-            style={{ ...txt, fontSize: 7, fontWeight: 700 }}
-          >
-            {n.name}
+    <tr className="avoid-break">
+      <td colSpan={2} className="px-3 pb-2">
+        <svg width="100%" viewBox={`0 0 ${Wd} ${Hd}`} role="img" aria-label="Truss elevation">
+          {g.tailLeft ? (
+            <line
+              x1={X(g.tailLeft.x)}
+              y1={Y(g.tailLeft.y)}
+              x2={X(g.nodes[g.topChordNodes[0]].x)}
+              y2={Y(g.nodes[g.topChordNodes[0]].y)}
+              {...line}
+            />
+          ) : null}
+          {g.tailRight ? (
+            <line
+              x1={X(g.tailRight.x)}
+              y1={Y(g.tailRight.y)}
+              x2={X(g.nodes[g.topChordNodes[g.topChordNodes.length - 1]].x)}
+              y2={Y(g.nodes[g.topChordNodes[g.topChordNodes.length - 1]].y)}
+              {...line}
+            />
+          ) : null}
+          {g.members.map((m, i) => {
+            const a = g.nodes[m.a];
+            const b = g.nodes[m.b];
+            const row = r.rows[i];
+            const F = row.mode === "compression" ? -row.Cmax : row.Tmax;
+            const mx = (X(a.x) + X(b.x)) / 2;
+            const my = (Y(a.y) + Y(b.y)) / 2;
+            return (
+              <g key={i}>
+                <line
+                  x1={X(a.x)}
+                  y1={Y(a.y)}
+                  x2={X(b.x)}
+                  y2={Y(b.y)}
+                  {...line}
+                  strokeWidth={m.group === "WEB" || m.group === "EV" ? 0.8 : 1.4}
+                  strokeDasharray={row.mode === "compression" ? undefined : row.mode === "zero" ? "1 2" : "4 2"}
+                />
+                {row.mode !== "zero" ? (
+                  <text x={mx} y={my - 2} style={{ ...txt, fontSize: 6.5 }} textAnchor="middle">
+                    {fmt(Math.abs(F), 0)}
+                    {row.mode === "compression" ? "C" : "T"}
+                  </text>
+                ) : null}
+              </g>
+            );
+          })}
+          {g.nodes.map((n) => (
+            <text
+              key={n.id}
+              x={X(n.x) + 2}
+              y={Y(n.y) + (n.onBottomChord ? 9 : -4)}
+              style={{ ...txt, fontSize: 7, fontWeight: 700 }}
+            >
+              {n.name}
+            </text>
+          ))}
+          {[g.supportLeft, g.supportRight].map((id, k) => (
+            <polygon
+              key={k}
+              points={`${X(g.nodes[id].x)},${Y(g.nodes[id].y)} ${X(g.nodes[id].x) - 6},${Y(g.nodes[id].y) + 10} ${X(g.nodes[id].x) + 6},${Y(g.nodes[id].y) + 10}`}
+              {...line}
+            />
+          ))}
+          <text x={pad} y={Hd - 2} style={txt}>
+            Span {fmt(g.span, 2)} ft — maximum ASD member forces, lb (solid = compression, dashed = tension)
+            {exag > 1.05 ? `; vertical scale × ${fmt(exag, 1)}` : ""}
           </text>
-        ))}
-        {[g.supportLeft, g.supportRight].map((id, k) => (
-          <polygon
-            key={k}
-            points={`${X(g.nodes[id].x)},${Y(g.nodes[id].y)} ${X(g.nodes[id].x) - 6},${Y(g.nodes[id].y) + 10} ${X(g.nodes[id].x) + 6},${Y(g.nodes[id].y) + 10}`}
-            {...line}
-          />
-        ))}
-        <text x={pad} y={Hd - 2} style={txt}>
-          Span {fmt(g.span, 2)} ft — maximum ASD member forces, lb (solid = compression, dashed = tension)
-          {exag > 1.05 ? `; vertical scale × ${fmt(exag, 1)}` : ""}
-        </text>
-      </svg>
-    </div>
+        </svg>
+      </td>
+    </tr>
   );
 }
 

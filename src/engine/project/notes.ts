@@ -190,6 +190,17 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
       ],
     });
 
+  const cfs = of("cfsWall");
+  if (cfs.length)
+    sections.push({
+      title: "Cold-formed steel framing",
+      notes: [
+        `Cold-formed steel studs and tracks: ASTM A1003, G60 coating minimum (G90 at exterior walls), sizes and yield strength as scheduled (${cfs.map((r) => r.mark).join(", ")}); member designations per SSMA / AISI S201.`,
+        "Design and installation per AISI S100 and AISI S240; bridging, blocking, jamb and header framing at openings and track fastening per the manufacturer and the details.",
+        "Screws: self-drilling, ASTM C1513, size and spacing as detailed; penetrate at least three exposed threads.",
+      ],
+    });
+
   if (has("steelBeam", "steelColumn", "basePlate"))
     sections.push({
       title: "Structural steel",

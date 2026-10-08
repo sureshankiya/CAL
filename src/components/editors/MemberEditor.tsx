@@ -35,6 +35,7 @@ import {
   type WoodTrussSpec,
   type RetainingWallSpec,
   type GuardPostSpec,
+  type CfsWallSpec,
 } from "@/engine/project";
 import { C_SHAPES, HSS_NAMES, ROUND_NAMES, STEEL_GRADES, W_SHAPES, steelShape } from "@/engine/data/steel";
 import { DIAPHRAGM_ROWS } from "@/engine/data/diaphragm";
@@ -894,6 +895,9 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
       break;
     case "guardPost":
       body = <GuardPostEditor p={p} m={m} upd={upd as Upd<GuardPostSpec>} />;
+      break;
+    case "cfsWall":
+      body = <CfsWallEditor p={p} m={m} upd={upd as Upd<CfsWallSpec>} />;
       break;
   }
   return (
@@ -4105,6 +4109,78 @@ function GuardPostEditor({ p, m, upd }: { p: Project; m: GuardPostSpec; upd: Upd
           checked={m.device.verified}
           onChange={(v) => upd({ device: { ...m.device, verified: v } })}
           label="Value checked against the current catalogue"
+        />
+      </Section>
+    </>
+  );
+}
+
+function CfsWallEditor({ p, m, upd }: { p: Project; m: CfsWallSpec; upd: Upd<CfsWallSpec> }) {
+  const num = (v: number | undefined, d: number) => v ?? d;
+  const t = m.table;
+  return (
+    <>
+      <Section title="Cold-formed steel studs">
+        <CommonFields p={p} m={m} upd={upd as Upd<MemberSpec>} />
+        <Grid cols={4}>
+          <Field label="SSMA designation">
+            <TextInput value={m.designation} onChange={(v) => upd({ designation: v.toUpperCase() })} />
+          </Field>
+          <Field label="F_y (psi)">
+            <Select value={String(m.Fy)} options={["33000", "50000"]} onChange={(v) => upd({ Fy: Number(v) })} />
+          </Field>
+          <Field label="Lip (in)">
+            <NumberInput value={m.lip} min={0.1} onChange={(v) => upd({ lip: num(v, 0.5) })} />
+          </Field>
+          <Field label="I_x from table (in⁴)">
+            <NumberInput value={m.IxTable} allowEmpty min={0.01} onChange={(v) => upd({ IxTable: v })} />
+          </Field>
+        </Grid>
+        <Grid cols={4}>
+          <Field label="Height (ft)">
+            <NumberInput value={m.height} min={1} onChange={(v) => upd({ height: num(v, 9) })} />
+          </Field>
+          <Field label="Spacing (in)">
+            <Select
+              value={String(m.spacing)}
+              options={["12", "16", "19.2", "24"]}
+              onChange={(v) => upd({ spacing: Number(v) })}
+            />
+          </Field>
+          <Field label="Wind W, C&C (psf)">
+            <NumberInput value={m.W} min={0} onChange={(v) => upd({ W: num(v, 0) })} />
+          </Field>
+          <Field label="Deflection limit H /">
+            <Select
+              value={String(m.deflLimit)}
+              options={["240", "360", "600", "720"]}
+              onChange={(v) => upd({ deflLimit: Number(v) })}
+            />
+          </Field>
+        </Grid>
+      </Section>
+      <Section title="Allowable strengths from the stud load table (ASD)">
+        <Grid cols={4}>
+          <Field label="P_a (lb)">
+            <NumberInput value={t.Pa} min={1} onChange={(v) => upd({ table: { ...t, Pa: num(v, 1000) } })} />
+          </Field>
+          <Field label="M_a (lb-in)">
+            <NumberInput value={t.Ma} min={1} onChange={(v) => upd({ table: { ...t, Ma: num(v, 1000) } })} />
+          </Field>
+          <Field label="V_a (lb)">
+            <NumberInput value={t.Va} allowEmpty min={1} onChange={(v) => upd({ table: { ...t, Va: v } })} />
+          </Field>
+          <Field label="Web crippling (lb)">
+            <NumberInput value={t.Pwc} allowEmpty min={1} onChange={(v) => upd({ table: { ...t, Pwc: v } })} />
+          </Field>
+        </Grid>
+        <Field label="Table source">
+          <TextInput value={t.source} onChange={(v) => upd({ table: { ...t, source: v } })} />
+        </Field>
+        <Check
+          checked={t.verified}
+          onChange={(v) => upd({ table: { ...t, verified: v } })}
+          label="Values checked against the current table"
         />
       </Section>
     </>

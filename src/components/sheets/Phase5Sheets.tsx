@@ -4,6 +4,7 @@
  */
 
 import type React from "react";
+import type { CfsWallResult } from "@/engine/members/cfsWall";
 import type { GuardPostResult } from "@/engine/members/guardPost";
 import type { RetainingWallResult } from "@/engine/members/retainingWall";
 import { B, DataTable, SectionHead, SubHead, TR } from "../report/primitives";
@@ -30,10 +31,10 @@ function RetainingSection({ r }: { r: RetainingWallResult }) {
   const w = r.input;
   const { B: Bw, ts, hf } = r.geo;
   const Wd = 470;
-  const Hd = 190;
+  const Hd = 250;
   const totalH = w.stem.height + hf;
-  const sc = Math.min((Wd - 160) / Bw, (Hd - 30) / totalH);
-  const x0 = 70;
+  const sc = Math.min((Wd - 220) / Bw, (Hd - 34) / totalH);
+  const x0 = (Wd - Bw * sc) / 2;
   const yb = Hd - 12;
   const X = (x: number) => x0 + x * sc;
   const Y = (y: number) => yb - y * sc;
@@ -42,46 +43,48 @@ function RetainingSection({ r }: { r: RetainingWallResult }) {
   const yGrade = hf + w.Hr;
   const yToe = hf + w.soil.toeCover;
   return (
-    <div className="avoid-break mb-1 block">
-      <svg width="100%" viewBox={`0 0 ${Wd} ${Hd}`} role="img" aria-label="Retaining wall section">
-        {/* footing and stem */}
-        <polygon
-          points={`${X(0)},${Y(0)} ${X(Bw)},${Y(0)} ${X(Bw)},${Y(hf)} ${X(toe + ts)},${Y(hf)} ${X(toe + ts)},${Y(yTop)} ${X(toe)},${Y(yTop)} ${X(toe)},${Y(hf)} ${X(0)},${Y(hf)}`}
-          {...line}
-          strokeWidth={1.2}
-        />
-        {/* retained grade behind, toe grade in front */}
-        <line x1={X(toe + ts)} y1={Y(yGrade)} x2={X(Bw) + 40} y2={Y(yGrade)} {...line} strokeDasharray="4 2" />
-        {w.soil.toeCover > 0 ? (
-          <line x1={X(0) - 30} y1={Y(yToe)} x2={X(toe)} y2={Y(yToe)} {...line} strokeDasharray="4 2" />
-        ) : null}
-        {/* earth pressure triangle on the heel plane */}
-        <polygon
-          points={`${X(Bw) + 6},${Y(yGrade)} ${X(Bw) + 6},${Y(0)} ${X(Bw) + 46},${Y(0)}`}
-          {...line}
-          strokeWidth={0.7}
-        />
-        <text x={X(Bw) + 50} y={Y(0) - 2} style={txt}>
-          {f0(w.soil.efp)} pcf
-        </text>
-        {/* dimensions */}
-        <text x={X(toe + ts) + 4} y={(Y(hf) + Y(yGrade)) / 2} style={txt}>
-          H_r = {f2(w.Hr)} ft
-        </text>
-        <text x={X(0)} y={yb + 10} style={txt}>
-          B = {f2(Bw)} ft (toe {f2(toe)}, stem {f2(ts)}, heel {f2(w.footing.heel)})
-        </text>
-        <text x={X(0) - 64} y={Y(hf / 2) + 3} style={txt}>
-          h_f = {f0(w.footing.h)} in
-        </text>
-        <text x={X(toe) - 4} y={Y(yTop) - 4} style={txt} textAnchor="end">
-          stem {f2(w.stem.height)} ft × {f1(w.stem.t)} in
-        </text>
-        <text x={X(Bw) + 44} y={Y(yGrade) - 4} style={txt}>
-          {w.soil.surcharge ? `q = ${f0(w.soil.surcharge)} psf` : "grade"}
-        </text>
-      </svg>
-    </div>
+    <tr className="avoid-break">
+      <td colSpan={2} className="px-3 pb-2">
+        <svg width="100%" viewBox={`0 0 ${Wd} ${Hd}`} role="img" aria-label="Retaining wall section">
+          {/* footing and stem */}
+          <polygon
+            points={`${X(0)},${Y(0)} ${X(Bw)},${Y(0)} ${X(Bw)},${Y(hf)} ${X(toe + ts)},${Y(hf)} ${X(toe + ts)},${Y(yTop)} ${X(toe)},${Y(yTop)} ${X(toe)},${Y(hf)} ${X(0)},${Y(hf)}`}
+            {...line}
+            strokeWidth={1.2}
+          />
+          {/* retained grade behind, toe grade in front */}
+          <line x1={X(toe + ts)} y1={Y(yGrade)} x2={X(Bw) + 40} y2={Y(yGrade)} {...line} strokeDasharray="4 2" />
+          {w.soil.toeCover > 0 ? (
+            <line x1={X(0) - 30} y1={Y(yToe)} x2={X(toe)} y2={Y(yToe)} {...line} strokeDasharray="4 2" />
+          ) : null}
+          {/* earth pressure triangle on the heel plane */}
+          <polygon
+            points={`${X(Bw) + 6},${Y(yGrade)} ${X(Bw) + 6},${Y(0)} ${X(Bw) + 46},${Y(0)}`}
+            {...line}
+            strokeWidth={0.7}
+          />
+          <text x={X(Bw) + 50} y={Y(0) - 2} style={txt}>
+            {f0(w.soil.efp)} pcf
+          </text>
+          {/* dimensions */}
+          <text x={X(toe + ts) + 4} y={(Y(hf) + Y(yGrade)) / 2} style={txt}>
+            Hr = {f2(w.Hr)} ft
+          </text>
+          <text x={X(0)} y={yb + 10} style={txt}>
+            B = {f2(Bw)} ft (toe {f2(toe)}, stem {f2(ts)}, heel {f2(w.footing.heel)})
+          </text>
+          <text x={X(0) - 64} y={Y(hf / 2) + 3} style={txt}>
+            hf = {f0(w.footing.h)} in
+          </text>
+          <text x={X(toe) - 4} y={Y(yTop) - 4} style={txt} textAnchor="end">
+            stem {f2(w.stem.height)} ft × {f1(w.stem.t)} in
+          </text>
+          <text x={X(Bw) + 44} y={Y(yGrade) - 4} style={txt}>
+            {w.soil.surcharge ? `q = ${f0(w.soil.surcharge)} psf` : "grade"}
+          </text>
+        </svg>
+      </td>
+    </tr>
   );
 }
 
@@ -304,6 +307,29 @@ export function RetainingWallSheet({ m, r, index, total, received, connections }
             f'<sub>c</sub> = {f0(f.fc)} psi; f<sub>y</sub> = {f0(f.fy)} psi
           </>
         }
+      />
+      <DataTable
+        caption="Footing actions per strength combination (moments per foot; toe + = bottom tension, heel − = top tension)"
+        head={[
+          "Combination",
+          "P_u (lb/ft)",
+          "x̄ (ft)",
+          "M_u toe (lb-in)",
+          "V_u toe (lb)",
+          "M_u heel (lb-in)",
+          "V_u heel (lb)",
+        ].map((h) => rich(h))}
+        align={["left", "right", "right", "right", "right", "right", "right"]}
+        small
+        rows={r.footing.rows.map((x) => [
+          x.combo.label,
+          f0(x.Pu),
+          f3(x.xbar),
+          f0(x.MuToe),
+          f0(x.VuToe),
+          f0(x.MuHeel),
+          f0(x.VuHeel),
+        ])}
       />
       <SubHead title="Toe — cantilever from the front face of the stem" />
       {f.toe > 0 ? (
@@ -552,6 +578,133 @@ export function GuardPostSheet({ m, r, index, total }: SheetProps<GuardPostResul
         notes={[
           "The tension device connects the top bolt to a deck joist or blocking; the joist / blocking and its fasteners are part of the device installation.",
           "Rails, balusters and infill (50 lb on 1 ft², IRC Table R301.5) are not checked here.",
+        ]}
+      />
+    </Frame>
+  );
+}
+
+export function CfsWallSheet({ m, r, index, total, received, connections }: SheetProps<CfsWallResult>) {
+  const w = r.input;
+  const s = r.section;
+  return (
+    <Frame
+      m={m}
+      r={r}
+      title={`Cold-formed steel stud wall (AISI S100, ${m.cycle.asce7} ASD)`}
+      subtitle={
+        <>
+          Studs from the manufacturer / SSMA load table, axial + wind — member {index} of {total}: {r.mark}
+        </>
+      }
+    >
+      <DesignBasis
+        m={m}
+        material={<>AISI S100-16 §H1.2 (combined), AISI S240; allowable strengths from the stud load table</>}
+        combos={<>{m.cycle.asce7} §2.4 (ASD)</>}
+      />
+      <SectionHead title="Stud" />
+      <TR desc="Mark" expr={<B>{`${r.mark} — ${r.callout}`}</B>} />
+      <TR
+        desc="Section"
+        expr={
+          <>
+            {w.designation}: web D = {f3(s.D)} in; flange B = {f3(s.B)} in; lip d = {f3(s.d)} in; design thickness t ={" "}
+            {s.mils} / 950 = {s.t.toFixed(4)} in; F<sub>y</sub> = {f0(w.Fy / 1000)} ksi; E = 29,500 ksi
+          </>
+        }
+      />
+      <TR
+        desc="Gross properties"
+        expr={
+          <>
+            A = {f3(s.A)} in²; I<sub>x</sub> = {f3(r.Ix)} in⁴{" "}
+            {w.IxTable ? "(load table)" : "(centre-line, square corners)"}
+          </>
+        }
+      />
+      <TR
+        desc="Wall"
+        expr={
+          <>
+            Height H = {f2(w.height)} ft; spacing s = {f0(w.spacing)} in o.c.; K = {f2(w.K)}
+          </>
+        }
+      />
+      <SectionHead title="Allowable strengths (load table)" />
+      <TR
+        desc="Table values"
+        expr={
+          <>
+            P<sub>a</sub> = {f0(w.table.Pa)} lb; M<sub>a</sub> = {f0(w.table.Ma)} lb-in
+            {w.table.Va ? `; V_a = ${f0(w.table.Va)} lb` : ""}
+            {w.table.Pwc ? `; web crippling ${f0(w.table.Pwc)} lb` : ""} ({w.table.source})
+          </>
+        }
+      />
+      <LoadPath received={received} connections={connections} />
+      <LoadLines lines={r.loadLines} />
+      <TR
+        desc="Per stud"
+        expr={
+          <>
+            P<sub>D</sub> = {f0(r.perStud.D)} lb; P<sub>L</sub> = {f0(r.perStud.L)} lb; P<sub>Lr</sub> ={" "}
+            {f0(r.perStud.Lr)} lb; P<sub>S</sub> = {f0(r.perStud.S)} lb; w<sub>W</sub> = {f1(r.w)} plf
+          </>
+        }
+      />
+      <SectionHead title="Combinations" />
+      <TR
+        desc="Euler load"
+        expr={
+          <>
+            P<sub>e</sub> = π² E I<sub>x</sub> / (K H)² = {f0(r.Pe)} lb; B<sub>1</sub> = 1 / (1 − 1.6 P / P<sub>e</sub>)
+          </>
+        }
+      />
+      <DataTable
+        caption="Per ASD combination"
+        head={["Combination", "P (lb)", "M (lb-in)", "V (lb)", "B_1", "P/P_a + B_1 M/M_a"].map((h) => rich(h))}
+        align={["left", "right", "right", "right", "right", "right"]}
+        small
+        rows={r.rows.map((x) => [x.combo.label, f0(x.P), f0(x.M), f0(x.V), f3(x.B1), f3(x.ratio)])}
+      />
+      <TR
+        desc="Combined (H1.2)"
+        expr={
+          <>
+            {f0(r.gov.P)} / {f0(w.table.Pa)} + {f3(r.gov.B1)} × {f0(r.gov.M)} / {f0(w.table.Ma)} = {f3(r.gov.ratio)} ≤
+            1.00 ({r.gov.combo.label})
+          </>
+        }
+        pass={r.gov.ratio <= 1}
+      />
+      {w.W ? (
+        <TR
+          desc="Deflection"
+          expr={
+            <>
+              Δ = 5 ({f2(w.deflWindFactor)} w<sub>W</sub>) H⁴ / (384 E I<sub>x</sub>) = {f3(r.defl.d)} in ≤ H /{" "}
+              {f0(w.deflLimit)} = {f3(r.defl.allow)} in
+            </>
+          }
+          pass={r.defl.d <= r.defl.allow}
+        />
+      ) : null}
+      <ChecksSummary checks={r.checks} />
+      <MemberResult r={r} />
+      <FinalSummary
+        rows={[
+          ["Studs", r.callout],
+          ["Governing check", `${r.governing.name} — D/C ${f3(r.governing.ratio)}`],
+          ["Field / EOR verification", verifyText(r)],
+        ]}
+      />
+      <AssumptionRows items={r.assumptions} />
+      <LimitationNotes
+        notes={[
+          "The section strength (effective width, distortional and global buckling) is the load table's; HouseCalc checks the demands against it and adds the second-order amplification.",
+          "Tracks, track-to-structure fasteners, bridging and headers / jambs at openings are detailed per AISI S240 and the manufacturer.",
         ]}
       />
     </Frame>

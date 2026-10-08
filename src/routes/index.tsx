@@ -20,6 +20,7 @@ import {
   exampleProject,
   sanMiguelProject,
   eastLincolnTrussProject,
+  deckExampleProject,
   fileNameFor,
   loadLocal,
   newMemberSpec,
@@ -190,6 +191,20 @@ function Index() {
               }}
             >
               Truss check
+            </button>
+            <button
+              type="button"
+              className={btn}
+              title="Phase 5 options: deck framing, guard post and site retaining wall"
+              onClick={() => {
+                const p = deckExampleProject();
+                setProject(p);
+                setActiveId(p.members[0]?.id);
+                setSheetKey("cover");
+                setMessage({ tone: "info", text: "Deck and retaining wall check loaded." });
+              }}
+            >
+              Deck + RW
             </button>
             <button type="button" className={btn} onClick={() => fileRef.current?.click()}>
               Open…

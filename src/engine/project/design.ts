@@ -46,6 +46,7 @@ import { designTieIn, type TieInResult } from "../members/tieIn";
 import { designWoodTruss, type WoodTrussResult } from "../members/woodTruss";
 import { designRetainingWall, type RetainingWallResult } from "../members/retainingWall";
 import { designGuardPost, type GuardPostResult } from "../members/guardPost";
+import { designCfsWall, type CfsWallResult } from "../members/cfsWall";
 import {
   designBasePlateMember,
   designSteelBeam,
@@ -82,7 +83,8 @@ export type AnyResult =
   | TieInResult
   | WoodTrussResult
   | RetainingWallResult
-  | GuardPostResult;
+  | GuardPostResult
+  | CfsWallResult;
 
 export interface DesignOutcome {
   spec: MemberSpec;
@@ -452,6 +454,8 @@ function designOne(
     }
     case "guardPost":
       return designGuardPost(ctx, m);
+    case "cfsWall":
+      return designCfsWall(ctx, { ...m, extra: [...m.extra, ...linked] });
     case "tieIn":
       return designTieIn(ctx, {
         ...m,

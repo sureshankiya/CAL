@@ -1,0 +1,202 @@
+/**
+ * Phase 5 options check project: an exterior deck (ledger, joists with a cantilever,
+ * drop beam, posts and pier pads, guard post) with a 4 ft site retaining wall, all in
+ * preservative-treated lumber / cast-in-place concrete. Used to exercise the deck load
+ * path (wet service, incising, 40 psf deck live load) and the retaining-wall module end
+ * to end; not a portfolio project.
+ */
+
+import { newProject } from "./example";
+import type { Project } from "./schema";
+
+export function deckExampleProject(): Project {
+  const p = newProject("Phase 5 options check — deck and site retaining wall");
+  p.info = { ...p.info, jobRef: "P5-DECK", date: "2026-10-08", preparedBy: "HouseCalc" };
+  p.criteria = {
+    ...p.criteria,
+    soil: {
+      bearing: 2000,
+      source: "Presumptive, CBC Table 1806.2, Class 4 — verify with geotechnical report",
+      class: "4",
+      density: 120,
+    },
+  };
+  p.structures = [{ id: "S1", name: "Deck and site walls", levels: [{ id: "DK", name: "Deck", number: 1 }] }];
+  const base = { structureId: "S1", levelId: "DK", status: "new" as const };
+  const line = (id: string, sourceId: string, support: number, label: string) => ({
+    id,
+    kind: "line" as const,
+    sourceId,
+    support,
+    label,
+    factor: 1,
+  });
+  const point = (id: string, sourceId: string, support: number, label: string, x: number) => ({
+    id,
+    kind: "point" as const,
+    sourceId,
+    support,
+    label,
+    x,
+    factor: 1,
+  });
+  p.members = [
+    {
+      kind: "joist",
+      id: "dk-dj1",
+      mark: "DJ-1",
+      description: "Deck joists, ledger to drop beam with 1'-6\" cantilever",
+      ...base,
+      links: [],
+      species: "DF-L",
+      grade: "No.2",
+      size: "2x8",
+      spacing: 16,
+      spans: [10],
+      rightCantilever: 1.5,
+      dead: { psf: 10 },
+      live: { use: "deck" },
+      extra: [],
+      bearing: [1.5, 3],
+      luBottom: 0,
+      rule441: true,
+      deflection: { preset: "floor" },
+      wetService: true,
+      incised: true,
+    },
+    {
+      kind: "ledger",
+      id: "dk-lg1",
+      mark: "LG-1",
+      description: "Deck ledger to the doubled house rim joist (flashed)",
+      ...base,
+      links: [line("dk-k1", "dk-dj1", 0, "Deck joists")],
+      ledger: { species: "DF-L", grade: "No.2", size: "2x10" },
+      extra: [],
+      lateral: { W: 0, E: 0 },
+      fastener: { type: "bolt", D: 0.5, Fyb: 45000, spacing: 8, label: "1/2 in. through-bolts, staggered" },
+      support: { kind: "wood", species: "DF-L", thickness: 3 },
+      continuity: 1.25,
+      wetService: true,
+    },
+    {
+      kind: "beam",
+      id: "dk-db1",
+      mark: "DB-1",
+      description: "Deck drop beam on posts at 8 ft",
+      ...base,
+      links: [line("dk-k2", "dk-dj1", 1, "Deck joists")],
+      role: "dropped",
+      material: { kind: "sawn", species: "DF-L", grade: "No.2", size: "4x10", plies: 1 },
+      spans: [8],
+      area: [],
+      walls: [],
+      extra: [],
+      bearing: [5.5, 5.5],
+      luTop: 0,
+      luBottom: 0,
+      deflection: { preset: "floor" },
+      selfWeight: true,
+      wetService: true,
+      incised: true,
+    },
+    {
+      kind: "post",
+      id: "dk-p1",
+      mark: "DP-1",
+      description: "Deck posts under DB-1",
+      ...base,
+      links: [point("dk-k3", "dk-db1", 0, "Drop beam", 0)],
+      material: { kind: "sawn", species: "DF-L", grade: "No.2", size: "6x6", plies: 1 },
+      height: 6,
+      Ke: 1,
+      extra: [],
+      bearing: { on: "concrete" },
+      selfWeight: true,
+      wetService: true,
+      incised: true,
+    },
+    {
+      kind: "footing",
+      id: "dk-pf1",
+      mark: "PF-1",
+      description: "Pier pads under the deck posts",
+      ...base,
+      links: [point("dk-k4", "dk-p1", 0, "Post", 0)],
+      type: "pad",
+      B: 2,
+      L: 2,
+      h: 12,
+      depth: 18,
+      soilOver: 6,
+      c1: 5.5,
+      c2: 5.5,
+      extra: [],
+      stories: 1,
+    },
+    {
+      kind: "guardPost",
+      id: "dk-gp1",
+      mark: "GP-1",
+      description: "Guard posts at the deck edge, 36 in. guard",
+      ...base,
+      links: [],
+      post: { species: "DF-L", grade: "No.1", size: "4x6" },
+      wetService: true,
+      incised: true,
+      guardHeight: 36,
+      topBolt: 2,
+      s: 8,
+      P: 200,
+      rail: { w: 0, spacing: 0 },
+      bolt: { d: 0.5, Fu: 60000, label: "1/2 in. A307 through-bolts" },
+      washer: 2,
+      device: {
+        model: "Tension device (e.g. DTT2Z) — confirm",
+        capacity: 1825,
+        source: "manufacturer catalogue — confirm the allowable tension",
+        verified: false,
+      },
+    },
+    {
+      kind: "retainingWall",
+      id: "dk-rw1",
+      mark: "RW-1",
+      description: "Site retaining wall below the deck, 4 ft retained",
+      ...base,
+      links: [],
+      Hr: 4,
+      stem: {
+        material: "concrete",
+        height: 4.5,
+        t: 8,
+        concrete: { fc: 2500, gamma: 150, cover: 2 },
+        fy: 60000,
+        vertical: { size: "#4", spacing: 12, layout: "offset", d: 5.75 },
+        horizontal: { size: "#4", count: 1, spacing: 12 },
+      },
+      footing: {
+        toe: 1,
+        heel: 3,
+        h: 14,
+        coverBottom: 3,
+        coverTop: 2,
+        bottom: { size: "#5", spacing: 12 },
+        top: { size: "#5", spacing: 12 },
+        longitudinal: { size: "#5", count: 5 },
+      },
+      soil: {
+        efp: 35,
+        efpSource: "assumed active 35 pcf, level drained backfill — confirm with the geotechnical report (IBC 1610.1)",
+        surcharge: 100,
+        toeCover: 1,
+        countToeSoil: false,
+        neglectPassive: 1,
+      },
+      extra: [],
+    },
+  ];
+  p.lateral = undefined;
+  p.notes = "Options check for the Phase 5 deck and retaining-wall modules (not a portfolio project).";
+  return p;
+}

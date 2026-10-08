@@ -731,6 +731,30 @@ export const guardPostSpecSchema = z.object({
   device: z.object({ model: z.string(), capacity: pos, source: z.string(), verified: z.boolean() }),
 });
 
+export const cfsWallSpecSchema = z.object({
+  kind: z.literal("cfsWall"),
+  ...common,
+  designation: z.string(),
+  lip: pos.default(0.5),
+  Fy: pos,
+  height: pos,
+  spacing: pos,
+  extra: z.array(extraLoadSchema).default([]),
+  W: nonneg,
+  deflWindFactor: pos.default(0.42),
+  deflLimit: pos.default(240),
+  table: z.object({
+    Pa: pos,
+    Ma: pos,
+    Va: pos.optional(),
+    Pwc: pos.optional(),
+    source: z.string(),
+    verified: z.boolean(),
+  }),
+  IxTable: pos.optional(),
+  K: pos.default(1),
+});
+
 export const woodTrussSpecSchema = z.object({
   kind: z.literal("woodTruss"),
   ...common,
@@ -787,6 +811,7 @@ export const memberSpecSchema = z.discriminatedUnion("kind", [
   woodTrussSpecSchema,
   retainingWallSpecSchema,
   guardPostSpecSchema,
+  cfsWallSpecSchema,
 ]);
 
 export const hardwareItemSchema = z.object({
@@ -987,6 +1012,7 @@ export type TieInSpec = z.infer<typeof tieInSpecSchema>;
 export type WoodTrussSpec = z.infer<typeof woodTrussSpecSchema>;
 export type RetainingWallSpec = z.infer<typeof retainingWallSpecSchema>;
 export type GuardPostSpec = z.infer<typeof guardPostSpecSchema>;
+export type CfsWallSpec = z.infer<typeof cfsWallSpecSchema>;
 export type LateralSpec = z.infer<typeof lateralSchema>;
 export type HardwareSpec = z.infer<typeof hardwareItemSchema>;
 export type LinkedLoad = z.infer<typeof linkedLoadSchema>;

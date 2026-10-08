@@ -148,6 +148,13 @@ export function targetFields(m: MemberSpec): TargetField[] {
         { field: "footing.heel", label: "Heel length (ft)", numeric: true },
         { field: "footing.h", label: "Footing thickness (in)", numeric: true },
       ];
+    case "cfsWall":
+      return [
+        ...common,
+        { field: "designation", label: "Stud designation (SSMA)", numeric: false },
+        { field: "spacing", label: "Stud spacing (in)", numeric: true },
+        { field: "height", label: "Stud height (ft)", numeric: true },
+      ];
     case "guardPost":
       return [
         ...common,

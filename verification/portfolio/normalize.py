@@ -307,6 +307,12 @@ def footing(set_id, s):
         if m:
             loads.setdefault(m.group(1), 0)
             loads[m.group(1)] += (num(xs[0][1]) or 0) * (1000 if "kip" in str(xs[0][1]) else 1)
+    # uniform surcharges on the footing area (psf): dead FDsur, live FLsur
+    area = Lx * Ly
+    for sk, t in (("FDsur", "D"), ("FLsur", "L")):
+        v = num(first(L, sk))
+        if v:
+            loads[t] = loads.get(t, 0) + v * area
     bars = g("Tension reinforcement provided", "Bottom reinforcement provided", "Final bar callout")
 
     def res(*names):

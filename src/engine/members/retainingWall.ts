@@ -145,6 +145,17 @@ export interface RwFootingSection {
   phiVc: number;
 }
 
+/** footing actions per strength combination (moments lb-in/ft: toe + bottom tension, heel − top tension) */
+export interface RwFootingRow {
+  combo: Combination;
+  Pu: number;
+  xbar: number;
+  MuToe: number;
+  VuToe: number;
+  MuHeel: number;
+  VuHeel: number;
+}
+
 export interface RetainingWallResult extends MemberResultBase {
   kind: "retainingWall";
   input: RetainingWallInput;
@@ -155,7 +166,14 @@ export interface RetainingWallResult extends MemberResultBase {
   stability: RwStabilityCase[];
   bearing: RwBearingRow[];
   bearingGov: RwBearingRow;
-  footing: { toe: RwFootingSection; heel: RwFootingSection; AsMin: number; AsBot: number; AsTop: number };
+  footing: {
+    toe: RwFootingSection;
+    heel: RwFootingSection;
+    AsMin: number;
+    AsBot: number;
+    AsTop: number;
+    rows: RwFootingRow[];
+  };
   longitudinal: { As: number; req: number; spacing: number; maxSpacing: number };
   dowel: { size: string; db: number; ldh: number; avail: number; psi: { e: number; r: number; o: number; c: number } };
   stem: MasonryWallResult;
@@ -351,7 +369,7 @@ export function designRetainingWall(ctx: DesignContext, w: RetainingWallInput): 
   const asd = relevantCombinations(
     asdCombinations({ SDS: ctx.SDS, includeWind: false, includeSeismic: !!seis }),
     present,
-  );
+  ).map((c) => ({ ...c, label: `${c.label} + H` }));
   const lateralMoment = (c: Combination) => {
     let H = 0;
     let M = 0;
@@ -384,7 +402,7 @@ export function designRetainingWall(ctx: DesignContext, w: RetainingWallInput): 
   const strength = relevantCombinations(
     strengthCombinations({ SDS: ctx.SDS, includeWind: false, includeSeismic: !!seis }),
     present,
-  );
+  ).map((c) => ({ ...c, label: `${c.label} + 1.6H` }));
   const bBot = bar(f.bottom.size);
   const bTop = bar(f.top.size);
   const AsBot = (bBot.A * 12) / f.bottom.spacing;
@@ -420,6 +438,7 @@ export function designRetainingWall(ctx: DesignContext, w: RetainingWallInput): 
     phiVc: oneWayShear(12, dTop, AsTop, f.fc).phiVc,
   };
   const toeSoil = s.toeCover > 0 ? s.gamma * s.toeCover : 0;
+  const footingRows: RwFootingRow[] = [];
   for (const c of strength) {
     const kD = c.factors.D ?? 0;
     const kL = c.factors.L ?? 0;
@@ -442,6 +461,8 @@ export function designRetainingWall(ctx: DesignContext, w: RetainingWallInput): 
       continue;
     }
     const q = (x: number) => pressureAt(P, xbar, B, x);
+    const row: RwFootingRow = { combo: c, Pu: P, xbar, MuToe: 0, VuToe: 0, MuHeel: 0, VuHeel: 0 };
+    footingRows.push(row);
     // toe: net upward = soil pressure − footing − soil over the toe (lb/ft per ft), moment at the front face
     const toeNet = (x: number) => q(x) - kD * (CONCRETE * hf + toeSoil);
     if (f.toe > 0) {
@@ -451,6 +472,8 @@ export function designRetainingWall(ctx: DesignContext, w: RetainingWallInput): 
       if (-Mu > -toe.MuNeg.Mu) toe.MuNeg = { Mu, combo: c.label };
       const V = Math.abs(integrate(toeNet, 0, toe.Vu.at, 0).F);
       if (V > toe.Vu.Vu) toe.Vu = { ...toe.Vu, Vu: V, combo: c.label };
+      row.MuToe = Mu;
+      row.VuToe = V;
     }
     // heel: net downward = footing + soil + surcharge − soil pressure, moment at the back face
     const heelDown = kD * (CONCRETE * hf + s.gamma * w.Hr) + kL * s.surcharge;
@@ -460,6 +483,8 @@ export function designRetainingWall(ctx: DesignContext, w: RetainingWallInput): 
     if (MuH > heel.MuPos.Mu) heel.MuPos = { Mu: MuH, combo: c.label };
     if (MuH < heel.MuNeg.Mu) heel.MuNeg = { Mu: MuH, combo: c.label };
     if (Math.abs(hm.F) > heel.Vu.Vu) heel.Vu = { ...heel.Vu, Vu: Math.abs(hm.F), combo: c.label };
+    row.MuHeel = MuH;
+    row.VuHeel = Math.abs(hm.F);
   }
   const AsMin = 0.0018 * 12 * f.h;
 
@@ -719,7 +744,7 @@ export function designRetainingWall(ctx: DesignContext, w: RetainingWallInput): 
     stability,
     bearing,
     bearingGov,
-    footing: { toe, heel, AsMin, AsBot, AsTop },
+    footing: { toe, heel, AsMin, AsBot, AsTop, rows: footingRows },
     longitudinal: { As: AsL, req: reqL, spacing: spL, maxSpacing: maxSpL },
     dowel: { size: w.stem.vertical.size, db: hook.db, ldh: hook.ldh, avail, psi: hook.psi },
     stem,

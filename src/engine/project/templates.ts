@@ -25,6 +25,7 @@ import type {
   MasonryWallSpec,
   RetainingWallSpec,
   GuardPostSpec,
+  CfsWallSpec,
   HoldownFootingSpec,
   TieInSpec,
   WoodTrussSpec,
@@ -61,7 +62,8 @@ export type NewMemberKind =
   | "tieIn"
   | "woodTruss"
   | "retainingWall"
-  | "guardPost";
+  | "guardPost"
+  | "cfsWall";
 
 export const NEW_MEMBER_LABEL: Record<NewMemberKind, string> = {
   joist: "Floor joist (FJ)",
@@ -94,6 +96,7 @@ export const NEW_MEMBER_LABEL: Record<NewMemberKind, string> = {
   woodTruss: "Wood truss — designed in HouseCalc (T)",
   retainingWall: "Cantilever retaining wall (RW)",
   guardPost: "Deck guard post (GP)",
+  cfsWall: "Cold-formed steel stud wall (CS)",
 };
 
 let counter = 0;
@@ -603,6 +606,27 @@ export function newMemberSpec(p: Project, kind: NewMemberKind, structureId: stri
           verified: false,
         },
       } satisfies GuardPostSpec;
+    case "cfsWall":
+      return {
+        kind: "cfsWall",
+        ...base,
+        designation: "362S162-54",
+        lip: 0.5,
+        Fy: 50000,
+        height: 9,
+        spacing: 16,
+        extra: [],
+        W: 0,
+        deflWindFactor: 0.42,
+        deflLimit: 360,
+        table: {
+          Pa: 1000,
+          Ma: 1000,
+          source: "manufacturer / SSMA load table — enter the allowable values",
+          verified: false,
+        },
+        K: 1,
+      } satisfies CfsWallSpec;
   }
 }
 
@@ -635,6 +659,8 @@ export function supportCount(m: MemberSpec): number {
     case "retainingWall":
     case "guardPost":
       return 0;
+    case "cfsWall":
+      return 1;
     case "steelColumn":
       return 2;
     case "basePlate":
@@ -666,6 +692,7 @@ export function supportLabels(m: MemberSpec): string[] {
     case "ledger":
       return ["Wall (line)"];
     case "masonryWall":
+    case "cfsWall":
       return ["Base (line)"];
     default:
       return Array.from({ length: supportCount(m) }, (_, i) => String.fromCharCode(65 + i));

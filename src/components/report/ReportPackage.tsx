@@ -2,7 +2,7 @@
 
 import type { Project, ProjectDesign } from "@/engine/project";
 import { HoldownFootingSheet, MasonryWallSheet, TieInSheet, WoodTrussSheet } from "../sheets/Phase4Sheets";
-import { GuardPostSheet, RetainingWallSheet } from "../sheets/Phase5Sheets";
+import { CfsWallSheet, GuardPostSheet, RetainingWallSheet } from "../sheets/Phase5Sheets";
 import { metaFor } from "../sheets/common";
 import { IJoistSheet } from "../sheets/IJoistSheet";
 import {
@@ -182,6 +182,8 @@ function SheetBody({
           return <RetainingWallSheet {...common} r={r} />;
         case "guardPost":
           return <GuardPostSheet {...common} r={r} />;
+        case "cfsWall":
+          return <CfsWallSheet {...common} r={r} />;
         default:
           return (
             <WoodMemberSheet
