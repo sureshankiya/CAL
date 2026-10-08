@@ -2,7 +2,7 @@
 
 import { fmt } from "@/engine/core/fmt";
 import type { IJoistResult } from "@/engine/members";
-import { tableStatusText } from "@/engine/data/library";
+import { TABLES, tableStatusText } from "@/engine/data/library";
 import {
   B,
   DataTable,
@@ -151,7 +151,16 @@ export function IJoistSheet({
       ))}
 
       <SectionHead title="Manufacturer design properties (100 % load duration)" />
-      <TR desc="Source" expr={<Flag>{tableStatusText("tji-4000")}</Flag>} />
+      <TR
+        desc="Source"
+        expr={
+          TABLES["tji-4000"].status === "verified" ? (
+            tableStatusText("tji-4000")
+          ) : (
+            <Flag>{tableStatusText("tji-4000")}</Flag>
+          )
+        }
+      />
       <TR
         desc="Depth / flange width"
         expr={

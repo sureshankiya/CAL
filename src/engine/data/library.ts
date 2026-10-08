@@ -2,7 +2,12 @@
  * Data-library registry. Every table used by a calculation carries its source
  * document, edition and entry-check status. Sheets print the table reference
  * and status in the Design-basis block; tables that are not yet checked
- * against the printed source print as VERIFY.
+ * against a published source print as VERIFY.
+ *
+ * Status:
+ *  - verified: every value checked against the publisher's document (or the code text);
+ *    `checked` names the document(s) and the date of the check
+ *  - unverified: not yet checked — prints VERIFY on every sheet that uses it
  */
 
 export type CheckStatus = "unverified" | "verified";
@@ -14,6 +19,8 @@ export interface TableMeta {
   edition: string;
   status: CheckStatus;
   note?: string;
+  /** verification record: document(s) checked against and the date (verified tables) */
+  checked?: { against: string; on: string };
 }
 
 export const TABLES: Record<string, TableMeta> = {
@@ -238,5 +245,7 @@ export const tableRef = (id: string) => TABLES[id];
 export function tableStatusText(id: string): string {
   const t = TABLES[id];
   if (!t) return "—";
-  return t.status === "verified" ? `${t.source} (${t.edition}) — checked` : `${t.source} (${t.edition}) — VERIFY`;
+  return t.status === "verified"
+    ? `${t.source} (${t.edition}) — checked against ${t.checked?.against ?? "the published source"}`
+    : `${t.source} (${t.edition}) — VERIFY`;
 }

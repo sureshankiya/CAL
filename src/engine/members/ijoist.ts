@@ -15,7 +15,7 @@ import { LOAD_TYPES, loadVector, type LoadType } from "../core/loads";
 import { fromDefault, type AssumptionEntry } from "../core/provenance";
 import { governingCheck, type Check } from "../design/wood";
 import { tjiProps, type TjiDepth, type TjiProps, type TjiSeries } from "../data/ijoist";
-import { tableStatusText } from "../data/library";
+import { TABLES, tableStatusText } from "../data/library";
 import {
   extraToBeamLoads,
   loadAssumptions,
@@ -448,7 +448,12 @@ export function designIJoist(ctx: DesignContext, j: IJoistInput): IJoistResult {
 
   const assumptions: AssumptionEntry[] = [
     ...loadAssumptions(dead, live),
-    fromDefault("I-joist properties", `${j.series} ${j.depth}: ${tableStatusText("tji-4000")}`, "manufacturer", true),
+    fromDefault(
+      "I-joist properties",
+      `${j.series} ${j.depth}: ${tableStatusText("tji-4000")}`,
+      "manufacturer",
+      TABLES["tji-4000"].status !== "verified",
+    ),
     fromDefault(
       "Load duration",
       j.cdOverride ? `C_D = ${fmt(j.cdOverride, 2)} (manual)` : "C_D per combination applied to Mr, Vr and reaction",
