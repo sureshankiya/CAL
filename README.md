@@ -85,6 +85,7 @@ bun run build:static # browser-only single-page build (dist-artifact/housecalc.h
   - A **drawing-data document** (a full-house calculation data extraction with criteria tables, beam / wall / footing schedules, a joist register and OCR text) is recognised and converted to an input sheet: project information, code cycle, criteria and one member per scheduled beam, bearing wall, footing, post and new joist / rafter. What the drawings do not give (spans, lengths, heights, trib widths, nailing, soil bearing) stays at the template value and is listed per member as REQUIRED INPUT — the sheet prints VERIFY and the cover DRAFT until each is marked entered in the member editor. Conflicts and skipped items go to the project notes. Shear walls are listed in the notes for the Lateral setup.
 - The sidebar holds the project, criteria, dead-load assemblies, levels, members and drawings; the preview shows one sheet or the full package.
 - **Print / Save PDF** prints the full package (US Letter). Printing is blocked while any member has an error.
+- **Download report (.html)** saves the full package as one standalone HTML file — open it in a browser and print to PDF (Letter, background graphics on). In the claude.ai Artifact view the page cannot open the print dialog, so **Print / Save PDF** hands over this file; **Save**, **Export .md** and the report go through the viewer's download confirmation there.
 - Values in red are overrides or data marked VERIFY; the cover prints a DRAFT banner until they are resolved.
 
 ## Checks

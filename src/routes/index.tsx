@@ -14,6 +14,8 @@ import {
 } from "@/components/editors/ProjectPanels";
 import { DrawingsPanel } from "@/components/drawings/DrawingsPanel";
 import { MarkdownExportDialog, MarkdownImportDialog } from "@/components/editors/MarkdownDialog";
+import { saveFile, saveMessage } from "@/lib/download";
+import { reportHtml } from "@/lib/reportHtml";
 import { getCycle } from "@/engine/core/codes";
 import {
   designProject,
@@ -106,23 +108,39 @@ function Index() {
     });
   }
 
-  function saveFile() {
-    const blob = new Blob([serializeProject(project)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileNameFor(project);
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  function saveProject() {
+    const name = fileNameFor(project);
+    saveFile(name, serializeProject(project), "application/json").then((o) => setMessage(saveMessage(name, o)));
+  }
+
+  function printBlocked(): boolean {
+    const errors = [...design.outcomes.values()].filter((o) => o.error);
+    if (!errors.length) return false;
+    setMessage({
+      tone: "error",
+      text: `Printing blocked — fix the members with errors first: ${errors.map((e) => `${e.spec.mark} (${e.error})`).join("; ")}`,
+    });
+    return true;
+  }
+
+  function downloadReport() {
+    if (printBlocked()) return;
+    const name = fileNameFor(project).replace(/\.housecalc\.json$/, "-calculations.html");
+    const html = reportHtml(deferred, design, entries);
+    saveFile(name, html, "text/html").then((o) =>
+      setMessage(
+        o === "saved"
+          ? { tone: "info", text: `Saved ${name} — open it in your browser and print to PDF (Letter).` }
+          : saveMessage(name, o),
+      ),
+    );
   }
 
   function handlePrint() {
-    const errors = [...design.outcomes.values()].filter((o) => o.error);
-    if (errors.length) {
-      setMessage({
-        tone: "error",
-        text: `Printing blocked — fix the members with errors first: ${errors.map((e) => `${e.spec.mark} (${e.error})`).join("; ")}`,
-      });
+    if (printBlocked()) return;
+    // the claude.ai Artifact viewer cannot open the print dialog: hand over the report file instead
+    if (typeof (window as Window & { claude?: { use?: unknown } }).claude?.use === "function") {
+      downloadReport();
       return;
     }
     setMode("package");
@@ -222,7 +240,7 @@ function Index() {
                 e.target.value = "";
               }}
             />
-            <button type="button" className={btn} onClick={saveFile}>
+            <button type="button" className={btn} onClick={saveProject}>
               Save
             </button>
             <button
@@ -240,6 +258,14 @@ function Index() {
               onClick={() => setMdDialog("export")}
             >
               Export .md
+            </button>
+            <button
+              type="button"
+              className={btn}
+              title="The full package as one HTML file — open it in a browser and print to PDF"
+              onClick={downloadReport}
+            >
+              Download report (.html)
             </button>
             <button type="button" onClick={handlePrint} className={primary}>
               Print / Save PDF

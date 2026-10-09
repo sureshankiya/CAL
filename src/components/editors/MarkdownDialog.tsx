@@ -6,6 +6,7 @@
  */
 
 import { useRef, useState } from "react";
+import { saveFile, saveMessage } from "@/lib/download";
 import {
   applyMarkdown,
   convertDrawingData,
@@ -285,12 +286,7 @@ export function MarkdownExportDialog({ project, onClose }: { project: Project; o
           type="button"
           className={btn}
           onClick={() => {
-            const url = URL.createObjectURL(new Blob([md], { type: "text/markdown" }));
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = fname;
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            saveFile(fname, md, "text/markdown").then((o) => setNote(saveMessage(fname, o).text));
           }}
         >
           Download {fname}
