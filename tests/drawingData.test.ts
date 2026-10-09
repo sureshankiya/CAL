@@ -1,7 +1,7 @@
 /**
  * Drawing-data documents → input sheet (convertDrawingData): recognition, values read from
  * the criteria / schedule tables, conflicts and missing inputs reported, REQUIRED INPUT
- * carried as pendingInputs (VERIFY on the sheet, DRAFT on the cover).
+ * carried as pendingInputs (VERIFY on the sheet).
  */
 
 import { describe, expect, it } from "vitest";
@@ -123,7 +123,7 @@ describe("drawing-data documents", () => {
     expect(fj.kind === "joist" && [fj.size, fj.spacing, fj.levelId, fj.dead.psf]).toEqual(["2x10", 16, "L2", 12]);
     for (const m of p.members) expect(m.pendingInputs?.length).toBeGreaterThan(0);
 
-    // every member prints VERIFY for its missing inputs (DRAFT banner on the cover)
+    // every member prints VERIFY for its missing inputs
     const d = designProject(p);
     for (const [, o] of d.outcomes) {
       expect(o.error).toBeUndefined();

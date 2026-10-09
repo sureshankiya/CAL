@@ -174,7 +174,7 @@ export function MarkdownImportDialog({
           </details>
           <div className="text-muted-foreground">
             Each member lists its missing inputs (spans, lengths, heights, trib widths, nailing) as REQUIRED INPUT; its
-            sheet prints VERIFY and the cover prints DRAFT until you mark them entered in the member editor.
+            sheet prints VERIFY until you mark them entered in the member editor.
           </div>
         </div>
       ) : null}

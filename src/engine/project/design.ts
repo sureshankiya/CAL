@@ -571,7 +571,7 @@ function markExisting(m: MemberSpec, r: AnyResult) {
   );
 }
 
-/** Inputs not yet entered: a VERIFY assumption (DRAFT banner on the cover) and a sheet flag. */
+/** Inputs not yet entered: a VERIFY assumption and a sheet flag. */
 function markPending(m: MemberSpec, r: AnyResult) {
   const list = m.pendingInputs?.filter((x) => x.trim());
   if (!list?.length) return;

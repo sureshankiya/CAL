@@ -70,7 +70,6 @@ export function CoverSheet({ m, design, entries }: { m: SheetMeta; design: Proje
     const t = o.result?.title ?? o.spec.kind;
     counts.set(t, (counts.get(t) ?? 0) + 1);
   }
-  const verify = [...design.outcomes.values()].some((o) => o.result?.assumptions.some((a) => a.verify));
   return (
     <Sheet f={titleFields(m)} footerLeft={ft.left} footerCenter={ft.center} first id="sheet-cover">
       <tr>
@@ -84,13 +83,6 @@ export function CoverSheet({ m, design, entries }: { m: SheetMeta; design: Proje
           {p.info.address ? <div className="text-[10.5pt] font-normal">{p.info.address}</div> : null}
         </td>
       </tr>
-      {verify ? (
-        <TextRow>
-          <div className="text-center text-[11pt] font-bold">
-            <Flag>DRAFT — contains items marked VERIFY. Not for permit until resolved.</Flag>
-          </div>
-        </TextRow>
-      ) : null}
       <DataTable
         head={["Item", "Information"]}
         rows={[
