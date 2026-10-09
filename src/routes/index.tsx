@@ -14,7 +14,7 @@ import {
 } from "@/components/editors/ProjectPanels";
 import { DrawingsPanel } from "@/components/drawings/DrawingsPanel";
 import { MarkdownExportDialog, MarkdownImportDialog } from "@/components/editors/MarkdownDialog";
-import { saveFile, saveMessage } from "@/lib/download";
+import { prepareDownloads, saveFile, saveMessage } from "@/lib/download";
 import { reportHtml } from "@/lib/reportHtml";
 import { getCycle } from "@/engine/core/codes";
 import {
@@ -54,6 +54,10 @@ function Index() {
   });
   const fileRef = useRef<HTMLInputElement>(null);
   const [mdDialog, setMdDialog] = useState<"import" | "export">();
+
+  useEffect(() => {
+    void prepareDownloads();
+  }, []);
 
   // restore the autosaved project after mount (browser storage is not available during SSR)
   useEffect(() => {
@@ -131,7 +135,12 @@ function Index() {
       setMessage(
         o === "saved"
           ? { tone: "info", text: `Saved ${name} — open it in your browser and print to PDF (Letter).` }
-          : saveMessage(name, o),
+          : o === "copied"
+            ? {
+                tone: "info",
+                text: `This view cannot save files or print, so the report (${entries.length} sheets) was copied to the clipboard — paste it into a plain-text editor, save it as ${name}, open that file in your browser and print to PDF (Letter).`,
+              }
+            : saveMessage(name, o),
       ),
     );
   }
