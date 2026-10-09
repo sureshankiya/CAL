@@ -742,7 +742,7 @@ export function BasePlateSheet({ m, r, index, total, received }: SheetProps<Base
         }
         pass={gp.tReq <= i.plate.tp + 1e-9}
       />
-      <SectionHead title="Anchor rods — tension, shear and bending (AISC J3.7)" />
+      <SectionHead title="Anchor rods — combined tension, shear and bending (AISC Ch. J3, Table J3.2)" />
       <TR
         desc="Rod stresses"
         expr={

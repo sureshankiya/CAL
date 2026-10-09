@@ -453,7 +453,7 @@ export function GuardPostSheet({ m, r, index, total }: SheetProps<GuardPostResul
         m={m}
         material={
           <>
-            ANSI/AWC {m.cycle.nds} Ch. 3, 4, 12; {m.cycle.aisc360} J3.6
+            ANSI/AWC {m.cycle.nds} Ch. 3, 4, 12; {m.cycle.aisc360} Ch. J3 (bolt tension, Table J3.2)
           </>
         }
         combos={<>L only, C_D = 1.0</>}
@@ -610,7 +610,7 @@ export function CfsWallSheet({ m, r, index, total, received, connections }: Shee
         expr={
           <>
             {w.designation}: web D = {f3(s.D)} in; flange B = {f3(s.B)} in; lip d = {f3(s.d)} in; design thickness t ={" "}
-            {s.mils} / 950 = {s.t.toFixed(4)} in; F<sub>y</sub> = {f0(w.Fy / 1000)} ksi; E = 29,500 ksi
+            {s.t.toFixed(4)} in (SSMA, {s.mils} mil); F<sub>y</sub> = {f0(w.Fy / 1000)} ksi; E = 29,500 ksi
           </>
         }
       />
@@ -619,7 +619,7 @@ export function CfsWallSheet({ m, r, index, total, received, connections }: Shee
         expr={
           <>
             A = {f3(s.A)} in²; I<sub>x</sub> = {f3(r.Ix)} in⁴{" "}
-            {w.IxTable ? "(load table)" : "(centre-line, square corners)"}
+            {w.IxTable ? "(load table)" : "(linear method, inside radius 1.5t)"}
           </>
         }
       />

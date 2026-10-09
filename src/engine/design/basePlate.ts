@@ -3,14 +3,15 @@
  * bearing. Units: kip, in, ksi. Moment about the plate N direction.
  *
  *  - Bearing: f_p,max = φ_c 0.85 f'c √(A2/A1) ≤ 2 (LRFD φ_c = 0.65; ASD Ω_c = 2.31)
- *  - Cantilevers m = (N − 0.95d)/2, n = (B − 0.80b_f)/2 (W) or (B − 0.95B_col)/2 (HSS),
+ *  - Cantilevers m = (N − 0.95d)/2, n = (B − 0.80b_f)/2 (W) or (B − 0.95B_col)/2 (HSS);
+ *    round HSS / pipe m = (N − 0.80D)/2, n = (B − 0.80D)/2 (AISC Design Guide 1),
  *    λn' = λ √(d b_f)/4 (DG1 Eq. 3.1.3); l = max(m, n, λn')
  *  - Small moment (e ≤ e_crit): Y = N − 2e, q = P/Y
  *  - Large moment (e > e_crit): Y = (f + N/2) − √((f + N/2)² − 2P(e + f)/q_max), T = q_max Y − P (DG1 3.4)
  *  - Plate at bearing interface: t_req = √(4 f_p Y (l − Y/2) / (φ_b F_y)) for Y < l, else √(2 f_p l² / (φ_b F_y))
- *  - Plate at tension interface: t_req = √(4 T x / (φ_b B F_y)), x = f − 0.95d/2 (HSS) or f − d/2 + t_f/2 (W)
+ *  - Plate at tension interface: t_req = √(4 T x / (φ_b B F_y)), x = f − 0.95d/2 (HSS; 0.80D round) or f − d/2 + t_f/2 (W)
  *  - Anchor rods with built-up grout pad: bending over z = t_p + t_washer/2, f_t = M/Z + T/A_b against the
- *    J3.7 combined tension–shear strength (Table J3.2: F_nt = 0.75F_u, F_nv = 0.45F_u)
+ *    Ch. J3 combined tension–shear strength, Table J3.2: F_nt = 0.75F_u, F_nv = 0.45F_u (J3.7 in 360-16)
  *  - Column-to-plate fillet weld all round: elastic line method, f_r = √(f_n² + f_v²) ≤ φ 0.60 F_EXX 0.707 w
  *    (directional increase not taken)
  */
@@ -94,8 +95,12 @@ export function designBasePlate(i: BasePlateInput, F: BasePlateForces): BasePlat
   const d = i.col.d;
   const bf = i.col.bf;
   const hss = i.col.family === "HSS" || i.col.family === "HSSR";
-  const m = (i.N - 0.95 * d) / 2;
-  const n = (i.B - (hss ? 0.95 : 0.8) * bf) / 2;
+  const round = i.col.family === "HSSR";
+  // DG1 bend-line factors: W 0.95d / 0.80b_f; rectangular HSS 0.95; round HSS / pipe 0.80D both ways
+  const kd = round ? 0.8 : 0.95;
+  const kb = round ? 0.8 : hss ? 0.95 : 0.8;
+  const m = (i.N - kd * d) / 2;
+  const n = (i.B - kb * bf) / 2;
   const phiB = 0.9;
   const omB = 1.67;
   const plateCap = (Mpl: number) => (lrfd ? Math.sqrt((4 * Mpl) / (phiB * i.Fy)) : Math.sqrt((4 * Mpl * omB) / i.Fy));
@@ -139,7 +144,7 @@ export function designBasePlate(i: BasePlateInput, F: BasePlateForces): BasePlat
   }
   const fp = Y > 0 ? q / i.B : 0;
   const tReqBearing = Y <= 0 ? 0 : Y >= l ? plateCap((fp * l * l) / 2) : plateCap(fp * Y * (l - Y / 2));
-  const x = hss ? f - (0.95 * d) / 2 : f - d / 2 + i.col.tf / 2;
+  const x = hss ? f - (kd * d) / 2 : f - d / 2 + i.col.tf / 2;
   const tReqTension =
     T > 0 ? (lrfd ? Math.sqrt((4 * T * x) / (phiB * i.B * i.Fy)) : Math.sqrt((4 * T * x * omB) / (i.B * i.Fy))) : 0;
   const tReq = Math.max(tReqBearing, tReqTension);
@@ -147,7 +152,7 @@ export function designBasePlate(i: BasePlateInput, F: BasePlateForces): BasePlat
   lines.push(
     `A1 = B N = ${A1.toFixed(1)} in²; A2 = ${i.A2.toFixed(0)} in²; P_p = 0.85 f'c A1 min(√(A2/A1), 2) = ${Pp.toFixed(1)} kip (J8-2)`,
     `f_p,max = ${lrfd ? "φ_c" : "1/Ω_c ×"} 0.85 f'c min(√(A2/A1), 2) = ${fpMax.toFixed(2)} ksi; q_max = f_p,max B = ${qMax.toFixed(2)} kip/in`,
-    `m = (N − 0.95d)/2 = ${m.toFixed(3)} in; n = (B − ${hss ? "0.95" : "0.80"}b_f)/2 = ${n.toFixed(3)} in; λn' = ${lambdaN.toFixed(3)} in; l = ${l.toFixed(3)} in`,
+    `m = (N − ${kd.toFixed(2)}d)/2 = ${m.toFixed(3)} in; n = (B − ${kb.toFixed(2)}${round ? "D" : "b_f"})/2 = ${n.toFixed(3)} in; λn' = ${lambdaN.toFixed(3)} in; l = ${l.toFixed(3)} in`,
   );
   // anchor rods: tension + bending through the grout pad / washer
   const Ab = (Math.PI * i.rod.d ** 2) / 4;

@@ -4101,6 +4101,14 @@ function GuardPostEditor({ p, m, upd }: { p: Project; m: GuardPostSpec; upd: Upd
               onChange={(v) => upd({ device: { ...m.device, capacity: num(v, 1500) } })}
             />
           </Field>
+          <Field label="Published for C_D (e.g. 1.6)">
+            <NumberInput
+              value={m.device.capacityCD ?? 1}
+              min={1}
+              step="0.05"
+              onChange={(v) => upd({ device: { ...m.device, capacityCD: num(v, 1) } })}
+            />
+          </Field>
         </Grid>
         <Field label="Source (catalogue / ESR)">
           <TextInput value={m.device.source} onChange={(v) => upd({ device: { ...m.device, source: v } })} />

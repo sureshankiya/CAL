@@ -101,7 +101,7 @@ export const SCL: Record<string, SclData> = {
     Fv: 290,
     Fcperp: 625,
     Fc: 2900,
-    Ft: 2025,
+    Ft: 2300,
     E: 2_200_000,
     Emin: 1_118_190,
     G: 0.5,

@@ -52,6 +52,8 @@ export interface HardwareItem {
 
 const SIMPSON = "Simpson Strong-Tie";
 const CAT = "Simpson Strong-Tie Wood Construction Connectors catalogue (DF/SP)";
+/** checked 2026-10-09 against the Simpson catalogue pages (C-C-2019 / C-C-2017 HDU, HTT, CS tables, DF/SP) */
+const CAT19 = "Simpson Strong-Tie C-C-2019 catalogue (DF/SP) — checked 2026-10-09; confirm against the current edition";
 
 const hd = (
   model: string,
@@ -60,6 +62,7 @@ const hd = (
   anchorDia: number,
   fasteners: string,
   minPost: number,
+  checked = true,
 ): HardwareItem => ({
   id: model,
   model,
@@ -72,8 +75,8 @@ const hd = (
   deflection,
   anchorDia,
   minPost,
-  checked: false,
-  source: CAT,
+  checked,
+  source: checked ? CAT19 : CAT,
 });
 
 const blank = (
@@ -99,12 +102,15 @@ export function defaultHardware(): HardwareItem[] {
     hd("HDU2-SDS2.5", 3075, 0.088, 0.625, "(6) SDS 1/4 × 2-1/2 in.", 3),
     hd("HDU4-SDS2.5", 4565, 0.114, 0.625, "(10) SDS 1/4 × 2-1/2 in.", 3),
     hd("HDU5-SDS2.5", 5645, 0.115, 0.625, "(14) SDS 1/4 × 2-1/2 in.", 3),
-    hd("HDU8-SDS2.5", 6970, 0.113, 0.875, "(20) SDS 1/4 × 2-1/2 in.", 3),
-    hd("HDU11-SDS2.5", 9535, 0.137, 1.0, "(30) SDS 1/4 × 2-1/2 in.", 5.5),
-    hd("HDU14-SDS2.5", 14390, 0.172, 1.0, "(36) SDS 1/4 × 2-1/2 in.", 5.5),
+    hd("HDU8-SDS2.5", 6970, 0.116, 0.875, "(20) SDS 1/4 × 2-1/2 in.", 3),
+    hd("HDU11-SDS2.5", 9335, 0.137, 1.0, "(30) SDS 1/4 × 2-1/2 in. (3-1/2 × 5-1/2 in. post)", 3.5),
     {
-      ...hd("HTT4", 4455, 0.112, 0.625, "(18) 16d × 2-1/2 in. nails", 3),
-      description: "HTT4 tension tie",
+      ...hd("HDU14-SDS2.5", 14390, 0.177, 1.0, "(36) SDS 1/4 × 2-1/2 in. (3-1/2 × 7-1/4 in. post)", 3.5),
+      description: "HDU14 hold-down (on a 6x6 post: 14,445 lb, 0.172 in.)",
+    },
+    {
+      ...hd("HTT4", 4235, 0.123, 0.625, "(18) 0.162 × 2-1/2 in. nails", 3),
+      description: "HTT4 tension tie (nailed; 4,455 lb with (18) #10 × 1-1/2 in. SD screws)",
       report: "ICC-ES ESR-2613",
     },
     {
@@ -119,7 +125,7 @@ export function defaultHardware(): HardwareItem[] {
       F1: 110,
       F2: 110,
       checked: false,
-      source: CAT,
+      source: `${CAT} — F1 / F2 110 lb confirmed (C-C-2019); uplift 535 lb (C-2008) is below the C-C-2019 value of 565 lb with 0.131 × 2-1/2 in. nails — confirm the fastener used`,
     },
     {
       id: "CS16",
@@ -127,11 +133,11 @@ export function defaultHardware(): HardwareItem[] {
       kind: "strap",
       manufacturer: SIMPSON,
       description: "CS16 coiled strap, 16 ga",
-      fasteners: "10d common nails per catalogue end length",
+      fasteners: "(20) 0.148 × 2-1/2 in. nails (11 in. end length) or (22) 0.131 × 2-1/2 in. (13 in.)",
       report: "ICC-ES ESR-2105",
       tension: 1705,
-      checked: false,
-      source: CAT,
+      checked: true,
+      source: CAT19,
     },
     blank("LUS26", "hanger", "LUS26 face-mount hanger, 2x6", "per catalogue"),
     blank("LUS28", "hanger", "LUS28 face-mount hanger, 2x8", "per catalogue"),

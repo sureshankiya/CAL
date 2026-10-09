@@ -242,15 +242,22 @@ def gp1():
 
 # ============================================== 3. CFS stud 350S162-54
 def cs1():
+    # SSMA section: design thickness by mil (SSMA product catalogue), centre-line model with
+    # rounded corners, inside bend radius 1.5t (centre-line radius r = 2t); quarter arcs
+    # integrated in closed form: integral of y^2 ds = r (yc^2 pi/2 + 2 yc r + r^2 pi/4)
     D, Bf, lip = 3.50, 1.625, 0.5
-    t = 54.0 / 950.0                                # design thickness
+    t = 0.0566                                      # 54 mil design thickness (SSMA)
     h = D - t                                       # centre-line web
     b = Bf - t                                      # centre-line flange
     c = lip - t / 2                                 # centre-line lip
-    Ix = (t * h ** 3 / 12                           # web
-          + 2 * b * t * (h / 2) ** 2                # flanges (thin, parallel axis)
-          + 2 * (t * c ** 3 / 12 + c * t * (h / 2 - c / 2) ** 2))   # lips
-    A = t * (h + 2 * b + 2 * c)
+    r = 1.5 * t + t / 2
+    yc = h / 2 - r
+    web = 2 * yc ** 3 / 3
+    flanges = 2 * (b - 2 * r) * (h / 2) ** 2
+    lips = 2 * (yc ** 3 - (h / 2 - c) ** 3) / 3
+    arcs = 4 * r * (yc ** 2 * PI / 2 + 2 * yc * r + r ** 2 * PI / 4)
+    Ix = t * (web + flanges + lips + arcs)
+    A = t * ((h - 2 * r) + 2 * (b - 2 * r) + 2 * (c - r) + 4 * r * PI / 2)
 
     L = 10.0                                        # ft
     E = 29.5e6

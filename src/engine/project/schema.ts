@@ -729,7 +729,13 @@ export const guardPostSpecSchema = z.object({
   rail: z.object({ w: nonneg, spacing: nonneg }).default({ w: 0, spacing: 0 }),
   bolt: z.object({ d: pos, Fu: pos, label: z.string() }),
   washer: pos,
-  device: z.object({ model: z.string(), capacity: pos, source: z.string(), verified: z.boolean() }),
+  device: z.object({
+    model: z.string(),
+    capacity: pos,
+    capacityCD: pos.optional(),
+    source: z.string(),
+    verified: z.boolean(),
+  }),
 });
 
 export const cfsWallSpecSchema = z.object({

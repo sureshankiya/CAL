@@ -406,7 +406,8 @@ export function shearMajor(s: SteelShape, Fy: number, E: number): ShearResult {
     const kv = 5.34;
     let Cv = 1;
     let factor = PHI.shear;
-    if (ht <= 2.24 * Math.sqrt(E / Fy)) {
+    // G2.1(a) (φ_v = 1.00 / Ω_v = 1.50) covers rolled I-shapes only; channels use G2.1(b), φ_v = 0.90 / Ω_v = 1.67
+    if (s.family === "W" && ht <= 2.24 * Math.sqrt(E / Fy)) {
       factor = PHI.shearRolledI;
       steps.push({
         label: "Web slenderness",

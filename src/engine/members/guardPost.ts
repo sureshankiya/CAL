@@ -10,7 +10,7 @@
  *   to the top bolt; maximum post moment at the top bolt M = P H₁; shear above the top bolt P
  *   and between the bolts P H₁ / s.
  * Checks: post bending (NDS 3.3, C_L = 1.0 for d / b ≤ 2), post shear (3.4), plate-washer
- * bearing on the post perpendicular to grain (3.10, C_b), bolt tension (AISC 360 J3.6,
+ * bearing on the post perpendicular to grain (3.10, C_b), bolt tension (AISC 360 Ch. J3, Table J3.2,
  * A307, ASD), and the tension device that carries T into the deck framing (catalogue value).
  */
 
@@ -45,7 +45,8 @@ export interface GuardPostInput {
   bolt: { d: number; Fu: number; label: string };
   /** square plate washer under the bolt head on the post, in */
   washer: number;
-  device: { model: string; capacity: number; source: string; verified: boolean };
+  /** catalogue allowable tension and the load-duration column it is published for (Simpson hold-downs: 1.6) */
+  device: { model: string; capacity: number; capacityCD?: number; source: string; verified: boolean };
 }
 
 export interface GuardPostResult extends MemberResultBase {
@@ -134,17 +135,20 @@ export function designGuardPost(ctx: DesignContext, g: GuardPostInput): GuardPos
     unit: "psi",
   });
   ck({
-    name: `Top-bolt tension, ${g.bolt.label} (AISC 360 J3.6, Ω = 2.00)`,
+    name: `Top-bolt tension, ${g.bolt.label} (AISC 360 Ch. J3, Table J3.2, Ω = 2.00)`,
     demand: T,
     capacity: boltAllow,
     ratio: T / boltAllow,
     unit: "lb",
   });
+  // catalogue values published for C_D = 1.6 are reduced to the guard-load duration C_D = 1.0
+  const devCD = g.device.capacityCD ?? CD;
+  const devAllow = g.device.capacity * (CD / devCD);
   ck({
-    name: `Tension device ${g.device.model} into the deck framing`,
+    name: `Tension device ${g.device.model} into the deck framing (catalogue × ${fmt(CD, 2)} / ${fmt(devCD, 2)})`,
     demand: T,
-    capacity: g.device.capacity,
-    ratio: T / g.device.capacity,
+    capacity: devAllow,
+    ratio: T / devAllow,
     unit: "lb",
   });
   if (g.wideFaceToRim && dr.d !== dr.b)
@@ -167,7 +171,7 @@ export function designGuardPost(ctx: DesignContext, g: GuardPostInput): GuardPos
     ),
     fromDefault(
       "Tension device",
-      `${g.device.model}: ${fmt(g.device.capacity, 0)} lb allowable`,
+      `${g.device.model}: ${fmt(g.device.capacity, 0)} lb allowable at C_D = ${fmt(devCD, 2)}; at C_D = ${fmt(CD, 2)}: ${fmt(devAllow, 0)} lb`,
       g.device.source,
       !g.device.verified,
     ),

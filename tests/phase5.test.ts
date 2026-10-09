@@ -8,6 +8,9 @@ import { describe, expect, it } from "vitest";
 import { asdCombinations, strengthCombinations } from "@/engine/core/combos";
 import { defaultHardware } from "@/engine/data/hardware";
 import { lumberData } from "@/engine/data/sawn";
+import { steelShape } from "@/engine/data/steel";
+import { designBasePlate } from "@/engine/design/basePlate";
+import { shearMajor } from "@/engine/design/steel";
 import { panel1532Shear, sheathingRow, sideValues } from "@/engine/data/sdpws";
 import { defaultAssemblies } from "@/engine/loads/dead";
 import type { DesignContext } from "@/engine/members";
@@ -241,8 +244,8 @@ describe("CS — cold-formed steel studs", () => {
     const s = ssmaSection("350S162-54", 0.5);
     expect(s.D).toBe(3.5);
     expect(s.B).toBe(1.625);
-    expect(s.t).toBeCloseTo(0.0568, 4);
-    expect(s.Ix).toBeCloseTo(0.841, 3);
+    expect(s.t).toBe(0.0566); // SSMA design thickness, 54 mil
+    expect(s.Ix).toBeCloseTo(0.804, 3); // rounded corners, R = 1.5t
     expect(() => ssmaSection("2x4", 0.5)).toThrow(/SSMA/);
   });
   it("East Grand stud wall (Tedds / SSMA table): P = 1.76 kips ≤ P_allow 2.44 kips, ratio 0.721", () => {
@@ -331,5 +334,51 @@ describe("deck options project", () => {
     expect(n.inspections.some((i) => /Soils/.test(i.item))).toBe(true);
     const lg = d.outcomes.get("dk-lg1")!.result!;
     expect(lg.governing.ratio).toBeLessThan(1);
+  });
+});
+
+describe("verification fixes — AISC and manufacturer data (sign-off C5 / C7)", () => {
+  it("channel shear uses G2.1(b) φ_v = 0.90 / Ω_v = 1.67; rolled W keeps G2.1(a) 1.00 / 1.50", () => {
+    const c = shearMajor(steelShape("C8x11.5"), 36, 29000);
+    const w = shearMajor(steelShape("W8x18"), 50, 29000);
+    expect(c.factor.omega).toBe(1.67);
+    expect(c.factor.phi).toBe(0.9);
+    expect(w.factor.omega).toBe(1.5);
+  });
+  it("tabulated rts and C8x13.75 torsion properties (AISC Shapes Database)", () => {
+    expect(steelShape("W8x31").rts).toBe(2.26);
+    expect(steelShape("W14x22").rts).toBe(1.27);
+    expect(steelShape("C8x13.75").J).toBe(0.186);
+    expect(steelShape("C8x13.75").Cw).toBe(19.2);
+  });
+  it("round HSS / pipe base plate cantilevers use 0.80D (Design Guide 1)", () => {
+    const col = steelShape("Pipe4STD");
+    const r = designBasePlate(
+      {
+        method: "ASD",
+        col,
+        N: 10,
+        B: 10,
+        tp: 0.75,
+        Fy: 36,
+        fc: 2.5,
+        A2: 100,
+        rod: { d: 0.75, Fu: 58, nTension: 2, nShear: 4, e1: 1.5, groutPad: false, washer: 0.25 },
+        weld: { w: 0.1875, FEXX: 70 },
+      },
+      { P: 10, M: 0, V: 0 },
+    );
+    expect(r.m).toBeCloseTo((10 - 0.8 * col.d) / 2, 9);
+    expect(r.n).toBeCloseTo((10 - 0.8 * col.bf) / 2, 9);
+  });
+  it("guard-post tension device: catalogue value at C_D = 1.6 reduced to the guard-load C_D = 1.0", () => {
+    const g = designGuardPost(
+      ctx,
+      gp({ device: { model: "DTT", capacity: 1825, capacityCD: 1.6, source: "x", verified: true } }),
+    );
+    const dev = g.checks.find((c) => c.name.startsWith("Tension device"))!;
+    expect(dev.capacity).toBeCloseTo(1825 / 1.6, 6);
+    const legacy = designGuardPost(ctx, gp());
+    expect(legacy.checks.find((c) => c.name.startsWith("Tension device"))!.capacity).toBe(1825);
   });
 });

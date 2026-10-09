@@ -8,7 +8,7 @@
  *  - SC-# steel columns (HSS / pipe, W): axial with eccentric beam reaction and
  *    wind on the column, B1 amplification (App. 8), H1-1 interaction, shear;
  *    bearing of the wood beam on the cap plate (NDS 3.10.2)
- *  - BP-# column base plates: DG1 plate, J8 bearing, anchor rods (J3.7 with
+ *  - BP-# column base plates: DG1 plate, J8 bearing, anchor rods (Ch. J3 combined tension–shear with
  *    grout-pad bending) and ACI 318 Ch. 17 anchor group, column weld
  *
  * Loads arrive by type (lb, plf) from the load path; steel checks run in kip.
@@ -1040,7 +1040,7 @@ export function designBasePlateMember(ctx: DesignContext, i: BasePlateMemberInpu
       unit: "",
     },
     {
-      name: "Anchor rods, tension + shear / bending (AISC J3.7)",
+      name: "Anchor rods, tension + shear / bending (AISC Ch. J3, Table J3.2)",
       demand: Math.max(...rows.map((r) => r.plate.rod.ratio)),
       capacity: 1,
       ratio: Math.max(...rows.map((r) => r.plate.rod.ratio)),

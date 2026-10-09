@@ -146,7 +146,7 @@ export function deckExampleProject(): Project {
       incised: true,
       guardHeight: 36,
       topBolt: 2,
-      s: 8,
+      s: 10,
       P: 200,
       rail: { w: 0, spacing: 0 },
       bolt: { d: 0.5, Fu: 60000, label: "1/2 in. A307 through-bolts" },
@@ -154,6 +154,7 @@ export function deckExampleProject(): Project {
       device: {
         model: "Tension device (e.g. DTT2Z) — confirm",
         capacity: 1825,
+        capacityCD: 1.6,
         source: "manufacturer catalogue — confirm the allowable tension",
         verified: false,
       },

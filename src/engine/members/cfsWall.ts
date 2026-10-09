@@ -14,7 +14,8 @@
  *    P_e = π² E I_x / (K L)².
  *  - Deflection under the wind (IBC Table 1604.3 note: 0.42 × C&C permitted) against
  *    the chosen H / n limit.
- *  - Gross I_x from the SSMA designation (centre-line, square corners) unless entered.
+ *  - Gross I_x from the SSMA designation (linear method, rounded corners R = 1.5t, SSMA design
+ *    thickness) unless entered.
  */
 
 import { asdCombinations, relevantCombinations, type Combination } from "../core/combos";
@@ -99,7 +100,23 @@ export interface CfsWallResult extends MemberResultBase {
 
 const E_STEEL = 29_500_000;
 
-/** SSMA designation "350S162-54" → depth, flange, design thickness (mils / 950, in). */
+/**
+ * SSMA design thickness = minimum base-metal thickness / 0.95 (SSMA Product Technical Guide,
+ * ICC-ES ER-3064P): 33 mil 0.0346, 43 mil 0.0451, 54 mil 0.0566, 68 mil 0.0713, 97 mil 0.1017 in.
+ */
+export const SSMA_DESIGN_THICKNESS: Record<number, number> = {
+  33: 0.0346,
+  43: 0.0451,
+  54: 0.0566,
+  68: 0.0713,
+  97: 0.1017,
+};
+
+/**
+ * SSMA designation "350S162-54" → gross section by the linear (centre-line) method with
+ * rounded corners, inside bend radius 1.5 t (reproduces the SSMA tabulated A and I_x —
+ * 350S162-54: A = 0.415 in², I_x = 0.804 in⁴).
+ */
 export function ssmaSection(designation: string, lip: number): CfsSection {
   const m = /^(\d{3,4})S(\d{3})-(\d{2,3})$/.exec(designation.trim());
   if (!m) throw new Error(`${designation}: not an SSMA stud designation (e.g. 350S162-54)`);
@@ -107,13 +124,33 @@ export function ssmaSection(designation: string, lip: number): CfsSection {
   const flangeCode = Number(m[2]);
   const B = flangeCode === 162 ? 1.625 : flangeCode === 137 ? 1.375 : flangeCode === 125 ? 1.25 : flangeCode / 100;
   const mils = Number(m[3]);
-  const t = mils / 950;
-  // centre-line dimensions, square corners
+  const t = SSMA_DESIGN_THICKNESS[mils] ?? mils / 1000 / 0.95;
+  const rc = 1.5 * t + t / 2; // centre-line corner radius
   const h = D - t;
   const b = B - t;
   const c = lip - t / 2;
-  const A = t * (h + 2 * b + 2 * c);
-  const Ix = (t * h ** 3) / 12 + 2 * b * t * (h / 2) ** 2 + 2 * ((t * c ** 3) / 12 + c * t * (h / 2 - c / 2) ** 2);
+  // integrate along the centre line of the upper half (web, corner, flange, corner, lip); mirror
+  let A = 0;
+  let Ix = 0;
+  const n = 400;
+  const add = (y: number, ds: number) => {
+    A += 2 * t * ds;
+    Ix += 2 * t * ds * y * y;
+  };
+  const line = (y0: number, y1: number, len: number) => {
+    for (let k = 0; k < n; k++) add(y0 + ((y1 - y0) * (k + 0.5)) / n, len / n);
+  };
+  const arc = (yc: number, a0: number, a1: number) => {
+    for (let k = 0; k < n; k++) {
+      const a = a0 + ((a1 - a0) * (k + 0.5)) / n;
+      add(yc + rc * Math.sin(a), (rc * Math.abs(a1 - a0)) / n);
+    }
+  };
+  line(0, h / 2 - rc, h / 2 - rc);
+  arc(h / 2 - rc, Math.PI, Math.PI / 2);
+  line(h / 2, h / 2, b - 2 * rc);
+  arc(h / 2 - rc, Math.PI / 2, 0);
+  line(h / 2 - rc, h / 2 - c, c - rc);
   return { D, B, d: lip, t, mils, A, Ix, Sx: Ix / (D / 2) };
 }
 
@@ -235,7 +272,7 @@ export function designCfsWall(ctx: DesignContext, w: CfsWallInput): CfsWallResul
     ),
     fromDefault(
       "Section",
-      `${w.designation}: D = ${fmt(sec.D, 3)} in, B = ${fmt(sec.B, 3)} in, lip ${fmt(sec.d, 3)} in, t = ${fmt(sec.t, 4)} in (${sec.mils} mil / 0.95), F_y = ${fmt(w.Fy / 1000, 0)} ksi; I_x = ${fmt(Ix, 3)} in⁴ ${w.IxTable ? "(table)" : "(centre-line, square corners)"}`,
+      `${w.designation}: D = ${fmt(sec.D, 3)} in, B = ${fmt(sec.B, 3)} in, lip ${fmt(sec.d, 3)} in, t = ${fmt(sec.t, 4)} in (SSMA design thickness, ${sec.mils} mil), F_y = ${fmt(w.Fy / 1000, 0)} ksi; I_x = ${fmt(Ix, 3)} in⁴ ${w.IxTable ? "(table)" : "(linear method, inside radius 1.5t — SSMA basis)"}`,
       w.IxTable ? w.table.source : "SSMA designation",
       !w.IxTable,
     ),
