@@ -316,7 +316,7 @@ export function sanMiguelProject(): Project {
         kcCr: 17,
         kcUncr: 24,
         phiBond: 0.55,
-        phiConcrete: 0.65,
+        phiConcrete: 0.7,
         verified: false,
       },
       shearDir: "parallel-edge",

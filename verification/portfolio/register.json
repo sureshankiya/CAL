@@ -1,6 +1,6 @@
 {
- "engine": "0.9.0",
- "data": "0.9",
+ "engine": "1.0.1-wip.1",
+ "data": "1.1-wip.1",
  "rows": [
   {
    "case": "1002-3rd-st-jadu/SW1",
@@ -1751,9 +1751,10 @@
    "quantity": "Vs",
    "tedds": 1676,
    "dec": 0,
-   "housecalc": 1675.5,
-   "diff": -0.5,
-   "status": "match"
+   "housecalc": 1196.7857142857144,
+   "diff": -479.21428571428555,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1165-goldenrod-st-adu/W1",
@@ -1907,9 +1908,10 @@
    "quantity": "Vs",
    "tedds": 2800,
    "dec": 0,
-   "housecalc": 2800.05,
-   "diff": 0.0500000000001819,
-   "status": "match"
+   "housecalc": 2000.0357142857147,
+   "diff": -799.9642857142853,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1165-goldenrod-st-adu/W2",
@@ -2063,9 +2065,10 @@
    "quantity": "Vs",
    "tedds": 926,
    "dec": 0,
-   "housecalc": 925.5,
-   "diff": -0.5,
-   "status": "match"
+   "housecalc": 661.0714285714287,
+   "diff": -264.92857142857133,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1165-goldenrod-st-adu/W3",
@@ -2327,9 +2330,10 @@
    "quantity": "Vs",
    "tedds": 1850,
    "dec": 0,
-   "housecalc": 1849.95,
-   "diff": -0.049999999999954525,
-   "status": "match"
+   "housecalc": 1321.3928571428573,
+   "diff": -528.6071428571427,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1165-goldenrod-st-adu/W5",
@@ -2639,9 +2643,10 @@
    "quantity": "Vs",
    "tedds": 1050,
    "dec": 0,
-   "housecalc": 1050,
-   "diff": 0,
-   "status": "match"
+   "housecalc": 750.0000000000001,
+   "diff": -299.9999999999999,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1165-goldenrod-st-adu/W7",
@@ -2795,9 +2800,10 @@
    "quantity": "Vs",
    "tedds": 1550,
    "dec": 0,
-   "housecalc": 1549.95,
-   "diff": -0.049999999999954525,
-   "status": "match"
+   "housecalc": 1107.107142857143,
+   "diff": -442.8928571428571,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1165-goldenrod-st-adu/W8",
@@ -4247,9 +4253,10 @@
    "quantity": "Vs",
    "tedds": 5133,
    "dec": 0,
-   "housecalc": 5133.2,
-   "diff": 0.1999999999998181,
-   "status": "match"
+   "housecalc": 3849.9,
+   "diff": -1283.1,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1550-bluebird-lane-house-remoulding/SW1",
@@ -4451,9 +4458,10 @@
    "quantity": "Vs",
    "tedds": 3733,
    "dec": 0,
-   "housecalc": 3733.2000000000003,
-   "diff": 0.20000000000027285,
-   "status": "match"
+   "housecalc": 2799.9,
+   "diff": -933.0999999999999,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1550-bluebird-lane-house-remoulding/SW2",
@@ -4655,9 +4663,10 @@
    "quantity": "Vs",
    "tedds": 3133,
    "dec": 0,
-   "housecalc": 3133.2000000000003,
-   "diff": 0.20000000000027285,
-   "status": "match"
+   "housecalc": 2349.9,
+   "diff": -783.0999999999999,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1550-bluebird-lane-house-remoulding/SW3",
@@ -4859,9 +4868,10 @@
    "quantity": "Vs",
    "tedds": 9165,
    "dec": 0,
-   "housecalc": 9165.2,
-   "diff": 0.2000000000007276,
-   "status": "match"
+   "housecalc": 6873.9,
+   "diff": -2291.1000000000004,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1550-bluebird-lane-house-remoulding/1SW1",
@@ -5063,9 +5073,10 @@
    "quantity": "Vs",
    "tedds": 7800,
    "dec": 0,
-   "housecalc": 7800,
-   "diff": 0,
-   "status": "match"
+   "housecalc": 5850,
+   "diff": -1950,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1550-bluebird-lane-house-remoulding/1SW2",
@@ -5267,9 +5278,10 @@
    "quantity": "Vs",
    "tedds": 5267,
    "dec": 0,
-   "housecalc": 5266.8,
-   "diff": -0.1999999999998181,
-   "status": "match"
+   "housecalc": 3950.1,
+   "diff": -1316.9,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1550-bluebird-lane-house-remoulding/1SW3",
@@ -5423,8 +5435,8 @@
    "quantity": "Vs",
    "tedds": 16881,
    "dec": 0,
-   "housecalc": 18532,
-   "diff": 1651,
+   "housecalc": 13899,
+   "diff": -2982,
    "status": "documented",
    "note": "Segmented wall with openings: Tedds limits each segment to the shear giving the same deflection as the stiffest segment (SDPWS 4.3.3.4.1 equal-deflection distribution, v = min(v_s, v_δ)); the register sums the segment capacities v_allow·b_i. HouseCalc applies the equal-deflection option at the wall-line level (Phase 2). Tedds is lower (conservative)."
   },
@@ -5581,9 +5593,10 @@
    "quantity": "Vs",
    "tedds": 4599,
    "dec": 0,
-   "housecalc": 4598.8,
-   "diff": -0.1999999999998181,
-   "status": "match"
+   "housecalc": 3449.1,
+   "diff": -1149.9,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "1550-bluebird-lane-house-remoulding/2SW2",
@@ -6855,9 +6868,10 @@
    "quantity": "Vs",
    "tedds": 1249,
    "dec": 0,
-   "housecalc": 1249.5,
-   "diff": 0.5,
-   "status": "match"
+   "housecalc": 892.5000000000001,
+   "diff": -356.4999999999999,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "215-alvarado-st-adu/W1",
@@ -7011,9 +7025,10 @@
    "quantity": "Vs",
    "tedds": 1850,
    "dec": 0,
-   "housecalc": 1849.5,
-   "diff": -0.5,
-   "status": "match"
+   "housecalc": 1321.0714285714287,
+   "diff": -528.9285714285713,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "215-alvarado-st-adu/W2",
@@ -7215,9 +7230,10 @@
    "quantity": "Vs",
    "tedds": 1150,
    "dec": 0,
-   "housecalc": 1150.5,
-   "diff": 0.5,
-   "status": "match"
+   "housecalc": 821.7857142857143,
+   "diff": -328.21428571428567,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "215-alvarado-st-adu/W3",
@@ -7371,9 +7387,10 @@
    "quantity": "Vs",
    "tedds": 1369,
    "dec": 0,
-   "housecalc": 1368.75,
-   "diff": -0.25,
-   "status": "match"
+   "housecalc": 977.6785714285716,
+   "diff": -391.32142857142844,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "215-alvarado-st-adu/W4",
@@ -7527,9 +7544,10 @@
    "quantity": "Vs",
    "tedds": 4550,
    "dec": 0,
-   "housecalc": 4549.5,
-   "diff": -0.5,
-   "status": "match"
+   "housecalc": 3249.642857142858,
+   "diff": -1300.3571428571422,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "215-alvarado-st-adu/W5",
@@ -7683,9 +7701,10 @@
    "quantity": "Vs",
    "tedds": 4249,
    "dec": 0,
-   "housecalc": 4249.5,
-   "diff": 0.5,
-   "status": "match"
+   "housecalc": 3035.357142857143,
+   "diff": -1213.6428571428569,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "215-alvarado-st-adu/W6",
@@ -8055,9 +8074,10 @@
    "quantity": "Vs",
    "tedds": 2100,
    "dec": 0,
-   "housecalc": 2100,
-   "diff": 0,
-   "status": "match"
+   "housecalc": 1500.0000000000002,
+   "diff": -599.9999999999998,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "215-alvarado-st-adu/W9",
@@ -8332,9 +8352,10 @@
    "quantity": "Vs",
    "tedds": 8400,
    "dec": 0,
-   "housecalc": 8400,
-   "diff": 0,
-   "status": "match"
+   "housecalc": 6000.000000000001,
+   "diff": -2399.999999999999,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "215-alvarado-st-adu/2W-1",
@@ -8644,9 +8665,10 @@
    "quantity": "Vs",
    "tedds": 5600,
    "dec": 0,
-   "housecalc": 5600,
-   "diff": 0,
-   "status": "match"
+   "housecalc": 4000.0000000000005,
+   "diff": -1599.9999999999995,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "215-alvarado-st-adu/2W-3",
@@ -9197,8 +9219,8 @@
    "quantity": "Vs",
    "tedds": 4962,
    "dec": 0,
-   "housecalc": 5600,
-   "diff": 638,
+   "housecalc": 4000,
+   "diff": -962,
    "status": "documented",
    "note": "Segmented wall with openings: Tedds limits each segment to the shear giving the same deflection as the stiffest segment (SDPWS 4.3.3.4.1 equal-deflection distribution, v = min(v_s, v_δ)); the register sums the segment capacities v_allow·b_i. HouseCalc applies the equal-deflection option at the wall-line level (Phase 2). Tedds is lower (conservative)."
   },
@@ -9355,9 +9377,10 @@
    "quantity": "Vs",
    "tedds": 6500,
    "dec": 0,
-   "housecalc": 6500,
-   "diff": 0,
-   "status": "match"
+   "housecalc": 4642.857142857143,
+   "diff": -1857.1428571428569,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "2163-controllata-street-garage-to-adu-wi/W2",
@@ -9559,9 +9582,10 @@
    "quantity": "Vs",
    "tedds": 6500,
    "dec": 0,
-   "housecalc": 6500,
-   "diff": 0,
-   "status": "match"
+   "housecalc": 4642.857142857143,
+   "diff": -1857.1428571428569,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "2163-controllata-street-garage-to-adu-wi/W3",
@@ -9763,9 +9787,10 @@
    "quantity": "Vs",
    "tedds": 3000,
    "dec": 0,
-   "housecalc": 3000,
-   "diff": 0,
-   "status": "match"
+   "housecalc": 2142.857142857143,
+   "diff": -857.1428571428569,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "2163-controllata-street-garage-to-adu-wi/W4",
@@ -9967,8 +9992,8 @@
    "quantity": "Vs",
    "tedds": 12388,
    "dec": 0,
-   "housecalc": 13399.999999999998,
-   "diff": 1011.9999999999982,
+   "housecalc": 9571.42857142857,
+   "diff": -2816.5714285714294,
    "status": "documented",
    "note": "Segmented wall with openings: Tedds limits each segment to the shear giving the same deflection as the stiffest segment (SDPWS 4.3.3.4.1 equal-deflection distribution, v = min(v_s, v_δ)); the register sums the segment capacities v_allow·b_i. HouseCalc applies the equal-deflection option at the wall-line level (Phase 2). Tedds is lower (conservative)."
   },
@@ -10125,9 +10150,10 @@
    "quantity": "Vs",
    "tedds": 1667,
    "dec": 0,
-   "housecalc": 1666.8,
-   "diff": -0.20000000000004547,
-   "status": "match"
+   "housecalc": 1190.5714285714284,
+   "diff": -476.42857142857156,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "2163-controllata-street-garage-to-adu-wi/LW2",
@@ -10281,9 +10307,10 @@
    "quantity": "Vs",
    "tedds": 6500,
    "dec": 0,
-   "housecalc": 6500,
-   "diff": 0,
-   "status": "match"
+   "housecalc": 4642.857142857143,
+   "diff": -1857.1428571428569,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "2163-controllata-street-garage-to-adu-wi/LW3",
@@ -10485,9 +10512,10 @@
    "quantity": "Vs",
    "tedds": 3000,
    "dec": 0,
-   "housecalc": 3000,
-   "diff": 0,
-   "status": "match"
+   "housecalc": 2142.857142857143,
+   "diff": -857.1428571428569,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "2163-controllata-street-garage-to-adu-wi/LW4",
@@ -12255,8 +12283,8 @@
    "quantity": "Vs",
    "tedds": 6570,
    "dec": 0,
-   "housecalc": 6800,
-   "diff": 230,
+   "housecalc": 4857.142857142857,
+   "diff": -1712.8571428571431,
    "status": "documented",
    "note": "Segmented wall with openings: Tedds limits each segment to the shear giving the same deflection as the stiffest segment (SDPWS 4.3.3.4.1 equal-deflection distribution, v = min(v_s, v_δ)); the register sums the segment capacities v_allow·b_i. HouseCalc applies the equal-deflection option at the wall-line level (Phase 2). Tedds is lower (conservative)."
   },
@@ -12389,8 +12417,8 @@
    "quantity": "Vs",
    "tedds": 6570,
    "dec": 0,
-   "housecalc": 6800,
-   "diff": 230,
+   "housecalc": 4857.142857142857,
+   "diff": -1712.8571428571431,
    "status": "documented",
    "note": "Segmented wall with openings: Tedds limits each segment to the shear giving the same deflection as the stiffest segment (SDPWS 4.3.3.4.1 equal-deflection distribution, v = min(v_s, v_δ)); the register sums the segment capacities v_allow·b_i. HouseCalc applies the equal-deflection option at the wall-line level (Phase 2). Tedds is lower (conservative)."
   },
@@ -12523,9 +12551,10 @@
    "quantity": "Vs",
    "tedds": 2400,
    "dec": 0,
-   "housecalc": 2400,
-   "diff": 0,
-   "status": "match"
+   "housecalc": 1714.2857142857142,
+   "diff": -685.7142857142858,
+   "status": "documented",
+   "note": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
   },
   {
    "case": "4609-bancroft-drive-grage-addition/IW",

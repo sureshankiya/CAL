@@ -59,6 +59,7 @@ import {
   type DesignContext,
   type ExtraLoad,
   type LoadLine,
+  asce7Of,
 } from "./common";
 import { areaWallLoads, type AreaLoad, type WallAbove } from "./distributed";
 import { supportName, type MemberReaction, type MemberResultBase } from "./types";
@@ -78,7 +79,7 @@ function presentOf(loads: BeamLoad[]): Partial<Record<LoadType, boolean>> {
 }
 
 export function steelCombos(ctx: DesignContext, method: SteelMethod, present: Partial<Record<LoadType, boolean>>) {
-  const opts = { SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E };
+  const opts = { asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E };
   return relevantCombinations(method === "LRFD" ? strengthCombinations(opts) : asdCombinations(opts), present);
 }
 
@@ -253,7 +254,7 @@ export function designSteelBeam(ctx: DesignContext, b: SteelBeamInput): SteelBea
   const present = presentOf(loads);
   const combos = steelCombos(ctx, b.method, present);
   const asd = relevantCombinations(
-    asdCombinations({ SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
     present,
   );
 
@@ -783,7 +784,10 @@ export function designSteelColumn(ctx: DesignContext, c: SteelColumnInput): Stee
   let cap: SteelColumnResult["cap"];
   if (c.cap) {
     const ld = lumberData(c.cap.species, c.cap.grade, "4x4", ndsOf(ctx));
-    const asd = relevantCombinations(asdCombinations({ SDS: ctx.SDS, includeWind: !!present.W }), present);
+    const asd = relevantCombinations(
+      asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!present.W }),
+      present,
+    );
     let R = 0;
     let rc = "";
     for (const k of asd) {
@@ -808,7 +812,10 @@ export function designSteelColumn(ctx: DesignContext, c: SteelColumnInput): Stee
       unit: "psi",
     });
   }
-  const asdAll = relevantCombinations(asdCombinations({ SDS: ctx.SDS, includeWind: !!present.W }), present);
+  const asdAll = relevantCombinations(
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!present.W }),
+    present,
+  );
   let maxDown = -Infinity;
   let maxDownCombo = "";
   let minNet = Infinity;

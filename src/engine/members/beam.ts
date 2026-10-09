@@ -20,6 +20,7 @@ import {
   type DeflectionInput,
   type DesignContext,
   type ExtraLoad,
+  asce7Of,
 } from "./common";
 import { areaWallLoads, type AreaLoad, type WallAbove } from "./distributed";
 
@@ -97,6 +98,7 @@ function woodInput(ctx: DesignContext, b: BeamInput, loads: BeamLoad[], material
     crOverride: b.crOverride,
     SDS: ctx.SDS,
     nds: ndsOf(ctx),
+    asce7: asce7Of(ctx),
   };
 }
 

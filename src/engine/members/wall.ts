@@ -36,6 +36,7 @@ import {
   type DesignContext,
   type ExtraLoad,
   type LoadLine,
+  asce7Of,
 } from "./common";
 import { areaWallLoads, type AreaLoad, type WallAbove } from "./distributed";
 import type { MemberReaction, MemberResultBase } from "./types";
@@ -249,7 +250,7 @@ function evaluate(ctx: DesignContext, wl: WallInput, size = wl.size, spacing = w
     hasWind,
   );
   const combos = relevantCombinations(
-    asdCombinations({ SDS: ctx.SDS, includeWind: !!allPresent.W, includeSeismic: false }),
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!allPresent.W, includeSeismic: false }),
     allPresent,
   );
 

@@ -107,6 +107,8 @@ export interface WoodBeamInput {
   /** S_DS for the ASCE 7 §2.4.5 seismic combinations, when E acts on the member */
   SDS?: number;
   nds: "NDS-2018" | "NDS-2024";
+  /** combinations edition (ASCE 7-22 snow factors) */
+  asce7?: "ASCE 7-16" | "ASCE 7-22";
 }
 
 export interface Check {
@@ -491,7 +493,7 @@ export function designWoodBeam(input: WoodBeamInput): WoodBeamResult {
   if (present.E && input.SDS === undefined)
     assumptions.push(fromDefault("S_DS for seismic combinations", "S_DS = 1.00 (not given)", "assumed", true));
   const combos = relevantCombinations(
-    asdCombinations({ SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
+    asdCombinations({ asce7: input.asce7, SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
     present,
   );
 

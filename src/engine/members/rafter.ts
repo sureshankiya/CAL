@@ -42,6 +42,7 @@ import {
   type DeflectionInput,
   type DesignContext,
   type LoadLine,
+  asce7Of,
 } from "./common";
 import type { MemberReaction, MemberResultBase } from "./types";
 
@@ -254,6 +255,7 @@ function woodInput(ctx: DesignContext, r: RafterInput, b: Built, size = r.size):
     rule441: r.rule441,
     SDS: ctx.SDS,
     nds: ndsOf(ctx),
+    asce7: asce7Of(ctx),
   };
 }
 

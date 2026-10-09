@@ -521,7 +521,7 @@ export function newMemberSpec(p: Project, kind: NewMemberKind, structureId: stri
           kcCr: 17,
           kcUncr: 24,
           phiBond: 0.55,
-          phiConcrete: 0.65,
+          phiConcrete: 0.7,
           verified: false,
         },
         shearDir: "toward-edge",

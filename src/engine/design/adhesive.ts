@@ -9,6 +9,8 @@
  *     A_Nco = 9 h_ef², per anchor A_Nc = min(s, 3 h_ef) × (min(c_a1, 1.5 h_ef) + 1.5 h_ef)
  *   - bond N_a = (A_Na / A_Nao) ψ_ed,Na ψ_cp,Na N_ba, N_ba = λ_a τ π d_a h_ef (17.6.5),
  *     c_Na = 10 d_a √(τ_uncr / 1100), A_Nao = (2 c_Na)², per anchor A_Na = min(s, 2 c_Na) × (min(c_a1, c_Na) + c_Na)
+ *   - splitting in uncracked concrete: ψ_cp,N = max(c_a,min, 1.5 h_ef) / c_ac, ψ_cp,Na = max(c_a,min, c_Na) / c_ac ≤ 1
+ *   - φ in tension (breakout and bond) by anchor category; φ in shear breakout / pryout by condition
  *   - seismic (SDC C–F): concrete-governed tension × 0.75 (17.10.5.4)
  *  Shear
  *   - steel V_sa = 0.6 A_se,V f_uta (17.7.1.2b), φ = 0.65
@@ -27,9 +29,15 @@ export interface AdhesiveProduct {
   /** breakout coefficient (post-installed: 17 cracked / 24 uncracked unless the report says otherwise) */
   kcCr: number;
   kcUncr: number;
-  /** strength reduction factor for bond / breakout (anchor category, condition) */
+  /**
+   * strength reduction factors (ACI 318-19 Table 17.5.3): phiBond — tension, applied to both
+   * concrete breakout and bond (anchor category from the ESR; Condition B: Cat. 1 0.65, Cat. 2
+   * 0.55, Cat. 3 0.45); phiConcrete — shear breakout and pryout (Condition B 0.70, A 0.75)
+   */
   phiBond: number;
   phiConcrete: number;
+  /** critical edge distance c_ac, in (ESR; default 2 h_ef, ACI 318-19 17.9.5) — splitting factor ψ_cp in uncracked concrete */
+  cac?: number;
 }
 
 export interface DowelRowInput {
@@ -68,8 +76,11 @@ export function dowelRow(i: DowelRowInput) {
   const psiEdN = i.ca1 >= 1.5 * i.hef ? 1 : 0.7 + (0.3 * i.ca1) / (1.5 * i.hef);
   const kc = i.cracked ? p.kcCr : p.kcUncr;
   const Nb = kc * lam * Math.sqrt(i.fc) * i.hef ** 1.5;
-  const Ncb = (Math.min(ANc, ANco) / ANco) * psiEdN * Nb;
-  const phiNcb = p.phiConcrete * Ncb * sf;
+  // splitting (uncracked concrete, no supplementary reinforcement): ψ_cp,N, ψ_cp,Na (17.6.2.6, 17.6.5.5)
+  const cac = p.cac ?? 2 * i.hef;
+  const psiCpN = i.cracked || i.ca1 >= cac ? 1 : Math.min(1, Math.max(i.ca1, 1.5 * i.hef) / cac);
+  const Ncb = (Math.min(ANc, ANco) / ANco) * psiEdN * psiCpN * Nb;
+  const phiNcb = p.phiBond * Ncb * sf;
   // bond
   const tau = i.cracked ? p.tauCr : p.tauUncr;
   const cNa = 10 * i.d * Math.sqrt(p.tauUncr / 1100);
@@ -77,7 +88,8 @@ export function dowelRow(i: DowelRowInput) {
   const ANa = Math.min(i.s, 2 * cNa) * (Math.min(i.ca1, cNa) + cNa);
   const psiEdNa = i.ca1 >= cNa ? 1 : 0.7 + (0.3 * i.ca1) / cNa;
   const Nba = lam * tau * Math.PI * i.d * i.hef;
-  const Na = (Math.min(ANa, ANao) / ANao) * psiEdNa * Nba;
+  const psiCpNa = i.cracked || i.ca1 >= cac ? 1 : Math.min(1, Math.max(i.ca1, cNa) / cac);
+  const Na = (Math.min(ANa, ANao) / ANao) * psiEdNa * psiCpNa * Nba;
   const phiNa = p.phiBond * Na * sf;
   const tension: Array<[string, number]> = [
     ["steel (17.6.1)", phiNsa],

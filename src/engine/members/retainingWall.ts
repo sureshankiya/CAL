@@ -14,7 +14,7 @@
  *  - Soil bearing: ASCE 7 §2.4 combinations with 1.0H, linear pressure with partial contact.
  *  - Stem: CW wall engine as a cantilever from the top of the footing (concrete ACI 318
  *    strength design with 1.6H, CMU TMS 402 ASD with 1.0H). A concrete stem is a one-way slab
- *    (ACI 318-19 13.3.7.1): minimum steel 0.0018 A_g each way (7.6.1.1, 24.4.3.2) and spacing
+ *    (ACI 318-19 13.3.6.1): minimum steel 0.0018 A_g each way (7.6.1.1, 24.4.3.2) and spacing
  *    7.7.2.3 / 24.4.3.3 replace the wall minimums of Table 11.6.1.
  *  - Footing (ACI 318-19 strength design, 1.6H): toe and heel as cantilevers from the stem
  *    faces under the factored soil pressure — flexure (22.2) at the face, one-way shear
@@ -29,7 +29,7 @@ import { loadVector, zeroLoads, type LoadType } from "../core/loads";
 import { fromDefault, type AssumptionEntry } from "../core/provenance";
 import { bar, flexure, oneWayShear } from "../design/concrete";
 import { governingCheck, type Check } from "../design/wood";
-import type { DesignContext, ExtraLoad, LoadLine } from "./common";
+import { asce7Of, type DesignContext, type ExtraLoad, type LoadLine } from "./common";
 import { eccentricBearing } from "./holdownFooting";
 import { designMasonryWall, type MasonryWallInput, type MasonryWallResult } from "./masonryWall";
 import type { MemberResultBase } from "./types";
@@ -367,7 +367,7 @@ export function designRetainingWall(ctx: DesignContext, w: RetainingWallInput): 
   const hasL = vertical.some((v) => v.type === "L");
   const present: Partial<Record<LoadType, boolean>> = { D: true, L: hasL, E: !!seis };
   const asd = relevantCombinations(
-    asdCombinations({ SDS: ctx.SDS, includeWind: false, includeSeismic: !!seis }),
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: false, includeSeismic: !!seis }),
     present,
   ).map((c) => ({ ...c, label: `${c.label} + H` }));
   const lateralMoment = (c: Combination) => {
@@ -400,7 +400,7 @@ export function designRetainingWall(ctx: DesignContext, w: RetainingWallInput): 
 
   // ---------------- footing, ACI 318 strength design (1.6H)
   const strength = relevantCombinations(
-    strengthCombinations({ SDS: ctx.SDS, includeWind: false, includeSeismic: !!seis }),
+    strengthCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: false, includeSeismic: !!seis }),
     present,
   ).map((c) => ({ ...c, label: `${c.label} + 1.6H` }));
   const bBot = bar(f.bottom.size);
@@ -604,7 +604,7 @@ export function designRetainingWall(ctx: DesignContext, w: RetainingWallInput): 
     combo: "—",
     unit: "in",
   });
-  // concrete stem: one-way slab minimums (ACI 318-19 13.3.7.1 → 7.6.1.1, 7.7.2.3, 24.4.3) replace the
+  // concrete stem: one-way slab minimums (ACI 318-19 13.3.6.1 → 7.6.1.1, 7.7.2.3, 24.4.3) replace the
   // wall minimums of Table 11.6.1 / 11.7
   const concreteStem = w.stem.material === "concrete";
   const wallMinimum = (name: string) => /Table 11\.6\.1|11\.7\.[23]\.1/.test(name);
@@ -618,7 +618,7 @@ export function designRetainingWall(ctx: DesignContext, w: RetainingWallInput): 
     const Av = stem.bars.As;
     const Ah = stem.bars.Ah;
     ck({
-      name: "Stem — vertical A_s ≥ 0.0018 A_g, one-way slab (13.3.7.1, 7.6.1.1)",
+      name: "Stem — vertical A_s ≥ 0.0018 A_g, one-way slab (13.3.6.1, 7.6.1.1)",
       category: "detailing",
       demand: vMin,
       capacity: Av,

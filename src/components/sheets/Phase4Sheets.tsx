@@ -111,6 +111,9 @@ export function MasonryWallSheet({ m, r, index, total, received, connections }: 
   const ax = r.axial;
   const asd = cmu;
   const L = asd ? "" : "u";
+  // TMS 402-22 (2025 cycle): 0.30 f'm A_n (8.3.4.2.1) and 0.20 P / A_n (8.3.5.1.3); TMS 402-16: 0.25 / 0.25
+  const tmsK = m.cycle.id === "2025" ? "0.30" : "0.25";
+  const tmsP = m.cycle.id === "2025" ? "0.20" : "0.25";
   return (
     <Frame
       m={m}
@@ -316,7 +319,7 @@ export function MasonryWallSheet({ m, r, index, total, received, connections }: 
             desc="Allowable axial force"
             expr={
               <>
-                P<sub>a</sub> = 0.25 f'<sub>m</sub> A<sub>n</sub> [1 − (K h / 140 r)²] = 0.25 × {f0(w.cmu!.fm)} ×{" "}
+                P<sub>a</sub> = {tmsK} f'<sub>m</sub> A<sub>n</sub> [1 − (K h / 140 r)²] = {tmsK} × {f0(w.cmu!.fm)} ×{" "}
                 {f1(r.section.A)} × {f3(ax.red)} = {f0(ax.cap)} lb/ft; P / P<sub>a</sub> = {f3(ax.ratio)}
               </>
             }
@@ -451,7 +454,7 @@ export function MasonryWallSheet({ m, r, index, total, received, connections }: 
             desc="Allowable shear stress"
             expr={
               <>
-                F<sub>vm</sub> = ½ [4.0 − 1.75 min(M/(Vd), 1.0)] √f'<sub>m</sub> + 0.25 P / A<sub>n</sub> ={" "}
+                F<sub>vm</sub> = ½ [4.0 − 1.75 min(M/(Vd), 1.0)] √f'<sub>m</sub> + {tmsP} P / A<sub>n</sub> ={" "}
                 {f1(sh.Fvm!)} psi (M/(Vd) = {f3(sh.MVd!)}); F<sub>v</sub> = min(F<sub>vm</sub>, {f1(sh.FvMax!)}) ={" "}
                 {f1(sh.cap / r.section.Anv)} psi; f<sub>v</sub> / F<sub>v</sub> = {f3(sh.ratio)}
               </>
@@ -762,8 +765,8 @@ export function TieInSheet({ m, r, index, total }: SheetProps<TieInResult>) {
         expr={
           <>
             {t.product.name}: τ<sub>cr</sub> = {f0(t.product.tauCr)} psi, τ<sub>uncr</sub> = {f0(t.product.tauUncr)}{" "}
-            psi; k<sub>c</sub> = {f0(w.kc)}; φ<sub>bond</sub> = {f2(t.product.phiBond)}, φ<sub>conc</sub> ={" "}
-            {f2(t.product.phiConcrete)}
+            psi; k<sub>c</sub> = {f0(w.kc)}; φ<sub>tension</sub> (breakout and bond) = {f2(t.product.phiBond)}, φ
+            <sub>shear</sub> (breakout, pryout) = {f2(t.product.phiConcrete)}
           </>
         }
       />

@@ -22,7 +22,7 @@ import { fmt } from "../core/fmt";
 import { LOAD_TYPES, loadVector, zeroLoads, type LoadType } from "../core/loads";
 import { fromDefault, type AssumptionEntry } from "../core/provenance";
 import { governingCheck, type Check } from "../design/wood";
-import type { DesignContext, ExtraLoad, LoadLine } from "./common";
+import { asce7Of, type DesignContext, type ExtraLoad, type LoadLine } from "./common";
 import type { MemberResultBase } from "./types";
 
 export interface CfsWallInput {
@@ -151,7 +151,7 @@ export function designCfsWall(ctx: DesignContext, w: CfsWallInput): CfsWallResul
   const present: Partial<Record<LoadType, boolean>> = { D: true, W: w.W > 0 };
   for (const tp of LOAD_TYPES) if (perStud[tp] > 0) present[tp] = true;
   const combos = relevantCombinations(
-    asdCombinations({ SDS: ctx.SDS, includeWind: w.W > 0, includeSeismic: false }),
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: w.W > 0, includeSeismic: false }),
     present,
   );
   const rows: CfsComboRow[] = combos.map((c) => {

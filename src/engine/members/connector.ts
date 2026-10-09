@@ -12,7 +12,7 @@ import { LOAD_TYPES, type LoadType, type LoadVector } from "../core/loads";
 import { fromDefault } from "../core/provenance";
 import { governingCheck, type Check } from "../design/wood";
 import { HARDWARE_KIND_LABEL, downCapacity, hardwareLabel, type HardwareItem } from "../data/hardware";
-import type { DesignContext, LoadLine } from "./common";
+import { asce7Of, type DesignContext, type LoadLine } from "./common";
 import type { MemberResultBase } from "./types";
 
 export interface ConnectorInput {
@@ -53,7 +53,7 @@ export function designConnector(ctx: DesignContext, c: ConnectorInput): Connecto
   const present: Partial<Record<LoadType, boolean>> = { D: true };
   for (const t of LOAD_TYPES) if (Math.abs(c.R[t]) > 1e-9) present[t] = true;
   const combos = relevantCombinations(
-    asdCombinations({ SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
     present,
   );
   const rows: ConnectorRow[] = [];

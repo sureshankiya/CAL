@@ -23,7 +23,7 @@ import { LOAD_TYPES, zeroLoads, type LoadType, type LoadVector } from "../core/l
 import { fromDefault, type AssumptionEntry } from "../core/provenance";
 import { bar, flexure, plainFlexure } from "../design/concrete";
 import { governingCheck, type Check } from "../design/wood";
-import type { DesignContext, ExtraLoad, LoadLine } from "./common";
+import { asce7Of, type DesignContext, type ExtraLoad, type LoadLine } from "./common";
 import type { ShearWallResult } from "./shearWall";
 import type { MemberResultBase } from "./types";
 
@@ -191,7 +191,7 @@ export function designHoldownFooting(ctx: DesignContext, f: HoldownFootingInput)
   if (w.demand.W) present.W = true;
   if (w.demand.Eh) present.E = true;
   const combos = relevantCombinations(
-    asdCombinations({ SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
     present,
   );
   // passive on the leading end face (ft-based lateral bearing, psf per ft below grade)

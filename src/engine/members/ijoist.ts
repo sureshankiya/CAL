@@ -28,6 +28,7 @@ import {
   type ExtraLoad,
   type LiveRef,
   type LoadLine,
+  asce7Of,
 } from "./common";
 import { supportName, type MemberReaction, type MemberResultBase } from "./types";
 
@@ -167,7 +168,7 @@ export function designIJoist(ctx: DesignContext, j: IJoistInput): IJoistResult {
   const present: Partial<Record<LoadType, boolean>> = { D: true };
   for (const t of LOAD_TYPES) if (loads.some((l) => l.type === t)) present[t] = true;
   const combos = relevantCombinations(
-    asdCombinations({ includeWind: !!present.W, includeSeismic: !!present.E, SDS: ctx.SDS }),
+    asdCombinations({ asce7: asce7Of(ctx), includeWind: !!present.W, includeSeismic: !!present.E, SDS: ctx.SDS }),
     present,
   );
 

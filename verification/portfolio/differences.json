@@ -49,6 +49,16 @@
    "case": "45324\\-indian\\-well\\-covered\\-carport/F1\\-\\ 18\"X10\"",
    "quantity": "qmax",
    "reason": "Not reconciled from the printed inputs: Tedds F_dz = 3.334 kips implies soil over 1.39 ft of the 1.6 ft width (wall printed as 8 in.); HouseCalc 2,015 psf with the soil over the projection beyond the wall. Tedds is 3.4 % higher (conservative)."
+  },
+  {
+   "case": "(1165\\-goldenrod\\-st\\-adu/W1|1165\\-goldenrod\\-st\\-adu/W2|1165\\-goldenrod\\-st\\-adu/W3|1165\\-goldenrod\\-st\\-adu/W5|1165\\-goldenrod\\-st\\-adu/W7|1165\\-goldenrod\\-st\\-adu/W8|1550\\-bluebird\\-lane\\-house\\-remoulding/1SW1|1550\\-bluebird\\-lane\\-house\\-remoulding/1SW2|1550\\-bluebird\\-lane\\-house\\-remoulding/1SW3|1550\\-bluebird\\-lane\\-house\\-remoulding/2SW2|1550\\-bluebird\\-lane\\-house\\-remoulding/SW1|1550\\-bluebird\\-lane\\-house\\-remoulding/SW2|1550\\-bluebird\\-lane\\-house\\-remoulding/SW3|215\\-alvarado\\-st\\-adu/2W\\-1|215\\-alvarado\\-st\\-adu/2W\\-3|215\\-alvarado\\-st\\-adu/W1|215\\-alvarado\\-st\\-adu/W2|215\\-alvarado\\-st\\-adu/W3|215\\-alvarado\\-st\\-adu/W4|215\\-alvarado\\-st\\-adu/W5|215\\-alvarado\\-st\\-adu/W6|215\\-alvarado\\-st\\-adu/W9|2163\\-controllata\\-street\\-garage\\-to\\-adu\\-wi/LW2|2163\\-controllata\\-street\\-garage\\-to\\-adu\\-wi/LW3|2163\\-controllata\\-street\\-garage\\-to\\-adu\\-wi/LW4|2163\\-controllata\\-street\\-garage\\-to\\-adu\\-wi/W2|2163\\-controllata\\-street\\-garage\\-to\\-adu\\-wi/W3|2163\\-controllata\\-street\\-garage\\-to\\-adu\\-wi/W4|4609\\-bancroft\\-drive\\-grage\\-addition/IW)",
+   "quantity": "Vs",
+   "reason": "Edition: the Tedds sheets use SDPWS-2015 (seismic ASD = v / 2.0 for gypsum). SDPWS-2021 Table 4.3C keeps the nominal gypsum values but sets the seismic ASD reduction to 2.8; HouseCalc applies 2021 — 2.0 / 2.8 = 0.714 × Tedds for gypsum-only walls, 0.75 × Tedds for WSP + gypsum sheathing where twice the gypsum value governs. Wind capacities are unchanged."
+  },
+  {
+   "case": "sheathing",
+   "quantity": "GWB-1/2-4",
+   "reason": "1/2 in. gypsum wallboard, unblocked, 4 in. edges: the Blackthorne Tedds sheets print v = 250 plf (the blocked cell); SDPWS Table 4.3C (as reproduced by WoodWorks) gives 220 plf unblocked. HouseCalc uses 220 plf (conservative)."
   }
  ]
 }

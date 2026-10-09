@@ -38,7 +38,7 @@ import { aspectFactor, panel1532Shear, sideValues, type SheathingRow } from "../
 import { type HardwareItem } from "../data/hardware";
 import type { Grade, Species } from "../data/sawn";
 import { SPECIFIC_GRAVITY } from "../data/sawn";
-import { ndsOf, resolveDead, type DeadRef, type DesignContext, type LoadLine } from "./common";
+import { ndsOf, resolveDead, type DeadRef, type DesignContext, type LoadLine, asce7Of } from "./common";
 import type { MemberResultBase } from "./types";
 
 export interface ShearWallSide {
@@ -160,6 +160,10 @@ export interface ShearWallResult extends MemberResultBase {
   vwc: number;
   /** wind: WSP + gypsum wallboard on opposite faces combined additively (SDPWS 4.3.3.2.1 exception) */
   windSum: boolean;
+  /** seismic ASD unit shear before C_ar (gypsum v / 2.8, wood-based v / 2.0, combined per SDPWS) */
+  asdS: number;
+  /** two-sided combination rule applied */
+  comboRule: "single" | "same" | "kmin" | "dissimilar";
   Gac: number;
   aspect: number;
   maxAspect: number;
@@ -203,23 +207,52 @@ export interface ShearWallResult extends MemberResultBase {
   ftao?: FtaoResult;
 }
 
+/** SDPWS-2021 ASD reduction for seismic: 2.0 wood-based panels (v_s = v_n / 1.4), 2.8 gypsum / plaster (Table 4.3C). */
+export const seismicAsdDivisor = (row: SheathingRow) => (row.family === "gypsum" ? 2.8 : 2.0);
+
 /**
- * Two-sided walls (SDPWS 4.3.3.2): same construction both faces — additive; dissimilar —
- * the greater of twice the smaller and the larger. Exception (wind): wood structural panels
- * (Table 4.3A) on one face and gypsum wallboard on the other are additive.
+ * Two-sided walls (SDPWS-2021 4.3.5.4; 2015 4.3.3.2):
+ *  - same construction and materials both faces: additive;
+ *  - same material, different capacity (e.g. different nailing): v_c = K_min ΣG_a, K_min = min(v_i / G_ai);
+ *  - dissimilar materials: the greater of twice the smaller and the larger, taken on the ASD
+ *    values (gypsum seismic v_n / 2.8, wood-based v_s / 2.0); wind exception — wood structural
+ *    panels (Table 4.3A) on one face and gypsum wallboard on the other are additive.
+ * Returns the nominal combinations (v_sc, v_wc) and the seismic ASD unit shear asdS.
  */
 function combineSides(sides: Array<{ row: SheathingRow; vs: number; vw: number; Ga: number }>) {
-  if (sides.length === 1) return { vsc: sides[0].vs, vwc: sides[0].vw, Gac: sides[0].Ga, windSum: false };
+  const allow = (x: { row: SheathingRow; vs: number }) => x.vs / seismicAsdDivisor(x.row);
+  if (sides.length === 1) {
+    const a = sides[0];
+    return { vsc: a.vs, vwc: a.vw, Gac: a.Ga, windSum: false, asdS: allow(a), rule: "single" as const };
+  }
   const [a, b] = sides;
+  const Gac = a.Ga + b.Ga;
   const same = a.row.key === b.row.key && a.vs === b.vs;
-  if (same) return { vsc: a.vs + b.vs, vwc: a.vw + b.vw, Gac: a.Ga + b.Ga, windSum: false };
+  if (same)
+    return {
+      vsc: a.vs + b.vs,
+      vwc: a.vw + b.vw,
+      Gac,
+      windSum: false,
+      asdS: (a.vs + b.vs) / seismicAsdDivisor(a.row),
+      rule: "same" as const,
+    };
+  if (a.row.family === b.row.family && a.row.table === b.row.table) {
+    const vsc = Math.min(a.vs / a.Ga, b.vs / b.Ga) * Gac;
+    const vwc = Math.min(a.vw / a.Ga, b.vw / b.Ga) * Gac;
+    return { vsc, vwc, Gac, windSum: false, asdS: vsc / seismicAsdDivisor(a.row), rule: "kmin" as const };
+  }
   const wspGwb = (x: SheathingRow, y: SheathingRow) => x.table === "4.3A" && y.key.startsWith("GWB");
   const windSum = wspGwb(a.row, b.row) || wspGwb(b.row, a.row);
+  const aS = allow(a);
+  const bS = allow(b);
   return {
     vsc: Math.max(2 * Math.min(a.vs, b.vs), a.vs, b.vs),
     vwc: windSum ? a.vw + b.vw : Math.max(2 * Math.min(a.vw, b.vw), a.vw, b.vw),
-    Gac: a.Ga + b.Ga,
+    Gac,
     windSum,
+    asdS: Math.max(2 * Math.min(aS, bS), aS, bS),
+    rule: "dissimilar" as const,
   };
 }
 
@@ -229,14 +262,14 @@ export function shearWallWeight(s: Pick<ShearWallInput, "sides" | "b" | "h" | "o
     const v = sideValues(x.key, x.spacing);
     return { ...v, vs: x.vsOverride ?? v.vs, vw: x.vsOverride ? Math.round((1.4 * x.vsOverride) / 5) * 5 : v.vw };
   });
-  const { vsc } = combineSides(sides);
+  const { asdS } = combineSides(sides);
   const fam = sides.some((x) => x.row.family === "gypsum") ? "gypsum" : "wsp";
   if (s.opening) {
     const ho = s.h - s.opening.ha - s.opening.hb;
     const Lp = s.opening.L1 + s.opening.L2;
-    return (vsc * aspectFactor(fam, ho / Math.min(s.opening.L1, s.opening.L2)) * Lp) / 2;
+    return asdS * aspectFactor(fam, ho / Math.min(s.opening.L1, s.opening.L2)) * Lp;
   }
-  return (vsc * aspectFactor(fam, s.h / s.b) * s.b) / 2;
+  return asdS * aspectFactor(fam, s.h / s.b) * s.b;
 }
 
 export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: ShearWallDemand): ShearWallResult {
@@ -276,7 +309,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     const vw = v.row.family === "wsp" ? Math.round((1.4 * vs) / 5) * 5 : vs;
     return { row: v.row, vs, vw, Ga: x.GaOverride ?? v.Ga, spacing: x.spacing, override };
   });
-  const { vsc, vwc, Gac, windSum } = combineSides(sides);
+  const { vsc, vwc, Gac, windSum, asdS, rule: comboRule } = combineSides(sides);
   const family = sides.some((x) => x.row.family === "gypsum") ? "gypsum" : "wsp";
   let aspect = s.h / s.b;
   let maxAspect = Math.min(...sides.map((x) => x.row.maxAspect));
@@ -326,7 +359,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
       ),
     );
   }
-  const vAllowS = (vsc * Car) / 2;
+  const vAllowS = asdS * Car;
   const vAllowW = (vwc * Car) / 2;
 
   // gravity per foot on the wall
@@ -389,7 +422,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   );
   const arm = s.overturning === "full" ? s.b - post.b / 12 : s.b;
   const tribEnd = s.stud.spacing / 12 / 2;
-  const combos = asdCombinations({ SDS: dem.SDS, includeWind: true, includeSeismic: true }).filter(
+  const combos = asdCombinations({ asce7: asce7Of(ctx), SDS: dem.SDS, includeWind: true, includeSeismic: true }).filter(
     (c) => (c.factors.E ?? 0) !== 0 || (c.factors.W ?? 0) !== 0,
   );
   const chord: ChordRow[] = combos.map((c: Combination) => {
@@ -775,6 +808,8 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     vsc,
     vwc,
     windSum,
+    asdS,
+    comboRule,
     Gac,
     aspect,
     maxAspect,

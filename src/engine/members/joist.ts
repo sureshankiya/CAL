@@ -24,6 +24,7 @@ import {
   type ExtraLoad,
   type LiveRef,
   type LoadLine,
+  asce7Of,
 } from "./common";
 import { supportName, type MemberReaction, type MemberResultBase } from "./types";
 
@@ -121,6 +122,7 @@ function toWoodInput(ctx: DesignContext, j: JoistInput, loads: BeamLoad[], size 
     rule441: j.rule441,
     SDS: ctx.SDS,
     nds: ndsOf(ctx),
+    asce7: asce7Of(ctx),
   };
 }
 

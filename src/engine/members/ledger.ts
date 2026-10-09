@@ -21,7 +21,7 @@ import { fromDefault, type AssumptionEntry } from "../core/provenance";
 import { SPECIFIC_GRAVITY, type Grade, type Species } from "../data/sawn";
 import { dowelBearingAngle, dowelYieldSingle, type DowelYieldResult } from "../design/dowel";
 import { governingCheck, resolveWood, type Check } from "../design/wood";
-import { ndsOf, type DesignContext, type ExtraLoad, type LoadLine } from "./common";
+import { ndsOf, type DesignContext, type ExtraLoad, type LoadLine, asce7Of } from "./common";
 import type { MemberResultBase } from "./types";
 
 export interface LedgerInput {
@@ -108,7 +108,7 @@ export function designLedger(ctx: DesignContext, l: LedgerInput): LedgerResult {
   const present: Partial<Record<LoadType, boolean>> = { D: true };
   for (const t of LOAD_TYPES) if (Math.abs(lat[t]) > 1e-9) present[t] = true;
   const combos = relevantCombinations(
-    asdCombinations({ SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
     present,
   );
   const s = l.fastener.spacing / 12;

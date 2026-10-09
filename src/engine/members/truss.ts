@@ -15,7 +15,7 @@ import { LOAD_TYPES, loadVector, type LoadType, type LoadVector } from "../core/
 import { fromDefault } from "../core/provenance";
 import { bearingAreaFactor, governingCheck, type Check } from "../design/wood";
 import { lumberData, type Grade, type Species } from "../data/sawn";
-import { ndsOf, type DesignContext, type LoadLine } from "./common";
+import { ndsOf, type DesignContext, type LoadLine, asce7Of } from "./common";
 import type { MemberReaction, MemberResultBase } from "./types";
 
 export interface TrussBearing {
@@ -72,7 +72,10 @@ export function designTruss(ctx: DesignContext, t: TrussInput): TrussResult {
   const vec = (b: TrussBearing): LoadVector => loadVector({ D: b.D, L: b.L, Lr: b.Lr, S: b.S, W: b.W });
   const present: Partial<Record<LoadType, boolean>> = { D: true };
   for (const b of t.bearings) for (const k of LOAD_TYPES) if (Math.abs(vec(b)[k]) > 1e-9) present[k] = true;
-  const combos = relevantCombinations(asdCombinations({ SDS: ctx.SDS, includeWind: !!present.W }), present);
+  const combos = relevantCombinations(
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!present.W }),
+    present,
+  );
   const lines: LoadLine[] = [];
   const checks: Check[] = [];
   const bearingChecks: TrussResult["bearingChecks"] = [];

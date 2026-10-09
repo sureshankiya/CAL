@@ -125,7 +125,7 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
       title: "Exterior decks",
       notes: [
         "Deck framing: preservative-treated lumber per AWPA U1 (UC4A for posts and members in ground contact), incised where so noted on the sheets; design values include wet service and incising factors.",
-        `Fasteners and connectors in treated wood: hot-dip galvanized (ASTM A153 / A653 G185) or stainless steel (${c.residential} R317.3).`,
+        `Fasteners and connectors in treated wood: hot-dip galvanized (ASTM A153 / A653 G185) or stainless steel (${c.residential} ${p.cycleId === "2025" ? "R304.3" : "R317.3"}).`,
         `Ledger: flashed at the house rim, attached with the bolts / lags and spacing on the ledger sheet; no attachment through siding or to brick veneer; deck lateral load connection per ${c.residential} R507.9.2 or as detailed.`,
         "Guard posts: through-bolted to the rim / end joist with the tension devices scheduled on the guard post sheets; do not notch guard posts.",
       ],

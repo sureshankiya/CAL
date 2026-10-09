@@ -35,6 +35,7 @@ import {
   type ExtraLoad,
   type LiveRef,
   type LoadLine,
+  asce7Of,
 } from "./common";
 import { reactionsFrom } from "./joist";
 import type { MemberResultBase } from "./types";
@@ -152,6 +153,7 @@ function evaluate(ctx: DesignContext, j: CeilingJoistInput, size = j.size) {
     rule441: j.rule441,
     SDS: ctx.SDS,
     nds: ndsOf(ctx),
+    asce7: asce7Of(ctx),
   });
   const checks: Check[] = [...design.checks];
   let tension: CeilingJoistResult["tension"];
@@ -159,7 +161,10 @@ function evaluate(ctx: DesignContext, j: CeilingJoistInput, size = j.size) {
     const mat = design.mat;
     const present: Partial<Record<LoadType, boolean>> = { ...design.present };
     for (const t of LOAD_TYPES) if (j.tension.T[t] > 0) present[t] = true;
-    const combos = relevantCombinations(asdCombinations({ includeWind: !!present.W, includeSeismic: false }), present);
+    const combos = relevantCombinations(
+      asdCombinations({ asce7: asce7Of(ctx), includeWind: !!present.W, includeSeismic: false }),
+      present,
+    );
     const nail = j.heel ? nailDef(j.heel.nail) : undefined;
     const G = SPECIFIC_GRAVITY[j.species];
     const ns = nail ? nailSingleShear({ nail, ts: j.heel!.rafterThickness, tm: mat.b, Gs: G, Gm: G }) : undefined;

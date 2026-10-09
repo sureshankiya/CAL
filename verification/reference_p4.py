@@ -194,7 +194,7 @@ def adhesive_row():
     psi_edN = 1.0 if ca1 >= 1.5 * hef else 0.7 + 0.3 * ca1 / (1.5 * hef)
     Nb = kc * lam * sfc * hef ** 1.5
     Ncb = min(ANc, ANco) / ANco * psi_edN * Nb
-    phiNcb = phi_c * Ncb
+    phiNcb = phi_b * Ncb  # ACI 318-19 17.5.3: one phi (anchor category) for breakout and bond in tension
 
     # Bond (17.6.5)
     cNa = 10 * da * math.sqrt(tau_uncr / 1100.0)

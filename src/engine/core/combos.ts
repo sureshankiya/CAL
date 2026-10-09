@@ -2,7 +2,9 @@
  * ASCE 7 load combinations.
  *  - ASD: §2.4.1 basic combinations and §2.4.5 seismic combinations (Ev = 0.2 SDS D, §12.4.2.2).
  *  - Strength: §2.3.1 basic combinations and §2.3.6 seismic combinations.
- * ASCE 7-16 and ASCE 7-22 use the same factors for these combinations.
+ * ASCE 7-16 and ASCE 7-22 use the same factors except snow: ASCE 7-22 ground snow loads are
+ * strength level, so ASD takes 0.7S and strength design 1.0S (0.3S as a companion load);
+ * the seismic companion 0.2S is kept for both editions (conservative).
  *
  * C_D for a combination is that of the shortest-duration load it contains
  * (NDS Table 2.3.2): D 0.9, L 1.0, S 1.15, Lr 1.25, W / E 1.6.
@@ -72,7 +74,9 @@ function lrfdBasic(): Combination[] {
     C("U3r", "LRFD", "1.2D + 1.6Lr + 1.0L", { D: 1.2, Lr: 1.6, L: 1 }, "§2.3.1 (3)"),
     C("U3s", "LRFD", "1.2D + 1.6S + 1.0L", { D: 1.2, S: 1.6, L: 1 }, "§2.3.1 (3)"),
     C("U3w", "LRFD", "1.2D + 1.6Lr + 0.5W", { D: 1.2, Lr: 1.6, W: 0.5 }, "§2.3.1 (3)"),
+    C("U3sw", "LRFD", "1.2D + 1.6S + 0.5W", { D: 1.2, S: 1.6, W: 0.5 }, "§2.3.1 (3)"),
     C("U4", "LRFD", "1.2D + 1.0W + 1.0L + 0.5Lr", { D: 1.2, W: 1, L: 1, Lr: 0.5 }, "§2.3.1 (4)"),
+    C("U4s", "LRFD", "1.2D + 1.0W + 1.0L + 0.5S", { D: 1.2, W: 1, L: 1, S: 0.5 }, "§2.3.1 (4)"),
     C("U5", "LRFD", "0.9D + 1.0W", { D: 0.9, W: 1 }, "§2.3.1 (5)"),
   ];
 }
@@ -91,24 +95,46 @@ function lrfdSeismic(SDS: number): Combination[] {
   ];
 }
 
-export function asdCombinations(
-  opts: { SDS?: number; includeSeismic?: boolean; includeWind?: boolean } = {},
-): Combination[] {
+export interface ComboOptions {
+  SDS?: number;
+  includeSeismic?: boolean;
+  includeWind?: boolean;
+  /** ASCE 7-22 snow loads are strength level: ASD uses 0.7S (§2.4.1); strength uses 1.0S and 0.3S (§2.3.1) */
+  asce7?: "ASCE 7-16" | "ASCE 7-22";
+}
+
+const rnd = (x: number) => Math.round(x * 1000) / 1000;
+const fmtF = (x: number) => String(rnd(x));
+
+/** ASCE 7-22 snow factors: ASD S → 0.7S everywhere; strength 1.6S → 1.0S and the 0.5S companion → 0.3S. */
+function snow722(c: Combination): Combination {
+  const S = c.factors.S;
+  if (!S) return c;
+  const Snew = c.kind === "ASD" ? rnd(S * 0.7) : S === 1.6 ? 1.0 : S === 0.5 ? 0.3 : S;
+  const label =
+    c.kind === "ASD"
+      ? c.label.replace(
+          /(^|[^0-9.])(\d*\.?\d*)S\b/g,
+          (_m, pre: string, k: string) => `${pre}${fmtF((k ? Number(k) : 1) * 0.7)}S`,
+        )
+      : c.label.replace(/1\.6S\b/, "1.0S").replace(/0\.5S\b/, "0.3S");
+  return { ...c, factors: { ...c.factors, S: Snew }, label, ref: `${c.ref}, ASCE 7-22` };
+}
+
+export function asdCombinations(opts: ComboOptions = {}): Combination[] {
   const { SDS = 1.0, includeSeismic = false, includeWind = true } = opts;
   let list = asdBasic();
   if (!includeWind) list = list.filter((c) => !c.factors.W);
   if (includeSeismic) list = list.concat(asdSeismic(SDS));
-  return list;
+  return opts.asce7 === "ASCE 7-22" ? list.map(snow722) : list;
 }
 
-export function strengthCombinations(
-  opts: { SDS?: number; includeSeismic?: boolean; includeWind?: boolean } = {},
-): Combination[] {
+export function strengthCombinations(opts: ComboOptions = {}): Combination[] {
   const { SDS = 1.0, includeSeismic = false, includeWind = true } = opts;
   let list = lrfdBasic();
   if (!includeWind) list = list.filter((c) => !c.factors.W);
   if (includeSeismic) list = list.concat(lrfdSeismic(SDS));
-  return list;
+  return opts.asce7 === "ASCE 7-22" ? list.map(snow722) : list;
 }
 
 /** Apply a combination to a load-type vector of any effect (moment, shear, reaction...). */

@@ -32,7 +32,7 @@ import {
 } from "../design/concrete";
 import { governingCheck, type Check } from "../design/wood";
 import { MIN_FOOTING_DEPTH, minFooting } from "../data/soil";
-import type { DesignContext, ExtraLoad, LoadLine } from "./common";
+import { asce7Of, type DesignContext, type ExtraLoad, type LoadLine } from "./common";
 import type { MemberResultBase } from "./types";
 
 export interface FootingRebar {
@@ -219,7 +219,7 @@ export function designFooting(ctx: DesignContext, f: FootingInput): FootingResul
   const present: Partial<Record<LoadType, boolean>> = { D: true };
   for (const t of LOAD_TYPES) if (Math.abs(applied[t]) > 1e-9) present[t] = true;
   const asd = relevantCombinations(
-    asdCombinations({ SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
     present,
   );
   const service: FootingRow[] = asd.map((combo) => {
@@ -233,7 +233,7 @@ export function designFooting(ctx: DesignContext, f: FootingInput): FootingResul
 
   // strength design on net factored pressure (footing and soil weight excluded)
   const lrfd = relevantCombinations(
-    strengthCombinations({ SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
+    strengthCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
     present,
   );
   const strength = lrfd.map((combo) => {

@@ -650,6 +650,7 @@ export const adhesiveSchema = z.object({
   kcUncr: pos,
   phiBond: pos,
   phiConcrete: pos,
+  cac: pos.optional(),
   verified: z.boolean().default(false),
 });
 

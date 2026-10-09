@@ -28,7 +28,7 @@ import {
   type WoodMaterial,
 } from "../design/wood";
 import { lumberData, type Grade, type Species } from "../data/sawn";
-import { ndsOf, type DesignContext, type ExtraLoad, type LoadLine } from "./common";
+import { ndsOf, type DesignContext, type ExtraLoad, type LoadLine, asce7Of } from "./common";
 import { materialCallout } from "./beam";
 import type { MemberReaction, MemberResultBase } from "./types";
 
@@ -130,7 +130,7 @@ function evaluate(ctx: DesignContext, p: PostInput, material = p.material) {
   for (const t of LOAD_TYPES) if (Math.abs(P[t]) > 1e-9) present[t] = true;
   if (windPlf > 0) present.W = true;
   const combos = relevantCombinations(
-    asdCombinations({ SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
     present,
   );
   const builtUp = material.kind === "sawn" && material.plies > 1 ? (p.builtUp ?? "nailed") : undefined;

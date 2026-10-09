@@ -4,7 +4,8 @@
  *    (ASCE 7-22 ground snow loads are risk-targeted, so Is is not applied).
  *  - Sloped-roof snow load: ps = Cs pf (§7.4), Cs from Fig. 7.4-1 (formula form).
  *  - Minimum snow load for low-slope roofs (§7.3.4 in 7-16, §7.3.3 in 7-22): slopes < 15°.
- *  - Rain-on-snow surcharge (§7.10): 5 psf where 0 < pg ≤ 20 psf and slope (deg) < W / 50.
+ *  - Rain-on-snow surcharge (§7.10): 5 psf (ASCE 7-16) / 8 psf (ASCE 7-22, strength-level snow)
+ *    where 0 < pg ≤ 20 psf and slope (deg) < W / 50.
  *  - Unbalanced snow on hip and gable roofs (§7.6.1): 2.38° ≤ slope ≤ 30.2°; for W ≤ 20 ft and
  *    simply supported prismatic members from ridge to eave the leeward side carries Is·pg (7-16) or
  *    pg (7-22) with the windward side unloaded. Wider roofs need the drift surcharge (not in this version).
@@ -72,7 +73,7 @@ export function snowLoads(i: SnowInput): SnowResult {
   const ps = Cs * pf;
   const pmApplies = slopeDeg < 15 && i.pg > 0;
   const pm = !pmApplies ? 0 : i.pg <= 20 ? IsUsed * i.pg : 20 * IsUsed;
-  const rainOnSnow = i.pg > 0 && i.pg <= 20 && slopeDeg < i.W / 50 ? 5 : 0;
+  const rainOnSnow = i.pg > 0 && i.pg <= 20 && slopeDeg < i.W / 50 ? (is716 ? 5 : 8) : 0;
   const balanced = ps + rainOnSnow;
 
   const unbalApplies = i.gable && i.pg > 0 && slopeDeg >= 2.38 - 1e-9 && slopeDeg <= 30.2 + 1e-9;

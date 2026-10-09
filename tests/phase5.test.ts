@@ -5,7 +5,9 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { asdCombinations, strengthCombinations } from "@/engine/core/combos";
 import { defaultHardware } from "@/engine/data/hardware";
+import { lumberData } from "@/engine/data/sawn";
 import { panel1532Shear, sheathingRow, sideValues } from "@/engine/data/sdpws";
 import { defaultAssemblies } from "@/engine/loads/dead";
 import type { DesignContext } from "@/engine/members";
@@ -174,7 +176,7 @@ describe("RW — cantilever retaining wall", () => {
     expect(b.qmax).toBeCloseTo(993.03, 1);
   });
 
-  it("concrete stem uses the one-way slab minimums (ACI 318-19 13.3.7.1), not wall Table 11.6.1", () => {
+  it("concrete stem uses the one-way slab minimums (ACI 318-19 13.3.6.1), not wall Table 11.6.1", () => {
     const r = designRetainingWall(ctx, rwBase());
     expect(r.checks.some((c) => /Table 11\.6\.1/.test(c.name))).toBe(false);
     const v = r.checks.find((c) => /Stem — vertical A_s ≥ 0\.0018/.test(c.name))!;
@@ -264,6 +266,55 @@ describe("CS — cold-formed steel studs", () => {
     expect(ax.ratio).toBeCloseTo(0.721, 3);
     expect(c.defl.allow).toBeCloseTo(144 / 720, 6); // Tedds δ = H/720 = 0.2 in
     expect(c.flags.some((f) => /VERIFY/.test(f))).toBe(true);
+  });
+});
+
+describe("verification fixes (sign-off C / D)", () => {
+  it("ASCE 7-22 snow factors: ASD 0.7S, strength 1.0S / 0.3S; ASCE 7-16 unchanged", () => {
+    const a16 = asdCombinations({ asce7: "ASCE 7-16" });
+    const a22 = asdCombinations({ asce7: "ASCE 7-22" });
+    expect(a16.find((c) => c.id === "A3s")!.factors.S).toBe(1);
+    expect(a22.find((c) => c.id === "A3s")!.factors.S).toBe(0.7);
+    expect(a22.find((c) => c.id === "A3s")!.label).toBe("D + 0.7S");
+    expect(a22.find((c) => c.id === "A4s")!.factors.S).toBeCloseTo(0.525, 9);
+    const s22 = strengthCombinations({ asce7: "ASCE 7-22" });
+    expect(s22.find((c) => c.id === "U3s")!.factors.S).toBe(1);
+    expect(s22.find((c) => c.id === "U2s")!.factors.S).toBe(0.3);
+    expect(strengthCombinations({ asce7: "ASCE 7-16" }).find((c) => c.id === "U3s")!.factors.S).toBe(1.6);
+  });
+
+  it("SDPWS-2021: gypsum seismic ASD = v / 2.8; WSP + gypsum combined on the ASD values", () => {
+    const g = designShearWall(ctx, wall([{ key: "GWB-5/8-4-blocked", spacing: 4 }]), dem);
+    expect(g.vAllowS).toBeCloseTo(350 / 2.8, 6);
+    expect(g.vAllowW).toBeCloseTo(350 / 2, 6);
+    const m = designShearWall(
+      ctx,
+      wall([
+        { key: "SI-5/16-6d", spacing: 6 },
+        { key: "GWB-5/8-4-blocked", spacing: 4 },
+      ]),
+      dem,
+    );
+    // max(2 × 125, 400 / 2) = 250 plf
+    expect(m.vAllowS).toBeCloseTo(250, 6);
+  });
+
+  it("same material, different nailing on the two faces: v_c = K_min ΣG_a", () => {
+    const r = designShearWall(
+      ctx,
+      wall([
+        { key: "SI-7/16-8d", spacing: 6 },
+        { key: "SI-7/16-8d", spacing: 4 },
+      ]),
+      dem,
+    );
+    expect(r.comboRule).toBe("kmin");
+    expect(r.vsc).toBeCloseTo(Math.min(510 / 16, 790 / 21) * 37, 6);
+  });
+
+  it("Southern Pine No.1 F_c per SPIB (Table 4B)", () => {
+    expect(lumberData("SP", "No.1", "2x4", "NDS-2018").ref.Fc).toBe(1650);
+    expect(lumberData("SP", "No.1", "2x12", "NDS-2024").ref.Fc).toBe(1400);
   });
 });
 

@@ -980,8 +980,8 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
             desc="Unit shear, seismic"
             expr={
               <>
-                max(v<sub>p</sub>, v<sub>ab</sub>) = {f1(r.vS)} plf ≤ v<sub>sc</sub> C<sub>ar</sub> / 2 ={" "}
-                {f1(r.vAllowS)} plf
+                max(v<sub>p</sub>, v<sub>ab</sub>) = {f1(r.vS)} plf ≤ v<sub>s,ASD</sub> C<sub>ar</sub> = {f1(r.vAllowS)}{" "}
+                plf
               </>
             }
             pass={r.vS <= r.vAllowS}
@@ -1014,13 +1014,13 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         </>
       ) : (
         <>
-          <SectionHead title="Unit shear — ASD (SDPWS 4.3.3, nominal / 2.0)" />
+          <SectionHead title="Unit shear — ASD (SDPWS-2021: seismic v / 2.0 wood-based panels, v / 2.8 gypsum; wind v / 2.0)" />
           <TR
             desc="Seismic"
             expr={
               <>
-                v = 0.7 E<sub>h</sub> / b<sub>s</sub> = 0.7 × {f0(d.Eh)} / {f3(s.b)} = {f1(r.vS)} plf ≤ v<sub>sc</sub> C
-                <sub>ar</sub> / 2 = {f1(r.vAllowS)} plf
+                v = 0.7 E<sub>h</sub> / b<sub>s</sub> = 0.7 × {f0(d.Eh)} / {f3(s.b)} = {f1(r.vS)} plf ≤ v
+                <sub>s,ASD</sub> C<sub>ar</sub> = {f1(r.asdS)} × {f3(r.Car)} = {f1(r.vAllowS)} plf
               </>
             }
             pass={r.vS <= r.vAllowS}

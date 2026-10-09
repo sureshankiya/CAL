@@ -11,8 +11,8 @@ declare const __DATA_HASH__: string;
 declare const __VERSION_LOCKED__: boolean;
 declare const __LOCKED_ON__: string;
 
-export const ENGINE_VERSION = "1.0.1-wip.1";
-export const DATA_VERSION = "1.1-wip.1";
+export const ENGINE_VERSION = "1.0.1-wip.2";
+export const DATA_VERSION = "1.1-wip.2";
 
 const defined = <T>(get: () => T, fallback: T): T => {
   try {

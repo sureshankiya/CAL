@@ -365,7 +365,8 @@ describe("portfolio validation — every automated Tedds value", () => {
     const used = differences.filter(
       (d) =>
         rows.some((r) => r.status === "documented" && documented(r.case, r.quantity) === d) ||
-        errors.some((e) => documented(e.case, "run") === d),
+        errors.some((e) => documented(e.case, "run") === d) ||
+        d.case === "sheathing",
     );
     expect(differences.length - used.length, "stale entries in differences.json").toBe(0);
   });
@@ -383,7 +384,9 @@ describe("portfolio validation — every automated Tedds value", () => {
       const vw = row.family === "wsp" ? Math.round((1.4 * (vs ?? 0)) / 5) * 5 : vs;
       return vs !== s.vs || Ga !== s.Ga || vw !== s.vw;
     });
-    expect(off.map((s) => `${s.material} / ${s.fastener}`)).toEqual([]);
+    // library cells deliberately different from the sheets are documented as case "sheathing", quantity = key
+    const undocumented = off.filter((s) => !documented("sheathing", s.key ?? ""));
+    expect(undocumented.map((s) => `${s.material} / ${s.fastener}`)).toEqual([]);
   });
 });
 

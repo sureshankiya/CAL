@@ -69,15 +69,19 @@ const T4A: Partial<Record<Species, Partial<Record<Grade, RefValues>>>> = {
   },
 };
 
-/** Table 4B Southern Pine (2018), keyed by nominal width class. */
+/**
+ * Table 4B Southern Pine (2018 / 2024), keyed by nominal width class. No.1 F_c corrected
+ * 2026-10-09 to the SPIB values (Supplement No. 13, 2013; SPIB 2021 rules) — the previous
+ * entry was 150–200 psi high.
+ */
 type SPWidth = 4 | 6 | 8 | 10 | 12;
 const T4B: Partial<Record<Grade, Record<SPWidth, RefValues>>> = {
   "No.1": {
-    4: v(1500, 1000, 175, 565, 1850, 1_600_000, 580_000),
-    6: v(1350, 875, 175, 565, 1750, 1_600_000, 580_000),
-    8: v(1250, 800, 175, 565, 1650, 1_600_000, 580_000),
-    10: v(1050, 700, 175, 565, 1600, 1_600_000, 580_000),
-    12: v(1000, 650, 175, 565, 1550, 1_600_000, 580_000),
+    4: v(1500, 1000, 175, 565, 1650, 1_600_000, 580_000),
+    6: v(1350, 875, 175, 565, 1550, 1_600_000, 580_000),
+    8: v(1250, 800, 175, 565, 1500, 1_600_000, 580_000),
+    10: v(1050, 700, 175, 565, 1450, 1_600_000, 580_000),
+    12: v(1000, 650, 175, 565, 1400, 1_600_000, 580_000),
   },
   "No.2": {
     4: v(1100, 675, 175, 565, 1450, 1_400_000, 510_000),

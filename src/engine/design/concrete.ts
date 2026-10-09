@@ -43,7 +43,9 @@ export function flexure(As: number, b: number, d: number, fc: number, fy: number
   const a = (As * fy) / (0.85 * fc * b);
   const c = a / beta1(fc);
   const epsT = c > 0 ? (0.003 * (d - c)) / c : Infinity;
-  const phi = Math.min(0.9, Math.max(0.65, 0.65 + ((epsT - 0.002) * 250) / 3));
+  // Table 21.2.2: φ = 0.65 + 0.25 (ε_t − ε_ty) / 0.003, ε_ty = f_y / E_s (0.00207 for Grade 60)
+  const epsTy = fy / 29_000_000;
+  const phi = Math.min(0.9, Math.max(0.65, 0.65 + (0.25 * (epsT - epsTy)) / 0.003));
   const Mn = As * fy * (d - a / 2);
   return { As, d, a, c, epsT, phi, Mn, phiMn: phi * Mn };
 }

@@ -78,7 +78,8 @@ describe("wall panel solver", () => {
 });
 
 describe("CMU wall — 1109 San Miguel parity (Tedds MSJC-13)", () => {
-  const r = designMasonryWall(ctx(), sanMiguelCmu());
+  // Tedds MSJC-13 coefficients (0.25 f'm A_n, 0.25 P / A_n) = TMS 402-16 → 2022 cycle
+  const r = designMasonryWall({ ...ctx(), cycleId: "2022" }, sanMiguelCmu());
   it("block geometry and self weight", () => {
     const w = cmuSelfWeight(
       { t: 8, hb: 8, lb: 16, tf: 1.25, tw: 1.25, te: 1.25, nWeb: 1, nEnd: 2, gammaBlock: 115, gammaGrout: 140 },
@@ -120,6 +121,11 @@ describe("CMU wall — 1109 San Miguel parity (Tedds MSJC-13)", () => {
     const max = Math.max(...r.combos.map((c) => c.ratio));
     near(max, 0.04, 0.03);
     expect(r.pass).toBe(true);
+  });
+  it("2025 cycle uses TMS 402-22: 0.30 f'm A_n (8.3.4.2.1) and 0.20 P / A_n (8.3.5.1.3)", () => {
+    const r22 = designMasonryWall({ ...ctx(), cycleId: "2025" }, sanMiguelCmu());
+    near(r22.axial.Fa! / r.axial.Fa!, 0.3 / 0.25, 1e-9);
+    expect(r22.shear.Fvm!).toBeLessThan(r.shear.Fvm!);
   });
   it("cracked-section capacity is continuous across the balance point", () => {
     const bars = [{ d: 4, A: 0.465 }];

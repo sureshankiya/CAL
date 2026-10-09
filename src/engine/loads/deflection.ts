@@ -1,8 +1,10 @@
 /**
  * Deflection limits, IBC / CBC Table 1604.3 (live = L, Lr or S; total = D + L).
- * Cantilevers are checked with ℓ = 2 × cantilever length (Table 1604.3 note h).
- * The total limit is compared with K_cr·D + live; K_cr = 1.0 is the code D + L check
- * and K_cr = 1.5 adds long-term creep per NDS 3.5.2 (seasoned lumber, glulam, SCL, I-joists).
+ * Cantilevers are checked with ℓ = 2 × cantilever length (Table 1604.3 footnote i, 2021 IBC).
+ * The total limit is compared with K_cr·Δ_D + Δ_L. Table 1604.3 footnote d applies the D + L
+ * limit to the creep component of the dead-load deflection plus the live-load deflection,
+ * and permits 0.5·Δ_D for wood (seasoned, dry); K_cr = 1.0 is therefore conservative, and
+ * K_cr = 1.5 / 2.0 add long-term creep per NDS 3.5.2.
  */
 
 export type DeflectionPreset =
@@ -57,7 +59,7 @@ export function deflectionLimits(preset: DeflectionPreset, custom?: { live: numb
 }
 
 export const KCR_OPTIONS = [
-  { value: 1.0, label: "1.0 — D + L immediate (IBC Table 1604.3)" },
+  { value: 1.0, label: "1.0 — full D + L (conservative; IBC Table 1604.3 note d permits 0.5 Δ_D for dry wood)" },
   { value: 1.5, label: "1.5 — long-term, seasoned lumber / glulam / SCL / I-joists, dry service (NDS 3.5.2)" },
   { value: 2.0, label: "2.0 — long-term, unseasoned lumber or wet service (NDS 3.5.2)" },
 ] as const;

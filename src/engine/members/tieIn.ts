@@ -192,7 +192,7 @@ export function designTieIn(ctx: DesignContext, t: TieInInput): TieInResult {
     ),
     fromDefault(
       "Adhesive",
-      `${t.product.name}: τ_cr = ${fmt(t.product.tauCr, 0)} psi, τ_uncr = ${fmt(t.product.tauUncr, 0)} psi, k_c = ${fmt(t.product.kcCr, 0)} / ${fmt(t.product.kcUncr, 0)}, φ = ${fmt(t.product.phiBond, 2)} (bond) / ${fmt(t.product.phiConcrete, 2)} (concrete)`,
+      `${t.product.name}: τ_cr = ${fmt(t.product.tauCr, 0)} psi, τ_uncr = ${fmt(t.product.tauUncr, 0)} psi, k_c = ${fmt(t.product.kcCr, 0)} / ${fmt(t.product.kcUncr, 0)}, φ = ${fmt(t.product.phiBond, 2)} (tension: breakout and bond) / ${fmt(t.product.phiConcrete, 2)} (shear breakout, pryout)`,
       t.product.report,
       !t.product.verified,
     ),

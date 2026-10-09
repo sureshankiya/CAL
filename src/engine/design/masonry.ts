@@ -54,10 +54,26 @@ export function cmuSelfWeight(b: BlockGeometry, sv: number) {
   return { Ablock, Agrout, wWall, wBond, w };
 }
 
-export function axialAllowable(fm: number, An: number, hEff: number, r: number, Ast = 0, Fs = 32000) {
+/** TMS 402 edition: "16" (2022 cycle) or "22" (2025 cycle). */
+export type TmsEdition = "16" | "22";
+
+/**
+ * Allowable axial load, TMS 402 §8.3.4.2.1 (Eqs. 8-21 / 8-22). The masonry term is
+ * 0.25 f'm A_n in TMS 402-16 and 0.30 f'm A_n in TMS 402-22.
+ */
+export function axialAllowable(
+  fm: number,
+  An: number,
+  hEff: number,
+  r: number,
+  Ast = 0,
+  Fs = 32000,
+  edition: TmsEdition = "16",
+) {
   const sr = hEff / r;
   const red = sr <= 99 ? 1 - (sr / 140) ** 2 : (70 / sr) ** 2;
-  return { sr, red, Pa: (0.25 * fm * An + 0.65 * Ast * Fs) * red, Fa: 0.25 * fm * red, eq: sr <= 99 ? "8-21" : "8-22" };
+  const k = edition === "22" ? 0.3 : 0.25;
+  return { sr, red, k, Pa: (k * fm * An + 0.65 * Ast * Fs) * red, Fa: k * fm * red, eq: sr <= 99 ? "8-21" : "8-22" };
 }
 
 export interface SectionBar {
@@ -157,13 +173,16 @@ export function masonryShear(o: {
   s?: number;
   d?: number;
   Fs?: number;
+  /** axial-load term 0.25 P / A_n (TMS 402-16) or 0.20 P / A_n (TMS 402-22), §8.3.5.1.3 */
+  edition?: TmsEdition;
 }) {
   const g = o.gammaG ?? 1;
   const r = Math.min(1, Math.max(0, o.MVd));
   const sq = Math.sqrt(o.fm);
-  const Fvm = 0.5 * (4 - 1.75 * r) * sq + (0.25 * Math.max(0, o.P)) / o.An;
+  const kP = o.edition === "22" ? 0.2 : 0.25;
+  const Fvm = 0.5 * (4 - 1.75 * r) * sq + (kP * Math.max(0, o.P)) / o.An;
   const Fvs = o.Av && o.s && o.d && o.Fs ? (0.5 * o.Av * o.Fs * o.d) / (o.An * o.s) : 0;
   const k = r <= 0.25 ? 3 : r >= 1 ? 2 : 3 - ((r - 0.25) / 0.75) * 1;
   const FvMax = k * sq * g;
-  return { r, Fvm, Fvs, FvMax, kMax: k, Fv: Math.min((Fvm + Fvs) * g, FvMax) };
+  return { r, kP, Fvm, Fvs, FvMax, kMax: k, Fv: Math.min((Fvm + Fvs) * g, FvMax) };
 }

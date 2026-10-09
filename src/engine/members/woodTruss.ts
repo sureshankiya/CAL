@@ -48,6 +48,7 @@ import {
   type DeflectionInput,
   type DesignContext,
   type LoadLine,
+  asce7Of,
 } from "./common";
 import type { MemberReaction, MemberResultBase } from "./types";
 
@@ -349,7 +350,7 @@ export function designWoodTruss(ctx: DesignContext, t: WoodTrussInput): WoodTrus
   if (wS) present.S = true;
   if (wW) present.W = true;
   const base = relevantCombinations(
-    asdCombinations({ SDS: ctx.SDS, includeWind: !!wW, includeSeismic: false }),
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!wW, includeSeismic: false }),
     present,
   );
   type Case = { combo: Combination; unbal: boolean; label: string; CD: number };

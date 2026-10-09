@@ -54,7 +54,7 @@ export const LIVE_LOADS: LiveLoadDef[] = [
     irc: 20,
     ibc: 20,
     refIrc: "Table R301.5 note g",
-    refIbc: "Table 1607.1 note i",
+    refIbc: "Table 1607.1 notes i–k (2021 IBC); §1607.21.2 (2024 IBC)",
     note: "Applies where the clear height between joist and rafter is 42 in. or greater",
   },
   {
@@ -105,7 +105,8 @@ export const LIVE_LOADS: LiveLoadDef[] = [
     label: "Garage — passenger vehicles only",
     irc: 50,
     ibc: 40,
-    concentrated: "2,000 lb on 20 in.² (IRC, elevated garage floors) / per IBC 1607.7",
+    concentrated:
+      "2,000 lb on 20 in.² (2021 IRC) / 4-1/2 in. × 4-1/2 in. (2024 IRC), elevated garage floors / per IBC 1607.7",
     refIrc: "Table R301.5",
     refIbc: "Table 1607.1",
   },

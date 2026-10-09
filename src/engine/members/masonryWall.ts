@@ -10,7 +10,8 @@
  *  - CMU (TMS 402 ASD, §8.3, src/engine/design/masonry.ts): ASCE 7 §2.4 combinations,
  *    H factor 1.0; axial P / P_a, combined axial + flexure M / M_c(P) on the cracked section,
  *    out-of-plane shear f_v / F_v with A_nv = b d; in-plane shear and flexure when an
- *    in-plane force is entered; reinforcement: vertical ≥ A_v / 3 (§8.3.5.2) and the
+ *    in-plane force is entered; reinforcement: vertical ≥ A_v / 3 where shear reinforcement is
+ *    required (§8.3.5.2.1), special reinforced wall minimums (§7.3.2.6, SDC D–F) and the
  *    prescriptive seismic reinforcement (TMS 402 §7.4, by SDC)
  *  - Concrete (ACI 318-19 Ch. 11, strength design): ASCE 7 §2.3 combinations, H factor 1.6;
  *    φM_n at the factored axial load (22.2, 22.4), slenderness moment magnifier
@@ -27,6 +28,7 @@ import { analysePanel, type PanelLoad, type PanelResult } from "../analysis/pane
 import { bar, momentAtAxial, oneWayShear, type StrengthBar } from "../design/concrete";
 import {
   allowableFs,
+  type TmsEdition,
   asdBalance,
   asdMomentCapacity,
   axialAllowable,
@@ -38,7 +40,7 @@ import {
   type SectionBar,
 } from "../design/masonry";
 import { governingCheck, type Check } from "../design/wood";
-import type { DesignContext, ExtraLoad, LoadLine } from "./common";
+import { asce7Of, type DesignContext, type ExtraLoad, type LoadLine } from "./common";
 import type { MemberResultBase } from "./types";
 
 export type WallSupport = "pinned-fixed" | "pinned-pinned" | "fixed-fixed" | "cantilever";
@@ -161,6 +163,8 @@ export interface MasonryWallResult extends MemberResultBase {
     Mcap: number;
     ratioV: number;
     ratioM: number;
+    /** shear reinforcement required (V > F_vm A_n) */
+    needsAv?: boolean;
   };
 }
 
@@ -401,7 +405,8 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
   const fm = mat.fm ?? 0;
   const fc = mat.fc ?? 0;
   const sqrtFc = Math.sqrt(fc);
-  const ax = cmu ? axialAllowable(fm, A, K * w.h * 12, r) : undefined;
+  const tms: TmsEdition = ctx.cycleId === "2025" ? "22" : "16";
+  const ax = cmu ? axialAllowable(fm, A, K * w.h * 12, r, 0, 32000, tms) : undefined;
   for (const c of combos) {
     let worst = 0;
     // axial at the base
@@ -457,7 +462,7 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
         let extra: Partial<MasonryWallResult["shear"]> = {};
         if (cmu) {
           const MVd = V > 0 ? Math.abs(M) / (V * dEff) : 1;
-          const sh = masonryShear({ fm, An: A, MVd, P });
+          const sh = masonryShear({ fm, An: A, MVd, P, edition: tms });
           sCap = sh.Fv * Anv;
           extra = { fv: V / Anv, Fvm: sh.Fvm, MVd: sh.r, FvMax: sh.FvMax };
         } else {
@@ -540,17 +545,6 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
   // reinforcement
   const AvVert = As * layers;
   if (cmu) {
-    checks.push({
-      name: "Vertical reinforcement ≥ A_v / 3 (TMS 402 §8.3.5.2)",
-      category: "detailing",
-      demand: Ah / 3,
-      capacity: AvVert,
-      ratio: Ah / 3 / AvVert,
-      pass: AvVert >= Ah / 3,
-      combo: "—",
-      CD: 1,
-      unit: "in²",
-    });
     const sdc = w.seismic.SDC;
     if (["C", "D", "E", "F"].includes(sdc)) {
       const sMax = sdc === "C" ? 120 : 48;
@@ -576,10 +570,53 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
         CD: 1,
         unit: "in",
       });
+      if (sdc !== "C") {
+        // special reinforced masonry shear walls (TMS 402 §7.3.2.6): spacing ≤ min(L/3, H/3, 48 in.),
+        // ρ ≥ 0.0007 each direction, sum ≥ 0.002 of the gross area
+        const Ag = t * 12;
+        const rv = AvVert / Ag;
+        const rh = Ah / Ag;
+        const sLim = Math.min((w.L * 12) / 3, (w.h * 12) / 3, 48);
+        checks.push(
+          {
+            name: `Special reinforced wall: bar spacing ≤ min(L/3, H/3, 48 in.) = ${fmt(sLim, 1)} in. (TMS 402 §7.3.2.6)`,
+            category: "detailing",
+            demand: Math.max(w.vertical.spacing, w.horizontal.spacing),
+            capacity: sLim,
+            ratio: Math.max(w.vertical.spacing, w.horizontal.spacing) / sLim,
+            pass: Math.max(w.vertical.spacing, w.horizontal.spacing) <= sLim + 1e-9,
+            combo: "—",
+            CD: 1,
+            unit: "in",
+          },
+          {
+            name: "Special reinforced wall: ρ ≥ 0.0007 each direction (TMS 402 §7.3.2.6)",
+            category: "detailing",
+            demand: 0.0007,
+            capacity: Math.min(rv, rh),
+            ratio: 0.0007 / Math.min(rv, rh),
+            pass: Math.min(rv, rh) >= 0.0007 - 1e-12,
+            combo: "—",
+            CD: 1,
+            unit: "",
+          },
+          {
+            name: "Special reinforced wall: ρ_v + ρ_h ≥ 0.002 (TMS 402 §7.3.2.6)",
+            category: "detailing",
+            demand: 0.002,
+            capacity: rv + rh,
+            ratio: 0.002 / (rv + rh),
+            pass: rv + rh >= 0.002 - 1e-12,
+            combo: "—",
+            CD: 1,
+            unit: "",
+          },
+        );
+      }
       assumptions.push(
         fromDefault(
           "Seismic reinforcement",
-          `TMS 402 §7.4 prescriptive minimums for SDC ${sdc} (bar area ≥ 0.2 in², spacing ≤ ${sMax} in. each way)`,
+          `TMS 402 §7.4 prescriptive minimums for SDC ${sdc} (bar area ≥ 0.2 in², spacing ≤ ${sMax} in. each way)${sdc === "C" ? "" : "; special reinforced wall limits of §7.3.2.6"}`,
           "TMS 402 Ch. 7 — confirm limits and wall classification against the adopted edition",
           true,
         ),
@@ -663,6 +700,7 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
     const An = t * Lin;
     const MVd = hIp / w.L;
     let best: MasonryWallResult["inPlaneRes"] | undefined;
+    let needsAv = false;
     for (const c of combos) {
       const V = Math.abs((c.factors.W ?? 0) * w.inPlane.W) + Math.abs((c.factors.E ?? 0) * w.inPlane.E);
       if (!V) continue;
@@ -681,8 +719,11 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
           s: w.horizontal.spacing,
           d: Lin,
           Fs: mat.Fs,
+          edition: tms,
         });
         shearCap = sh.Fv * An;
+        // shear reinforcement required where the masonry alone does not carry V (§8.3.5.2.1)
+        needsAv = needsAv || V > Math.min(sh.Fvm, sh.FvMax) * An;
         shearText = `F_vm = ${fmt(sh.Fvm, 1)} psi, F_vs = ${fmt(sh.Fvs, 1)} psi, F_v = ${fmt(sh.Fv, 1)} psi (≤ ${fmt(sh.FvMax, 1)} psi), A_n = ${fmt(An, 0)} in²`;
         Mcap = asdMomentCapacity(P, t, Lin, ipBars, mat.n!, mat.Fb!, mat.Fs!).Mc;
       } else {
@@ -700,7 +741,19 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
         best = { combo: c.label, V, M, P, An, MVd, shearCap, shearText, Mcap, ratioV, ratioM };
     }
     if (best) {
-      inPlaneRes = best;
+      inPlaneRes = { ...best, needsAv };
+      if (cmu && needsAv)
+        checks.push({
+          name: "Shear reinforcement required: perpendicular (vertical) steel ≥ A_v / 3 (TMS 402 §8.3.5.2.1)",
+          category: "detailing",
+          demand: Ah / 3,
+          capacity: As * layers,
+          ratio: Ah / 3 / (As * layers),
+          pass: As * layers >= Ah / 3,
+          combo: "—",
+          CD: 1,
+          unit: "in²",
+        });
       checks.push(
         {
           name: cmu ? "In-plane shear (TMS 402 §8.3.5.1)" : "In-plane shear (ACI 318 11.5.4.3)",
@@ -782,7 +835,7 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
   // ---------------- reactions (per foot at the base)
   const base = addLoads(top, loadVector({ D: self.w * Htot }));
   const asdForReact = relevantCombinations(
-    asdCombinations({ SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
+    asdCombinations({ asce7: asce7Of(ctx), SDS: ctx.SDS, includeWind: !!present.W, includeSeismic: !!present.E }),
     present,
   );
   const net = asdForReact.map((c) => ({ c, v: LOAD_TYPES.reduce((s, tp) => s + (c.factors[tp] ?? 0) * base[tp], 0) }));
