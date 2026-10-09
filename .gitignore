@@ -18,3 +18,5 @@ coverage
 .DS_Store
 __pycache__/
 print-check.pdf
+dist-static
+dist-artifact
