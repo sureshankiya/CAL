@@ -955,6 +955,8 @@ export const projectSchema = z.object({
     approvedBy: z.string().default(""),
     date: z.string().default(""),
     revision: z.string().default("0"),
+    /** printed issue (absent = "final"): "final" = issued calculations (no VERIFY / review wording); "check" = working copy */
+    issue: z.enum(["final", "check"]).optional(),
   }),
   cycleId: z.enum(["2025", "2022"]),
   criteria: z.object({

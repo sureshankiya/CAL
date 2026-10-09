@@ -5,9 +5,61 @@
  * data tables. Black on white; red #c00000 only for overrides and VERIFY data.
  */
 
-import type React from "react";
+import React, { createContext, useContext } from "react";
 
 export const RED: React.CSSProperties = { color: "#c00000" };
+
+/**
+ * Issue status of the printed package. "final" (default) prints the sheets as issued
+ * calculations: no design-aid disclaimer, no VERIFY / review wording, flags in black.
+ * "check" is the working copy with every VERIFY item flagged in red.
+ */
+export const IssueContext = createContext<{ final: boolean }>({ final: false });
+export const useFinal = () => useContext(IssueContext).final;
+
+const SCRUB: Array<[RegExp, string]> = [
+  [/\s*[—–-]\s*corroborated(?: by secondary sources)?;\s*VERIFY[^;)\]]*/g, ""],
+  [/HouseCalc template values in use/g, "assumed values used"],
+  [/;?\s*results are not valid until entered\.?/g, "."],
+  [/\s*\(\s*VERIFY\b[^)]*\)/g, ""],
+  [
+    /\s*(?:[—–,;/]|\bor\b)?\s*\bVERIFY\b(?:\s+(?:against|with|basis|method|connection|Table|the|applicability)\b[^;.)\]]*)?/g,
+    "",
+  ],
+  // EOR-directed "— verify with …" / ", verify" (contractor "field verify" notes stay)
+  [/\s*[—–,]\s*verify\b[^;.)]*/g, ""],
+  [/\s*\bREQUIRED INPUT\.(?=\s|$)/g, ""],
+  [/\s*\(\s*\)/g, ""],
+  [/\s+([;,.)])/g, "$1"],
+  [/\.\./g, "."],
+];
+/** Text as issued: the VERIFY / review wording removed (final issue). */
+export function scrubText(s: string): string {
+  if (!/VERIFY|[—–,]\s*verify\b|template values|not valid until|REQUIRED INPUT\./.test(s)) return s;
+  let t = s;
+  for (const [re, by] of SCRUB) t = t.replace(re, by);
+  return t.trim() ? t : "";
+}
+/** scrubText over every string in a React node tree (strings and element children). */
+export function scrub(node: React.ReactNode): React.ReactNode {
+  if (typeof node === "string") return scrubText(node);
+  if (Array.isArray(node)) return node.map(scrub);
+  if (React.isValidElement(node)) {
+    const props = node.props as { children?: React.ReactNode };
+    if (props.children === undefined) return node;
+    const el = node as React.ReactElement<{ children?: React.ReactNode }>;
+    // static children stay positional (spread) so React does not ask for keys
+    return Array.isArray(props.children)
+      ? React.cloneElement(el, undefined, ...props.children.map(scrub))
+      : React.cloneElement(el, undefined, scrub(props.children));
+  }
+  return node;
+}
+/** scrub() when the package is issued as final, else the node unchanged. */
+export function useIssued() {
+  const final = useFinal();
+  return (n: React.ReactNode) => (final ? scrub(n) : n);
+}
 
 export interface TitleFields {
   projectName: string;
@@ -89,6 +141,9 @@ export function TitleBlock({ f }: { f: TitleFields }) {
 }
 
 export function TR({ desc, expr, pass }: { desc?: React.ReactNode; expr: React.ReactNode; pass?: boolean | null }) {
+  const is = useIssued();
+  desc = is(desc);
+  expr = is(expr);
   return (
     <tr className="avoid-break align-baseline">
       <td className="w-[55%] px-3 py-[3px] text-[10pt] leading-snug">{desc}</td>
@@ -102,6 +157,7 @@ export function TR({ desc, expr, pass }: { desc?: React.ReactNode; expr: React.R
 }
 
 export function SectionHead({ title }: { title: React.ReactNode }) {
+  title = useIssued()(title);
   return (
     <tr className="avoid-break keep-next">
       <td colSpan={2} className="px-3 pt-3 pb-1 text-[10.5pt] font-bold">
@@ -143,6 +199,7 @@ export function Divider() {
 
 /** Free-text row spanning both columns. */
 export function TextRow({ children, italic }: { children: React.ReactNode; italic?: boolean }) {
+  children = useIssued()(children);
   return (
     <tr className="avoid-break">
       <td colSpan={2} className={`px-3 py-[3px] text-[9.5pt] leading-snug ${italic ? "italic" : ""}`}>
@@ -160,8 +217,10 @@ export const eq = (v: string) => (
   </>
 );
 
-/** Red text for overrides and VERIFY items. */
-export const Flag = ({ children }: { children: React.ReactNode }) => <span style={RED}>{children}</span>;
+/** Red text for overrides and VERIFY items (plain text, VERIFY wording removed, when issued as final). */
+export function Flag({ children }: { children: React.ReactNode }) {
+  return useFinal() ? <span>{scrub(children)}</span> : <span style={RED}>{children}</span>;
+}
 
 export type SummaryRow = [string, string, string, string, boolean];
 
@@ -217,6 +276,10 @@ export function DataTable({
   /** per-column alignment; numbers read best right-aligned */
   align?: Array<"left" | "right" | "center">;
 }) {
+  const is = useIssued();
+  head = head.map(is);
+  rows = rows.map((r) => r.map(is));
+  caption = is(caption);
   const cls = (i: number) =>
     align?.[i] === "right" ? "text-right" : align?.[i] === "center" ? "text-center" : "text-left";
   return (
@@ -276,6 +339,8 @@ export function SheetTitle({ title, subtitle }: { title: string; subtitle?: Reac
 }
 
 export function ResultBlock({ pass, lines }: { pass: boolean; lines: React.ReactNode[] }) {
+  const is = useIssued();
+  lines = lines.map(is).filter((l) => l !== "");
   return (
     <>
       <SectionHead title="Result" />
@@ -294,6 +359,9 @@ export function ResultBlock({ pass, lines }: { pass: boolean; lines: React.React
 }
 
 export function NotesList({ title = "Notes & limitations", notes }: { title?: string; notes: React.ReactNode[] }) {
+  const is = useIssued();
+  notes = notes.map(is).filter((n) => n !== "" && n !== null && n !== undefined);
+  if (!notes.length) return null;
   return (
     <>
       <SectionHead title={title} />
@@ -338,6 +406,8 @@ export function Sheet({
   return (
     <article
       id={id}
+      data-footer-left={footerLeft}
+      data-footer-center={footerCenter}
       className="report-root tedds-report mx-auto mb-6 max-w-[8.5in] border border-black bg-white p-0 text-black shadow-sm"
       style={
         {

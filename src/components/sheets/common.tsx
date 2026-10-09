@@ -6,7 +6,7 @@ import { VERSION_LOCKED, softwareText } from "@/engine/version";
 import { fmt } from "@/engine/core/fmt";
 import { TABLES } from "@/engine/data/library";
 import type { Project } from "@/engine/project";
-import { B, Flag, SectionHead, TR, type TitleFields } from "../report/primitives";
+import { B, Flag, SectionHead, TR, useFinal, type TitleFields } from "../report/primitives";
 
 export interface SheetMeta {
   project: Project;
@@ -62,6 +62,7 @@ export function DesignBasis({
   combos?: React.ReactNode;
 }) {
   const c = m.cycle;
+  const final = useFinal();
   return (
     <>
       <SectionHead title="Design basis" />
@@ -87,7 +88,8 @@ export function DesignBasis({
                 if (!t) return null;
                 return (
                   <span key={id} className="block">
-                    {t.source} ({t.edition}) {t.status === "verified" ? (
+                    {t.source} ({t.edition}){" "}
+                    {t.status === "verified" ? (
                       "— checked"
                     ) : (
                       <Flag>{t.status === "corroborated" ? "— corroborated; VERIFY" : "— VERIFY"}</Flag>
@@ -99,7 +101,18 @@ export function DesignBasis({
           }
         />
       ) : null}
-      <TR desc="Engine / data library" expr={VERSION_LOCKED ? softwareText(c.id) : <Flag>{softwareText(c.id)}</Flag>} />
+      <TR
+        desc="Engine / data library"
+        expr={
+          VERSION_LOCKED ? (
+            softwareText(c.id)
+          ) : final ? (
+            softwareText(c.id).replace(/; UNLOCKED build — not for issue$/, "")
+          ) : (
+            <Flag>{softwareText(c.id)}</Flag>
+          )
+        }
+      />
     </>
   );
 }

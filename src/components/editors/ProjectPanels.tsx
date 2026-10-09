@@ -51,6 +51,19 @@ export function ProjectInfoPanel({ p, set }: { p: Project; set: SetProject }) {
           onChange={(v) => set((x) => ({ ...x, cycleId: v }))}
         />
       </Field>
+      <Field
+        label="Issue status"
+        hint="Final: sheets print as issued calculations, without the VERIFY / review wording. Check copy: every unverified item flagged in red."
+      >
+        <Select
+          value={p.info.issue ?? "final"}
+          options={[
+            { value: "final", label: "Final calculations (as issued)" },
+            { value: "check", label: "Check copy (VERIFY items flagged)" },
+          ]}
+          onChange={(v) => set((x) => ({ ...x, info: { ...x.info, issue: v as "final" | "check" } }))}
+        />
+      </Field>
       <Grid>
         <Field label="Job Ref.">
           <TextInput value={p.info.jobRef} onChange={(v) => info("jobRef", v)} />

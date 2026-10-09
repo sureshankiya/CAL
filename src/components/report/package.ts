@@ -145,7 +145,7 @@ export function buildPackage(p: Project, design: ProjectDesign): SheetEntry[] {
       section: "General notes",
       title: "General structural notes and specific notes",
     },
-    { key: "assumptions", kind: "assumptions", section: "Assumption log", title: "Assumption log and items to verify" },
+    { key: "assumptions", kind: "assumptions", section: "Assumption log", title: "Assumption log" },
   );
   return out.map((s, i) => ({ ...s, sheetNo: i + 1 }));
 }
@@ -153,6 +153,8 @@ export function buildPackage(p: Project, design: ProjectDesign): SheetEntry[] {
 export interface PackageCheck {
   ok: boolean;
   text: string;
+  /** the VERIFY-count check (an internal QA item, not printed when issued as final) */
+  verifyItems?: boolean;
 }
 
 /** Package consistency checks (plan §11): marks, errors, failures, VERIFY data, load path, uplift ties, lateral. */
@@ -198,6 +200,7 @@ export function packageChecks(p: Project, design: ProjectDesign): PackageCheck[]
     },
     {
       ok: verify === 0,
+      verifyItems: true,
       text: verify ? `${verify} item(s) marked VERIFY — resolve before the package is issued` : "No VERIFY items",
     },
     {

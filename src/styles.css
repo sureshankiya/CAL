@@ -122,3 +122,21 @@
     page-break-after: avoid;
   }
 }
+
+/* Off-screen layout for the PDF / Word export: sheets at the printed text width. */
+.export-layout {
+  position: absolute;
+  left: -20000px;
+  top: 0;
+  width: 7.3in;
+  background: #fff;
+  color: #000;
+}
+.export-layout .report-root {
+  box-shadow: none !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: none !important;
+  font-size: 10pt;
+}

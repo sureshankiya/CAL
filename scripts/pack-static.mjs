@@ -11,6 +11,9 @@ const workerExpr = `new URL(new URL(\`${worker}\`,import.meta.url).href,\`\`+imp
 let js = readFileSync(`${dir}/${files.find((f) => f.endsWith(".js"))}`, "utf8");
 if (!js.includes(workerExpr)) throw new Error("pdf.js worker URL expression not found in the bundle");
 js = js.replace(workerExpr, "window.__HC_PDF_WORKER__").replace(/<\/script/gi, "<\\/script");
+// literal U+FFFD (charset tables in the font / Word libraries) as escapes: same value in JS
+// string, template and regex literals, and the published page carries no replacement characters
+js = js.replace(/\uFFFD/g, "\\uFFFD");
 const workerB64 = readFileSync(`${dir}/${worker}`).toString("base64");
 
 const out = process.argv[2] ?? "dist-artifact";

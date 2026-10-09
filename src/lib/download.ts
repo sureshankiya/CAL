@@ -43,13 +43,14 @@ function copyText(text: string): Promise<boolean> {
   }
 }
 
-export async function saveFile(filename: string, data: string, mime: string): Promise<SaveOutcome> {
+export async function saveFile(filename: string, data: string | Blob | Uint8Array, mime: string): Promise<SaveOutcome> {
+  const blobOf = () => (data instanceof Blob ? data : new Blob([data as BlobPart], { type: mime }));
   if (inViewer()) {
     // capability already resolved: act inside the click; otherwise wait for it
     const cap = ns === undefined ? await prepareDownloads() : ns;
     if (cap) {
       try {
-        await cap.save({ filename, data });
+        await cap.save({ filename, data: typeof data === "string" ? data : blobOf() });
         return "saved";
       } catch (e) {
         const code = (e as { code?: string })?.code;
@@ -57,9 +58,10 @@ export async function saveFile(filename: string, data: string, mime: string): Pr
         if (code === "rate_limited" || code === "bad_request") return "error";
       }
     }
-    return (await copyText(data)) ? "copied" : "unavailable";
+    // binary files cannot go through the clipboard
+    return typeof data === "string" && (await copyText(data)) ? "copied" : "unavailable";
   }
-  const url = URL.createObjectURL(new Blob([data], { type: mime }));
+  const url = URL.createObjectURL(blobOf());
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;

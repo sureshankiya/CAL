@@ -16,6 +16,7 @@ import { DrawingsPanel } from "@/components/drawings/DrawingsPanel";
 import { MarkdownExportDialog, MarkdownImportDialog } from "@/components/editors/MarkdownDialog";
 import { prepareDownloads, saveFile, saveMessage } from "@/lib/download";
 import { reportHtml } from "@/lib/reportHtml";
+import { reportFileName } from "@/lib/exportLayout";
 import { getCycle } from "@/engine/core/codes";
 import {
   designProject,
@@ -54,6 +55,7 @@ function Index() {
   });
   const fileRef = useRef<HTMLInputElement>(null);
   const [mdDialog, setMdDialog] = useState<"import" | "export">();
+  const [exporting, setExporting] = useState<"pdf" | "docx">();
 
   useEffect(() => {
     void prepareDownloads();
@@ -129,7 +131,7 @@ function Index() {
 
   function downloadReport() {
     if (printBlocked()) return;
-    const name = fileNameFor(project).replace(/\.housecalc\.json$/, "-calculations.html");
+    const name = reportFileName(project, "html");
     const html = reportHtml(deferred, design, entries);
     saveFile(name, html, "text/html").then((o) =>
       setMessage(
@@ -145,11 +147,39 @@ function Index() {
     );
   }
 
+  async function exportReport(kind: "pdf" | "docx") {
+    if (printBlocked() || exporting) return;
+    const name = reportFileName(deferred, kind);
+    setExporting(kind);
+    setMessage({ tone: "info", text: `Preparing ${name} (${entries.length} sheets)…` });
+    try {
+      const data =
+        kind === "pdf"
+          ? await (await import("@/lib/pdfExport")).reportPdf(deferred, design, entries)
+          : await (await import("@/lib/docxExport")).reportDocx(deferred, design, entries);
+      const mime =
+        kind === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      const o = await saveFile(name, data, mime);
+      setMessage(
+        o === "unavailable"
+          ? {
+              tone: "error",
+              text: `This view cannot save files — open HouseCalc from a regular web host to export ${name}.`,
+            }
+          : saveMessage(name, o),
+      );
+    } catch (e) {
+      setMessage({ tone: "error", text: `Could not export ${name}: ${e instanceof Error ? e.message : String(e)}` });
+    } finally {
+      setExporting(undefined);
+    }
+  }
+
   function handlePrint() {
     if (printBlocked()) return;
-    // the claude.ai Artifact viewer cannot open the print dialog: hand over the report file instead
+    // the claude.ai Artifact viewer cannot open the print dialog: export the PDF instead
     if (typeof (window as Window & { claude?: { use?: unknown } }).claude?.use === "function") {
-      downloadReport();
+      void exportReport("pdf");
       return;
     }
     setMode("package");
@@ -271,10 +301,28 @@ function Index() {
             <button
               type="button"
               className={btn}
+              disabled={!!exporting}
+              title="The full calculation package as a PDF (US Letter)"
+              onClick={() => void exportReport("pdf")}
+            >
+              {exporting === "pdf" ? "Exporting PDF…" : "Export PDF"}
+            </button>
+            <button
+              type="button"
+              className={btn}
+              disabled={!!exporting}
+              title="The full calculation package as an editable Word document (.docx)"
+              onClick={() => void exportReport("docx")}
+            >
+              {exporting === "docx" ? "Exporting Word…" : "Export Word"}
+            </button>
+            <button
+              type="button"
+              className={btn}
               title="The full package as one HTML file — open it in a browser and print to PDF"
               onClick={downloadReport}
             >
-              Download report (.html)
+              Export HTML
             </button>
             <button type="button" onClick={handlePrint} className={primary}>
               Print / Save PDF

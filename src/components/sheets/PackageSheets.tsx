@@ -12,7 +12,19 @@ import { snowLoads } from "@/engine/loads/snow";
 import { hardwareLabel } from "@/engine/data/hardware";
 import { fmtInFraction } from "@/engine/core/fmt";
 import { generateNotes, hardwareSchedule, type AnyResult, type Project, type ProjectDesign } from "@/engine/project";
-import { B, DataTable, Flag, NotesList, SectionHead, Sheet, SheetTitle, TextRow, TR, eq } from "../report/primitives";
+import {
+  B,
+  DataTable,
+  Flag,
+  NotesList,
+  SectionHead,
+  Sheet,
+  SheetTitle,
+  TextRow,
+  TR,
+  eq,
+  useFinal,
+} from "../report/primitives";
 import type { PackageCheck, SheetEntry } from "../report/package";
 import { DESIGN_AID, DesignBasis, f0, f1, f2, f3, footers, rich, titleFields, type SheetMeta } from "./common";
 
@@ -65,6 +77,7 @@ export function CoverSheet({ m, design, entries }: { m: SheetMeta; design: Proje
   const p = m.project;
   const c = m.cycle;
   const ft = footers(m);
+  const final = useFinal();
   const counts = new Map<string, number>();
   for (const o of design.outcomes.values()) {
     const t = o.result?.title ?? o.spec.kind;
@@ -97,7 +110,10 @@ export function CoverSheet({ m, design, entries }: { m: SheetMeta; design: Proje
             "Referenced standards",
             `${c.asce7}; ANSI/AWC ${c.nds} and ${c.ndsSupplement}; ${c.sdpws}; ${c.aci318}; ${c.aisc360}; ${c.tms402}`,
           ],
-          ["Software", softwareText(c.id)],
+          [
+            "Software",
+            final ? softwareText(c.id).replace(/; UNLOCKED build — not for issue$/, "") : softwareText(c.id),
+          ],
           ["Scope of this package", [...counts.entries()].map(([k, n]) => `${k} × ${n}`).join("; ") || "—"],
           ["Sheets in this package", String(entries.length)],
         ]}
@@ -107,11 +123,20 @@ export function CoverSheet({ m, design, entries }: { m: SheetMeta; design: Proje
         <td colSpan={2} className="px-3 pb-3">
           <div className="grid grid-cols-[1fr_2.2in] gap-4">
             <div className="text-[9.5pt] leading-snug">
-              <p className="font-bold">{DESIGN_AID}</p>
-              <p className="mt-2">
-                The Engineer of Record has reviewed the design criteria, loads, member design and the items listed in
-                the assumption log, and accepts responsibility for this package by signature and seal.
-              </p>
+              {final ? (
+                <p>
+                  These structural calculations were prepared by or under the direct supervision of the undersigned
+                  Engineer of Record.
+                </p>
+              ) : (
+                <>
+                  <p className="font-bold">{DESIGN_AID}</p>
+                  <p className="mt-2">
+                    The Engineer of Record has reviewed the design criteria, loads, member design and the items listed
+                    in the assumption log, and accepts responsibility for this package by signature and seal.
+                  </p>
+                </>
+              )}
               <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 text-[9pt]">
                 <div className="border-t border-black pt-1">Engineer of Record</div>
                 <div className="border-t border-black pt-1">License no. / expiration</div>
@@ -141,6 +166,7 @@ export function SummarySheet({
   checks: PackageCheck[];
 }) {
   const ft = footers(m);
+  const final = useFinal();
   const rows: React.ReactNode[][] = [];
   let i = 0;
   for (const e of entries) {
@@ -192,7 +218,7 @@ export function SummarySheet({
         rows={rows}
       />
       <SectionHead title="Package checks" />
-      {checks.map((c, k) => (
+      {(final ? checks.filter((c) => !c.verifyItems) : checks).map((c, k) => (
         <TR key={k} desc={c.ok ? "OK" : "ATTENTION"} expr={c.ok ? <>{c.text}</> : <Flag>{c.text}</Flag>} />
       ))}
     </Sheet>
@@ -1163,6 +1189,8 @@ export function GeneralNotesSheet({ m, design }: { m: SheetMeta; design: Project
   const ft = footers(m);
   const c = m.cycle;
   const n = generateNotes(m.project, design);
+  const final = useFinal();
+  const specific = final ? n.specific.filter((x) => !x.note.startsWith("REQUIRED INPUT")) : n.specific;
   const hw = hardwareSchedule(m.project, design);
   return (
     <Sheet f={titleFields(m)} footerLeft={ft.left} footerCenter={ft.center} first={m.first} id="sheet-notes">
@@ -1173,7 +1201,7 @@ export function GeneralNotesSheet({ m, design }: { m: SheetMeta; design: Project
       {m.project.notes.trim() ? (
         <NotesList title="Project notes (entered)" notes={m.project.notes.split(/\n+/).filter(Boolean)} />
       ) : null}
-      <NotesList title="Responsibility" notes={[DESIGN_AID]} />
+      {final ? null : <NotesList title="Responsibility" notes={[DESIGN_AID]} />}
       {hw.length ? (
         <>
           <SectionHead title="Hardware schedule" />
@@ -1204,27 +1232,28 @@ export function GeneralNotesSheet({ m, design }: { m: SheetMeta; design: Project
       ) : null}
       {n.deferred.length ? <NotesList title="Deferred submittals" notes={n.deferred} /> : null}
       <SectionHead title="Specific notes by member" />
-      {n.specific.length ? (
+      {specific.length ? (
         <DataTable
           head={["Mark", "Note"]}
           small
-          rows={n.specific.map((x) => [
-            x.mark,
-            x.note.includes("VERIFY") ? <Flag key="f">{x.note}</Flag> : rich(x.note),
-          ])}
+          rows={specific.map((x) => [x.mark, x.note.includes("VERIFY") ? <Flag key="f">{x.note}</Flag> : rich(x.note)])}
         />
       ) : (
         <TextRow italic>No specific notes.</TextRow>
       )}
-      <SectionHead title="Field verification and items to confirm" />
-      {n.fieldVerify.length ? (
-        <DataTable
-          head={["Mark", "Item", "Value / basis"]}
-          small
-          rows={n.fieldVerify.map((x) => [x.mark, x.item, <Flag key="v">{x.value}</Flag>])}
-        />
-      ) : (
-        <TextRow italic>None.</TextRow>
+      {final ? null : (
+        <>
+          <SectionHead title="Field verification and items to confirm" />
+          {n.fieldVerify.length ? (
+            <DataTable
+              head={["Mark", "Item", "Value / basis"]}
+              small
+              rows={n.fieldVerify.map((x) => [x.mark, x.item, <Flag key="v">{x.value}</Flag>])}
+            />
+          ) : (
+            <TextRow italic>None.</TextRow>
+          )}
+        </>
       )}
     </Sheet>
   );
@@ -1232,13 +1261,14 @@ export function GeneralNotesSheet({ m, design }: { m: SheetMeta; design: Project
 
 export function AssumptionLogSheet({ m, design }: { m: SheetMeta; design: ProjectDesign }) {
   const ft = footers(m);
+  const final = useFinal();
   const rows: React.ReactNode[][] = [];
   for (const o of design.outcomes.values()) {
     if (o.error) rows.push([o.spec.mark, "Design error", <Flag key="e">{o.error}</Flag>, "—"]);
     for (const a of o.result?.assumptions ?? [])
       rows.push([
         o.spec.mark,
-        a.item,
+        final && a.item === "Inputs not yet entered" ? "Assumed inputs" : a.item,
         a.verify || a.provenance.kind === "override" ? <Flag key="v">{a.value}</Flag> : a.value,
         <>
           {provenanceLabel(a.provenance)}
@@ -1254,13 +1284,23 @@ export function AssumptionLogSheet({ m, design }: { m: SheetMeta; design: Projec
     <Sheet f={titleFields(m)} footerLeft={ft.left} footerCenter={ft.center} first={m.first} id="sheet-assumptions">
       <SheetTitle
         title="Assumption log"
-        subtitle={<>Every default, override and item requiring verification, by member</>}
+        subtitle={
+          final ? (
+            <>Design defaults, assumed values and overrides, by member</>
+          ) : (
+            <>Every default, override and item requiring verification, by member</>
+          )
+        }
       />
       <DataTable head={["Mark", "Item", "Value", "Source"]} small rows={rows} />
-      <TextRow italic>
-        {rows.length} entries; {verify} marked VERIFY or in error. Items marked VERIFY must be resolved by the Engineer
-        of Record before the package is issued.
-      </TextRow>
+      {final ? (
+        <TextRow italic>{rows.length} entries.</TextRow>
+      ) : (
+        <TextRow italic>
+          {rows.length} entries; {verify} marked VERIFY or in error. Items marked VERIFY must be resolved by the
+          Engineer of Record before the package is issued.
+        </TextRow>
+      )}
     </Sheet>
   );
 }

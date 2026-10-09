@@ -26,7 +26,7 @@ import {
   TransferSheet,
   UpliftSheet,
 } from "../sheets/Phase3Sheets";
-import { Flag, Sheet, SheetTitle, TextRow } from "./primitives";
+import { Flag, IssueContext, Sheet, SheetTitle, TextRow } from "./primitives";
 import { packageChecks, type SheetEntry } from "./package";
 import { footers, titleFields } from "../sheets/common";
 
@@ -86,6 +86,26 @@ export function SheetView({
 }
 
 function SheetBody({
+  project,
+  design,
+  entries,
+  entry,
+  meta,
+}: {
+  project: Project;
+  design: ProjectDesign;
+  entries: SheetEntry[];
+  entry: SheetEntry;
+  meta: ReturnType<typeof metaFor>;
+}) {
+  return (
+    <IssueContext.Provider value={{ final: project.info.issue !== "check" }}>
+      <SheetSwitch project={project} design={design} entries={entries} entry={entry} meta={meta} />
+    </IssueContext.Provider>
+  );
+}
+
+function SheetSwitch({
   project,
   design,
   entries,

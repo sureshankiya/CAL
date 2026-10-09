@@ -10,6 +10,7 @@ import {
   B,
   DataTable,
   Flag,
+  useFinal,
   NotesList,
   ResultBlock,
   SectionHead,
@@ -171,10 +172,13 @@ export function MemberResult({ r, extra }: { r: MemberResultBase; extra?: React.
 }
 
 export function FinalSummary({ rows }: { rows: Array<[string, React.ReactNode]> }) {
+  // issued as final: no verification row
+  if (useFinal()) rows = rows.filter(([a]) => !/verification/i.test(a));
   return <DataTable caption="Final design summary" head={["Item", "Design"]} rows={rows.map(([a, b]) => [a, b])} />;
 }
 
 export function AssumptionRows({ items }: { items: AssumptionEntry[] }) {
+  const final = useFinal();
   if (!items.length) return null;
   return (
     <>
@@ -182,7 +186,7 @@ export function AssumptionRows({ items }: { items: AssumptionEntry[] }) {
       <DataTable
         head={["Item", "Value", "Source"]}
         rows={items.map((a) => [
-          a.item,
+          final && a.item === "Inputs not yet entered" ? "Assumed inputs" : a.item,
           a.verify || a.provenance.kind === "override" ? <Flag key="v">{a.value}</Flag> : a.value,
           <>
             {provenanceLabel(a.provenance)}
@@ -195,6 +199,8 @@ export function AssumptionRows({ items }: { items: AssumptionEntry[] }) {
 }
 
 export function SpecificNotes({ flags }: { flags: string[] }) {
+  const final = useFinal();
+  if (final) flags = flags.filter((f) => !f.startsWith("REQUIRED INPUT"));
   if (!flags.length) return null;
   return (
     <NotesList
@@ -205,7 +211,8 @@ export function SpecificNotes({ flags }: { flags: string[] }) {
 }
 
 export function LimitationNotes({ notes }: { notes: React.ReactNode[] }) {
-  return <NotesList notes={[...notes, <b key="aid">{DESIGN_AID}</b>]} />;
+  const final = useFinal();
+  return <NotesList notes={final ? notes : [...notes, <b key="aid">{DESIGN_AID}</b>]} />;
 }
 
 export function govDeflection(r: MemberResultBase): string {
