@@ -4,7 +4,8 @@
  * the page itself cannot open the print dialog (the claude.ai Artifact viewer).
  */
 
-import { renderToStaticMarkup } from "react-dom/server";
+import { flushSync } from "react-dom";
+import { createRoot } from "react-dom/client";
 import { ReportPackage } from "@/components/report/ReportPackage";
 import type { SheetEntry } from "@/components/report/package";
 import type { Project, ProjectDesign } from "@/engine/project";
@@ -24,11 +25,18 @@ function pageCss(): string {
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
 export function reportHtml(project: Project, design: ProjectDesign, entries: SheetEntry[]): string {
-  const body = renderToStaticMarkup(
-    <div className="report-preview">
-      <ReportPackage project={project} design={design} entries={entries} />
-    </div>,
+  // render off-screen with the client renderer and take the markup
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  flushSync(() =>
+    root.render(
+      <div className="report-preview">
+        <ReportPackage project={project} design={design} entries={entries} />
+      </div>,
+    ),
   );
+  const body = host.innerHTML;
+  root.unmount();
   const title = `${project.info.jobRef || project.info.name || "HouseCalc"} — structural calculations`;
   return `<!doctype html>
 <html lang="en">
