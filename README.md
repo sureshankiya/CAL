@@ -73,9 +73,15 @@ AI extraction needs an Anthropic API key set as `ANTHROPIC_API_KEY` in the envir
 ```bash
 bun install
 bun run dev          # http://localhost:8080 (in a container without IPv6: bunx vite dev --host 127.0.0.1)
+bun run build:static # browser-only single-page build (dist-artifact/housecalc.html); no AI extraction
 ```
 
 - **Example** loads a one-story example house; **San Miguel** and **Truss check** load the Phase 4 validation projects; **Deck + RW** loads the Phase 5 options project; **New** / **Open… / Save** manage project files (`*.housecalc.json`).
+- **Fill from .md…** fills the project — information, criteria, assemblies, levels, lateral, hardware and every member — from a Markdown input sheet (choose a `.md` file or paste it). **Export .md** writes the current project in the same format, which is also the template (`examples/example-house.housecalc.md`).
+  - One `- path: value` line per field under `## Project`, and under `## Member MARK (kind)` for each member (e.g. `## Member B-1 (beam)`, then `- spans: [16]`). `| path | value |` table rows also work.
+  - Members are matched by mark: existing marks are updated, new marks are added from the standard template for the kind, then the sheet's values applied. A list given in the sheet replaces the list.
+  - **Check sheet** reports the values filled, members added / updated, template defaults used and keys that are not fields. Nothing is applied while a required field is missing or a value is invalid; the report names each one.
+  - Apply to the current project, or start a new project from the sheet.
 - The sidebar holds the project, criteria, dead-load assemblies, levels, members and drawings; the preview shows one sheet or the full package.
 - **Print / Save PDF** prints the full package (US Letter). Printing is blocked while any member has an error.
 - Values in red are overrides or data marked VERIFY; the cover prints a DRAFT banner until they are resolved.

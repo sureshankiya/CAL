@@ -11,3 +11,4 @@ export * from "./notes";
 export * from "./sanMiguel";
 export * from "./eastLincoln";
 export * from "./deckExample";
+export * from "./markdown";

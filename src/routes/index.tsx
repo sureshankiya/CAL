@@ -13,6 +13,7 @@ import {
   ProjectInfoPanel,
 } from "@/components/editors/ProjectPanels";
 import { DrawingsPanel } from "@/components/drawings/DrawingsPanel";
+import { MarkdownExportDialog, MarkdownImportDialog } from "@/components/editors/MarkdownDialog";
 import { getCycle } from "@/engine/core/codes";
 import {
   designProject,
@@ -50,6 +51,7 @@ function Index() {
     text: "Example house loaded — use New or Open to start your own project.",
   });
   const fileRef = useRef<HTMLInputElement>(null);
+  const [mdDialog, setMdDialog] = useState<"import" | "export">();
 
   // restore the autosaved project after mount (browser storage is not available during SSR)
   useEffect(() => {
@@ -223,6 +225,22 @@ function Index() {
             <button type="button" className={btn} onClick={saveFile}>
               Save
             </button>
+            <button
+              type="button"
+              className={btn}
+              title="Fill every field — project data and members — from a Markdown input sheet"
+              onClick={() => setMdDialog("import")}
+            >
+              Fill from .md…
+            </button>
+            <button
+              type="button"
+              className={btn}
+              title="The current project as a Markdown input sheet (also the template)"
+              onClick={() => setMdDialog("export")}
+            >
+              Export .md
+            </button>
             <button type="button" onClick={handlePrint} className={primary}>
               Print / Save PDF
             </button>
@@ -239,6 +257,20 @@ function Index() {
           </div>
         ) : null}
       </header>
+      {mdDialog === "import" ? (
+        <MarkdownImportDialog
+          project={project}
+          onClose={() => setMdDialog(undefined)}
+          onApply={(p, summary) => {
+            setProject(p);
+            if (!p.members.some((m) => m.id === activeId)) setActiveId(p.members[0]?.id);
+            setSheetKey("cover");
+            setMdDialog(undefined);
+            setMessage({ tone: "info", text: summary });
+          }}
+        />
+      ) : null}
+      {mdDialog === "export" ? <MarkdownExportDialog project={project} onClose={() => setMdDialog(undefined)} /> : null}
 
       <div className="mx-auto grid max-w-[1500px] gap-6 px-6 py-8 lg:grid-cols-[380px_1fr] print:block print:max-w-none print:p-0">
         <aside className="no-print space-y-5">

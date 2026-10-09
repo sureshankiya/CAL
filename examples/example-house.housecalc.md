@@ -1,0 +1,1718 @@
+# HouseCalc input sheet — Example Residence
+
+<!-- One `- path: value` line per field. Edit values, add `## Member MARK (kind)` sections for new
+     members, then use Fill from .md in HouseCalc. Text that looks like a number is quoted ("2025"). -->
+
+## Project
+
+### Information
+
+- schemaVersion: 1
+- info.name: Example Residence
+- info.address: 123 Example Street, Escondido, CA
+- info.jobRef: HC-0001
+- info.client: Example Owner
+- info.jurisdiction: City of Escondido
+- info.preparedBy: ""
+- info.checkedBy: ""
+- info.approvedBy: ""
+- info.date: 2026-10-07
+- info.revision: "0"
+- cycleId: "2025"
+
+### Design criteria
+
+- criteria.riskCategory: II
+- criteria.liveBasis: IRC
+- criteria.roofLive.L0: 20
+- criteria.roofLive.reduce: false
+- criteria.snow.pg: 0
+- criteria.snow.Ce: 1
+- criteria.snow.Ct: 1
+- criteria.snow.Is: 1
+- criteria.snow.slippery: false
+- criteria.Kcr: 1
+- criteria.seismic.SDS: 1
+- criteria.seismic.SD1: 0.6
+- criteria.seismic.siteClass: D (default)
+- criteria.seismic.SDC: D
+- criteria.wind.V: 95
+- criteria.wind.exposure: B
+- criteria.wind.Kzt: 1
+- criteria.soil.bearing: 1500
+- criteria.soil.source: Presumptive, CBC Table 1806.2, Class 5 — verify with geotechnical report
+- criteria.soil.class: "5"
+- criteria.soil.density: 110
+- criteria.concrete.fc: 2500
+- criteria.concrete.fy: 60000
+- criteria.concrete.cover: 3
+
+### Dead-load assemblies
+
+- assemblies.0.id: RD1
+- assemblies.0.name: Roof — asphalt shingles (ceiling carried by ceiling joists)
+- assemblies.0.kind: roof
+- assemblies.0.basis: sloped
+- assemblies.0.components.0.key: asphalt-shingles
+- assemblies.0.components.0.name: Asphalt shingles
+- assemblies.0.components.0.psf: 2
+- assemblies.0.components.0.source: C3.1-1a
+- assemblies.0.components.1.key: reroof-overlay
+- assemblies.0.components.1.name: Future reroof — one shingle overlay
+- assemblies.0.components.1.psf: 2
+- assemblies.0.components.1.source: C3.1-1a
+- assemblies.0.components.2.key: underlayment
+- assemblies.0.components.2.name: Roofing underlayment (felt / synthetic)
+- assemblies.0.components.2.psf: 0.5
+- assemblies.0.components.2.source: typical
+- assemblies.0.components.3.key: ply-15/32
+- assemblies.0.components.3.name: Plywood / OSB sheathing, 15/32 in. (1/2 in.)
+- assemblies.0.components.3.psf: 1.6
+- assemblies.0.components.3.source: C3.1-1a
+- assemblies.0.components.4.key: framing-roof
+- assemblies.0.components.4.name: Roof framing allowance (rafters / trusses)
+- assemblies.0.components.4.psf: 2
+- assemblies.0.components.4.source: typical
+- assemblies.0.components.5.key: misc
+- assemblies.0.components.5.name: Miscellaneous, mechanical and electrical
+- assemblies.0.components.5.psf: 1.5
+- assemblies.0.components.5.source: typical
+- assemblies.0.designValue: 10
+- assemblies.1.id: RD2
+- assemblies.1.name: Roof — concrete tile (ceiling carried by ceiling joists)
+- assemblies.1.kind: roof
+- assemblies.1.basis: sloped
+- assemblies.1.components.0.key: cement-tile
+- assemblies.1.components.0.name: Cement (concrete) roof tile
+- assemblies.1.components.0.psf: 16
+- assemblies.1.components.0.source: C3.1-1a
+- assemblies.1.components.1.key: underlayment
+- assemblies.1.components.1.name: Roofing underlayment (felt / synthetic)
+- assemblies.1.components.1.psf: 0.5
+- assemblies.1.components.1.source: typical
+- assemblies.1.components.2.key: ply-15/32
+- assemblies.1.components.2.name: Plywood / OSB sheathing, 15/32 in. (1/2 in.)
+- assemblies.1.components.2.psf: 1.6
+- assemblies.1.components.2.source: C3.1-1a
+- assemblies.1.components.3.key: framing-roof
+- assemblies.1.components.3.name: Roof framing allowance (rafters / trusses)
+- assemblies.1.components.3.psf: 2
+- assemblies.1.components.3.source: typical
+- assemblies.1.components.4.key: misc
+- assemblies.1.components.4.name: Miscellaneous, mechanical and electrical
+- assemblies.1.components.4.psf: 1.5
+- assemblies.1.components.4.source: typical
+- assemblies.1.designValue: 22
+- assemblies.2.id: RD3
+- assemblies.2.name: Roof — asphalt shingles, vaulted ceiling on rafters
+- assemblies.2.kind: roof
+- assemblies.2.basis: sloped
+- assemblies.2.components.0.key: asphalt-shingles
+- assemblies.2.components.0.name: Asphalt shingles
+- assemblies.2.components.0.psf: 2
+- assemblies.2.components.0.source: C3.1-1a
+- assemblies.2.components.1.key: reroof-overlay
+- assemblies.2.components.1.name: Future reroof — one shingle overlay
+- assemblies.2.components.1.psf: 2
+- assemblies.2.components.1.source: C3.1-1a
+- assemblies.2.components.2.key: underlayment
+- assemblies.2.components.2.name: Roofing underlayment (felt / synthetic)
+- assemblies.2.components.2.psf: 0.5
+- assemblies.2.components.2.source: typical
+- assemblies.2.components.3.key: ply-15/32
+- assemblies.2.components.3.name: Plywood / OSB sheathing, 15/32 in. (1/2 in.)
+- assemblies.2.components.3.psf: 1.6
+- assemblies.2.components.3.source: C3.1-1a
+- assemblies.2.components.4.key: framing-roof
+- assemblies.2.components.4.name: Roof framing allowance (rafters / trusses)
+- assemblies.2.components.4.psf: 2
+- assemblies.2.components.4.source: typical
+- assemblies.2.components.5.key: insul-batt
+- assemblies.2.components.5.name: Insulation, batt or blown (typical allowance)
+- assemblies.2.components.5.psf: 1
+- assemblies.2.components.5.source: typical
+- assemblies.2.components.6.key: gyp-5/8
+- assemblies.2.components.6.name: Gypsum board, 5/8 in.
+- assemblies.2.components.6.psf: 2.75
+- assemblies.2.components.6.source: C3.1-1a
+- assemblies.2.components.7.key: misc
+- assemblies.2.components.7.name: Miscellaneous, mechanical and electrical
+- assemblies.2.components.7.psf: 1.5
+- assemblies.2.components.7.source: typical
+- assemblies.2.designValue: 15
+- assemblies.3.id: FD1
+- assemblies.3.name: Floor — wood framed, wood / carpet finish
+- assemblies.3.kind: floor
+- assemblies.3.basis: horizontal
+- assemblies.3.components.0.key: hardwood-7/8
+- assemblies.3.components.0.name: Hardwood flooring, 7/8 in.
+- assemblies.3.components.0.psf: 4
+- assemblies.3.components.0.source: C3.1-1a
+- assemblies.3.components.1.key: ply-23/32
+- assemblies.3.components.1.name: Plywood / OSB sheathing, 23/32 in. (3/4 in.)
+- assemblies.3.components.1.psf: 2.4
+- assemblies.3.components.1.source: C3.1-1a
+- assemblies.3.components.2.key: framing-floor
+- assemblies.3.components.2.name: Floor framing allowance (joists / I-joists)
+- assemblies.3.components.2.psf: 3
+- assemblies.3.components.2.source: typical
+- assemblies.3.components.3.key: gyp-5/8
+- assemblies.3.components.3.name: Gypsum board, 5/8 in.
+- assemblies.3.components.3.psf: 2.75
+- assemblies.3.components.3.source: C3.1-1a
+- assemblies.3.components.4.key: misc
+- assemblies.3.components.4.name: Miscellaneous, mechanical and electrical
+- assemblies.3.components.4.psf: 1.5
+- assemblies.3.components.4.source: typical
+- assemblies.3.designValue: 15
+- assemblies.4.id: FD2
+- assemblies.4.name: Floor — wood framed, tile on mortar bed
+- assemblies.4.kind: floor
+- assemblies.4.basis: horizontal
+- assemblies.4.components.0.key: tile-mortar-1/2
+- assemblies.4.components.0.name: Ceramic or quarry tile (3/4 in.) on 1/2 in. mortar bed
+- assemblies.4.components.0.psf: 16
+- assemblies.4.components.0.source: C3.1-1a
+- assemblies.4.components.1.key: ply-23/32
+- assemblies.4.components.1.name: Plywood / OSB sheathing, 23/32 in. (3/4 in.)
+- assemblies.4.components.1.psf: 2.4
+- assemblies.4.components.1.source: C3.1-1a
+- assemblies.4.components.2.key: framing-floor
+- assemblies.4.components.2.name: Floor framing allowance (joists / I-joists)
+- assemblies.4.components.2.psf: 3
+- assemblies.4.components.2.source: typical
+- assemblies.4.components.3.key: gyp-5/8
+- assemblies.4.components.3.name: Gypsum board, 5/8 in.
+- assemblies.4.components.3.psf: 2.75
+- assemblies.4.components.3.source: C3.1-1a
+- assemblies.4.components.4.key: misc
+- assemblies.4.components.4.name: Miscellaneous, mechanical and electrical
+- assemblies.4.components.4.psf: 1.5
+- assemblies.4.components.4.source: typical
+- assemblies.4.designValue: 26
+- assemblies.5.id: CD1
+- assemblies.5.name: Ceiling — gypsum on ceiling joists, attic insulation
+- assemblies.5.kind: ceiling
+- assemblies.5.basis: horizontal
+- assemblies.5.components.0.key: gyp-5/8
+- assemblies.5.components.0.name: Gypsum board, 5/8 in.
+- assemblies.5.components.0.psf: 2.75
+- assemblies.5.components.0.source: C3.1-1a
+- assemblies.5.components.1.key: insul-batt
+- assemblies.5.components.1.name: Insulation, batt or blown (typical allowance)
+- assemblies.5.components.1.psf: 1
+- assemblies.5.components.1.source: typical
+- assemblies.5.components.2.key: framing-ceiling
+- assemblies.5.components.2.name: Ceiling joist allowance
+- assemblies.5.components.2.psf: 1.5
+- assemblies.5.components.2.source: typical
+- assemblies.5.components.3.key: misc
+- assemblies.5.components.3.name: Miscellaneous, mechanical and electrical
+- assemblies.5.components.3.psf: 1.5
+- assemblies.5.components.3.source: typical
+- assemblies.5.designValue: 7
+- assemblies.6.id: DD1
+- assemblies.6.name: Deck — 2 in. wood decking
+- assemblies.6.kind: deck
+- assemblies.6.basis: horizontal
+- assemblies.6.components.0.key: decking-2in
+- assemblies.6.components.0.name: Decking, 2 in. wood (Douglas fir)
+- assemblies.6.components.0.psf: 5
+- assemblies.6.components.0.source: C3.1-1a
+- assemblies.6.components.1.key: framing-floor
+- assemblies.6.components.1.name: Floor framing allowance (joists / I-joists)
+- assemblies.6.components.1.psf: 3
+- assemblies.6.components.1.source: typical
+- assemblies.6.components.2.key: misc
+- assemblies.6.components.2.name: Miscellaneous, mechanical and electrical
+- assemblies.6.components.2.psf: 1.5
+- assemblies.6.components.2.source: typical
+- assemblies.6.designValue: 10
+- assemblies.7.id: WD1
+- assemblies.7.name: Exterior wall — 2x6 @ 16 in., stucco
+- assemblies.7.kind: wall
+- assemblies.7.basis: wall
+- assemblies.7.components.0.key: wall-ext-2x6
+- assemblies.7.components.0.name: Exterior stud wall 2x6 @ 16 in., 5/8 in. gypsum, insulated, 3/8 in. siding
+- assemblies.7.components.0.psf: 12
+- assemblies.7.components.0.source: C3.1-1a
+- assemblies.7.components.1.key: stucco-7/8
+- assemblies.7.components.1.name: Portland cement plaster (stucco), 7/8 in. on lath — add to stud wall
+- assemblies.7.components.1.psf: 10
+- assemblies.7.components.1.source: typical
+- assemblies.7.designValue: 22
+- assemblies.8.id: WD2
+- assemblies.8.name: Interior wall — 2x4 @ 16 in., gypsum both sides
+- assemblies.8.kind: wall
+- assemblies.8.basis: wall
+- assemblies.8.components.0.key: wall-int-2x4
+- assemblies.8.components.0.name: Interior partition, wood studs, 1/2 in. gypsum each side
+- assemblies.8.components.0.psf: 8
+- assemblies.8.components.0.source: C3.1-1a
+- assemblies.8.designValue: 10
+
+### Structures and levels
+
+- structures.0.id: S1
+- structures.0.name: Main house
+- structures.0.levels.0.id: L1
+- structures.0.levels.0.name: First floor
+- structures.0.levels.0.number: 1
+- structures.0.levels.1.id: RF
+- structures.0.levels.1.name: Roof
+- structures.0.levels.1.number: 2
+
+### Member marks
+
+- marks.joist: FJ-{n}
+- marks.rafter: R-{n}
+- marks.ceilingJoist: CJ-{n}
+- marks.ijoist: IJ-{n}
+- marks.beam: B-{n}
+- marks.header: H-{n}
+- marks.ridge: RB-{n}
+- marks.flush: FB-{n}
+- marks.dropped: DB-{n}
+- marks.wall: "{L}W-{n}"
+- marks.post: P-{n}
+- marks.truss: T-{n}
+- marks.connector: CN-{n}
+- marks.footing: F-{n}
+- marks.pad: PF-{n}
+- marks.shearWall: "{L}SW-{n}"
+- marks.steelBeam: SB-{n}
+- marks.steelColumn: SC-{n}
+- marks.basePlate: BP-{n}
+- marks.roofDiaphragm: RD-{n}
+- marks.floorDiaphragm: FD-{n}
+- marks.transfer: ST-{n}
+- marks.uplift: UP-{n}
+- marks.ledger: LG-{n}
+- marks.masonryWall: CW-{n}
+- marks.holdownFooting: HF-{n}
+- marks.tieIn: TI-{n}
+- marks.retainingWall: RW-{n}
+- marks.guardPost: GP-{n}
+- marks.cfsWall: CS-{n}
+
+### Lateral
+
+- lateral.enabled: true
+- lateral.system: wsp
+- lateral.rho: 1.3
+- lateral.TL: 8
+- lateral.driftLowRise: false
+- lateral.Lx: 40
+- lateral.Ly: 24
+- lateral.ridge: X
+- lateral.pitch: 4
+- lateral.roofRise: 4
+- lateral.Ke: 1
+- lateral.stories.0.id: ST1
+- lateral.stories.0.name: First story
+- lateral.stories.0.height: 9
+- lateral.stories.0.items.0.label: Roof (RD1), plan area
+- lateral.stories.0.items.0.kind: area
+- lateral.stories.0.items.0.qty: 960
+- lateral.stories.0.items.0.assemblyId: RD1
+- lateral.stories.0.items.0.sloped: true
+- lateral.stories.0.items.1.label: Ceiling (CD1)
+- lateral.stories.0.items.1.kind: area
+- lateral.stories.0.items.1.qty: 960
+- lateral.stories.0.items.1.assemblyId: CD1
+- lateral.stories.0.items.2.label: Exterior walls, half story above and below
+- lateral.stories.0.items.2.kind: wall
+- lateral.stories.0.items.2.qty: 128
+- lateral.stories.0.items.2.height: 4.5
+- lateral.stories.0.items.2.assemblyId: WD1
+- lateral.stories.0.items.3.label: Interior walls (estimated length = half the perimeter)
+- lateral.stories.0.items.3.kind: wall
+- lateral.stories.0.items.3.qty: 64
+- lateral.stories.0.items.3.height: 4.5
+- lateral.stories.0.items.3.assemblyId: WD2
+- lateral.lines.0.id: LN1
+- lateral.lines.0.name: Line 1 (front)
+- lateral.lines.0.storyId: ST1
+- lateral.lines.0.dir: X
+- lateral.lines.0.trib: 12
+- lateral.lines.0.pos: 0
+- lateral.lines.1.id: LN2
+- lateral.lines.1.name: Line 2 (rear)
+- lateral.lines.1.storyId: ST1
+- lateral.lines.1.dir: X
+- lateral.lines.1.trib: 12
+- lateral.lines.1.pos: 24
+- lateral.lines.2.id: LNA
+- lateral.lines.2.name: Line A (left)
+- lateral.lines.2.storyId: ST1
+- lateral.lines.2.dir: Y
+- lateral.lines.2.trib: 20
+- lateral.lines.2.pos: 0
+- lateral.lines.3.id: LNB
+- lateral.lines.3.name: Line B (right)
+- lateral.lines.3.storyId: ST1
+- lateral.lines.3.dir: Y
+- lateral.lines.3.trib: 20
+- lateral.lines.3.pos: 40
+- lateral.distribution: envelope
+
+### Hardware
+
+- hardware.0.id: HDU2-SDS2.5
+- hardware.0.model: HDU2-SDS2.5
+- hardware.0.kind: holdown
+- hardware.0.manufacturer: Simpson Strong-Tie
+- hardware.0.description: HDU2-SDS2.5 hold-down
+- hardware.0.fasteners: (6) SDS 1/4 × 2-1/2 in.
+- hardware.0.report: ICC-ES ESR-2330
+- hardware.0.tension: 3075
+- hardware.0.deflection: 0.088
+- hardware.0.anchorDia: 0.625
+- hardware.0.minPost: 3
+- hardware.0.checked: true
+- hardware.0.source: Simpson Strong-Tie C-C-2019 catalogue (DF/SP) — checked 2026-10-09; confirm against the current edition
+- hardware.1.id: HDU4-SDS2.5
+- hardware.1.model: HDU4-SDS2.5
+- hardware.1.kind: holdown
+- hardware.1.manufacturer: Simpson Strong-Tie
+- hardware.1.description: HDU4-SDS2.5 hold-down
+- hardware.1.fasteners: (10) SDS 1/4 × 2-1/2 in.
+- hardware.1.report: ICC-ES ESR-2330
+- hardware.1.tension: 4565
+- hardware.1.deflection: 0.114
+- hardware.1.anchorDia: 0.625
+- hardware.1.minPost: 3
+- hardware.1.checked: true
+- hardware.1.source: Simpson Strong-Tie C-C-2019 catalogue (DF/SP) — checked 2026-10-09; confirm against the current edition
+- hardware.2.id: HDU5-SDS2.5
+- hardware.2.model: HDU5-SDS2.5
+- hardware.2.kind: holdown
+- hardware.2.manufacturer: Simpson Strong-Tie
+- hardware.2.description: HDU5-SDS2.5 hold-down
+- hardware.2.fasteners: (14) SDS 1/4 × 2-1/2 in.
+- hardware.2.report: ICC-ES ESR-2330
+- hardware.2.tension: 5645
+- hardware.2.deflection: 0.115
+- hardware.2.anchorDia: 0.625
+- hardware.2.minPost: 3
+- hardware.2.checked: true
+- hardware.2.source: Simpson Strong-Tie C-C-2019 catalogue (DF/SP) — checked 2026-10-09; confirm against the current edition
+- hardware.3.id: HDU8-SDS2.5
+- hardware.3.model: HDU8-SDS2.5
+- hardware.3.kind: holdown
+- hardware.3.manufacturer: Simpson Strong-Tie
+- hardware.3.description: HDU8-SDS2.5 hold-down
+- hardware.3.fasteners: (20) SDS 1/4 × 2-1/2 in.
+- hardware.3.report: ICC-ES ESR-2330
+- hardware.3.tension: 6970
+- hardware.3.deflection: 0.116
+- hardware.3.anchorDia: 0.875
+- hardware.3.minPost: 3
+- hardware.3.checked: true
+- hardware.3.source: Simpson Strong-Tie C-C-2019 catalogue (DF/SP) — checked 2026-10-09; confirm against the current edition
+- hardware.4.id: HDU11-SDS2.5
+- hardware.4.model: HDU11-SDS2.5
+- hardware.4.kind: holdown
+- hardware.4.manufacturer: Simpson Strong-Tie
+- hardware.4.description: HDU11-SDS2.5 hold-down
+- hardware.4.fasteners: (30) SDS 1/4 × 2-1/2 in. (3-1/2 × 5-1/2 in. post)
+- hardware.4.report: ICC-ES ESR-2330
+- hardware.4.tension: 9335
+- hardware.4.deflection: 0.137
+- hardware.4.anchorDia: 1
+- hardware.4.minPost: 3.5
+- hardware.4.checked: true
+- hardware.4.source: Simpson Strong-Tie C-C-2019 catalogue (DF/SP) — checked 2026-10-09; confirm against the current edition
+- hardware.5.id: HDU14-SDS2.5
+- hardware.5.model: HDU14-SDS2.5
+- hardware.5.kind: holdown
+- hardware.5.manufacturer: Simpson Strong-Tie
+- hardware.5.description: HDU14 hold-down (on a 6x6 post: 14,445 lb, 0.172 in.)
+- hardware.5.fasteners: (36) SDS 1/4 × 2-1/2 in. (3-1/2 × 7-1/4 in. post)
+- hardware.5.report: ICC-ES ESR-2330
+- hardware.5.tension: 14390
+- hardware.5.deflection: 0.177
+- hardware.5.anchorDia: 1
+- hardware.5.minPost: 3.5
+- hardware.5.checked: true
+- hardware.5.source: Simpson Strong-Tie C-C-2019 catalogue (DF/SP) — checked 2026-10-09; confirm against the current edition
+- hardware.6.id: HTT4
+- hardware.6.model: HTT4
+- hardware.6.kind: holdown
+- hardware.6.manufacturer: Simpson Strong-Tie
+- hardware.6.description: HTT4 tension tie (nailed; 4,455 lb with (18) #10 × 1-1/2 in. SD screws)
+- hardware.6.fasteners: (18) 0.162 × 2-1/2 in. nails
+- hardware.6.report: ICC-ES ESR-2613
+- hardware.6.tension: 4235
+- hardware.6.deflection: 0.123
+- hardware.6.anchorDia: 0.625
+- hardware.6.minPost: 3
+- hardware.6.checked: true
+- hardware.6.source: Simpson Strong-Tie C-C-2019 catalogue (DF/SP) — checked 2026-10-09; confirm against the current edition
+- hardware.7.id: H2.5A
+- hardware.7.model: H2.5A
+- hardware.7.kind: tie
+- hardware.7.manufacturer: Simpson Strong-Tie
+- hardware.7.description: H2.5A hurricane tie, rafter / truss to plate
+- hardware.7.fasteners: (10) 8d × 1-1/2 in. nails
+- hardware.7.report: ICC-ES ESR-2613
+- hardware.7.uplift: 535
+- hardware.7.F1: 110
+- hardware.7.F2: 110
+- hardware.7.checked: false
+- hardware.7.source: Simpson Strong-Tie Wood Construction Connectors catalogue (DF/SP) — F1 / F2 110 lb confirmed (C-C-2019); uplift 535 lb (C-2008) is below the C-C-2019 value of 565 lb with 0.131 × 2-1/2 in. nails — confirm the fastener used
+- hardware.8.id: CS16
+- hardware.8.model: CS16
+- hardware.8.kind: strap
+- hardware.8.manufacturer: Simpson Strong-Tie
+- hardware.8.description: CS16 coiled strap, 16 ga
+- hardware.8.fasteners: (20) 0.148 × 2-1/2 in. nails (11 in. end length) or (22) 0.131 × 2-1/2 in. (13 in.)
+- hardware.8.report: ICC-ES ESR-2105
+- hardware.8.tension: 1705
+- hardware.8.checked: true
+- hardware.8.source: Simpson Strong-Tie C-C-2019 catalogue (DF/SP) — checked 2026-10-09; confirm against the current edition
+- hardware.9.id: LUS26
+- hardware.9.model: LUS26
+- hardware.9.kind: hanger
+- hardware.9.manufacturer: Simpson Strong-Tie
+- hardware.9.description: LUS26 face-mount hanger, 2x6
+- hardware.9.fasteners: per catalogue
+- hardware.9.report: ""
+- hardware.9.checked: false
+- hardware.9.source: Simpson Strong-Tie Wood Construction Connectors catalogue (DF/SP) — enter the published values
+- hardware.10.id: LUS28
+- hardware.10.model: LUS28
+- hardware.10.kind: hanger
+- hardware.10.manufacturer: Simpson Strong-Tie
+- hardware.10.description: LUS28 face-mount hanger, 2x8
+- hardware.10.fasteners: per catalogue
+- hardware.10.report: ""
+- hardware.10.checked: false
+- hardware.10.source: Simpson Strong-Tie Wood Construction Connectors catalogue (DF/SP) — enter the published values
+- hardware.11.id: LUS210
+- hardware.11.model: LUS210
+- hardware.11.kind: hanger
+- hardware.11.manufacturer: Simpson Strong-Tie
+- hardware.11.description: LUS210 face-mount hanger, 2x10
+- hardware.11.fasteners: per catalogue
+- hardware.11.report: ""
+- hardware.11.checked: false
+- hardware.11.source: Simpson Strong-Tie Wood Construction Connectors catalogue (DF/SP) — enter the published values
+- hardware.12.id: HUS210
+- hardware.12.model: HUS210
+- hardware.12.kind: hanger
+- hardware.12.manufacturer: Simpson Strong-Tie
+- hardware.12.description: HUS210 face-mount hanger, 2x10
+- hardware.12.fasteners: per catalogue
+- hardware.12.report: ""
+- hardware.12.checked: false
+- hardware.12.source: Simpson Strong-Tie Wood Construction Connectors catalogue (DF/SP) — enter the published values
+- hardware.13.id: BC4
+- hardware.13.model: BC4
+- hardware.13.kind: post-cap
+- hardware.13.manufacturer: Simpson Strong-Tie
+- hardware.13.description: BC4 post cap, 4x post
+- hardware.13.fasteners: per catalogue
+- hardware.13.report: ""
+- hardware.13.checked: false
+- hardware.13.source: Simpson Strong-Tie Wood Construction Connectors catalogue (DF/SP) — enter the published values
+- hardware.14.id: BC6
+- hardware.14.model: BC6
+- hardware.14.kind: post-cap
+- hardware.14.manufacturer: Simpson Strong-Tie
+- hardware.14.description: BC6 post cap, 6x post
+- hardware.14.fasteners: per catalogue
+- hardware.14.report: ""
+- hardware.14.checked: false
+- hardware.14.source: Simpson Strong-Tie Wood Construction Connectors catalogue (DF/SP) — enter the published values
+- hardware.15.id: ABU44
+- hardware.15.model: ABU44
+- hardware.15.kind: post-base
+- hardware.15.manufacturer: Simpson Strong-Tie
+- hardware.15.description: ABU44 adjustable post base, 4x4
+- hardware.15.fasteners: per catalogue
+- hardware.15.report: ""
+- hardware.15.checked: false
+- hardware.15.source: Simpson Strong-Tie Wood Construction Connectors catalogue (DF/SP) — enter the published values
+- hardware.16.id: ABU66
+- hardware.16.model: ABU66
+- hardware.16.kind: post-base
+- hardware.16.manufacturer: Simpson Strong-Tie
+- hardware.16.description: ABU66 adjustable post base, 6x6
+- hardware.16.fasteners: per catalogue
+- hardware.16.report: ""
+- hardware.16.checked: false
+- hardware.16.source: Simpson Strong-Tie Wood Construction Connectors catalogue (DF/SP) — enter the published values
+- hardware.17.id: A35
+- hardware.17.model: A35
+- hardware.17.kind: angle
+- hardware.17.manufacturer: Simpson Strong-Tie
+- hardware.17.description: A35 framing angle
+- hardware.17.fasteners: per catalogue
+- hardware.17.report: ""
+- hardware.17.checked: false
+- hardware.17.source: Simpson Strong-Tie Wood Construction Connectors catalogue (DF/SP) — enter the published values
+- hardware.18.id: H1
+- hardware.18.model: H1
+- hardware.18.kind: tie
+- hardware.18.manufacturer: Simpson Strong-Tie
+- hardware.18.description: H1 hurricane tie
+- hardware.18.fasteners: per catalogue
+- hardware.18.report: ""
+- hardware.18.checked: false
+- hardware.18.source: Simpson Strong-Tie Wood Construction Connectors catalogue (DF/SP) — enter the published values
+
+### Slab, notes, drawings and review table
+
+- notes: ""
+- drawings: []
+- review: []
+
+## Member R-1 (rafter)
+
+- id: m-r1
+- mark: R-1
+- description: Main roof rafters, ridge board, tied by CJ-1
+- structureId: S1
+- levelId: RF
+- status: new
+- links: []
+- species: DF-L
+- grade: No.2
+- size: 2x8
+- spacing: 24
+- rise: 4
+- run: 12
+- overhang: 1.5
+- ridge: board
+- plateSeat: 5.5
+- ridgeSeat: 0
+- seatCut: 1.5
+- dead.assemblyId: RD1
+- roofLive: true
+- snow: true
+- windPressure: -20
+- deflection.preset: roof-nonplaster
+- luBottom: 4
+- rule441: false
+- tieSpacing: 24
+- gable: true
+
+## Member CJ-1 (ceilingJoist)
+
+- id: m-cj1
+- mark: CJ-1
+- description: Ceiling joists / rafter ties, lapped over the center bearing wall
+- structureId: S1
+- levelId: RF
+- status: new
+- links: []
+- species: DF-L
+- grade: No.2
+- size: 2x6
+- spacing: 24
+- spans: [12,12]
+- dead.assemblyId: CD1
+- live.use: attic-no-storage
+- extra: []
+- bearing: [5.5,3.5,5.5]
+- deflection.preset: roof-nonplaster
+- luTop: 0
+- rule441: true
+- tensionFrom: m-r1
+- heel.nail: 16d-common
+- heel.count: 8
+- heel.rafterThickness: 1.5
+
+## Member H-1 (beam)
+
+- id: m-h1
+- mark: H-1
+- description: Window header, exterior bearing wall
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k1
+- links.0.kind: line
+- links.0.sourceId: m-r1
+- links.0.support: 0
+- links.0.label: Rafters
+- links.0.factor: 1
+- links.1.id: k2
+- links.1.kind: line
+- links.1.sourceId: m-cj1
+- links.1.support: 0
+- links.1.label: Ceiling joists
+- links.1.factor: 1
+- role: header
+- material.kind: sawn
+- material.species: DF-L
+- material.grade: No.2
+- material.size: 4x8
+- material.plies: 1
+- spans: [6]
+- area: []
+- walls: []
+- extra: []
+- bearing: [3,3]
+- luTop: 0
+- luBottom: 0
+- deflection.preset: roof-nonplaster
+- selfWeight: true
+
+## Member FJ-1 (joist)
+
+- id: m-fj1
+- mark: FJ-1
+- description: Raised floor joists
+- structureId: S1
+- levelId: L1
+- status: new
+- links: []
+- species: DF-L
+- grade: No.2
+- size: 2x10
+- spacing: 16
+- spans: [12]
+- dead.assemblyId: FD1
+- live.use: living
+- extra: []
+- bearing: [1.5,1.5]
+- luBottom: 0
+- rule441: false
+- deflection.preset: floor
+
+## Member B-1 (beam)
+
+- id: m-b1
+- mark: B-1
+- description: Family room floor girder: interior post P-1 to perimeter footing F-1
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k3
+- links.0.kind: line
+- links.0.sourceId: m-ij1
+- links.0.support: 1
+- links.0.label: I-joists
+- links.0.factor: 1
+- role: beam
+- material.kind: sawn
+- material.species: DF-L
+- material.grade: No.1
+- material.size: 4x12
+- material.plies: 1
+- spans: [6]
+- area: []
+- walls: []
+- extra: []
+- bearing: [3.5,3.5]
+- luTop: 0
+- luBottom: 0
+- deflection.preset: floor
+- selfWeight: true
+
+## Member IJ-1 (ijoist)
+
+- id: m-ij1
+- mark: IJ-1
+- description: Family room I-joist bay, bearing on F-1 and girder B-1
+- structureId: S1
+- levelId: L1
+- status: new
+- links: []
+- series: TJI 210
+- depth: 11-7/8"
+- spacing: 16
+- spans: [16]
+- dead.assemblyId: FD1
+- live.use: living
+- extra: []
+- bearing: [1.75,3.5]
+- deflection.preset: floor
+
+## Member 1W-1 (wall)
+
+- id: m-w1
+- mark: 1W-1
+- description: Front exterior bearing wall with window W1 (H-1)
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k10
+- links.0.kind: line
+- links.0.sourceId: m-r1
+- links.0.support: 0
+- links.0.label: Rafters
+- links.0.x1: 0
+- links.0.x2: 4
+- links.0.factor: 1
+- links.1.id: k11
+- links.1.kind: line
+- links.1.sourceId: m-r1
+- links.1.support: 0
+- links.1.label: Rafters
+- links.1.x1: 10
+- links.1.x2: 40
+- links.1.factor: 1
+- links.2.id: k12
+- links.2.kind: line
+- links.2.sourceId: m-cj1
+- links.2.support: 0
+- links.2.label: Ceiling joists
+- links.2.x1: 0
+- links.2.x2: 4
+- links.2.factor: 1
+- links.3.id: k13
+- links.3.kind: line
+- links.3.sourceId: m-cj1
+- links.3.support: 0
+- links.3.label: Ceiling joists
+- links.3.x1: 10
+- links.3.x2: 40
+- links.3.factor: 1
+- links.4.id: k14
+- links.4.kind: point
+- links.4.sourceId: m-h1
+- links.4.support: 0
+- links.4.label: Header
+- links.4.x: 4
+- links.4.factor: 1
+- links.5.id: k15
+- links.5.kind: point
+- links.5.sourceId: m-h1
+- links.5.support: 1
+- links.5.label: Header
+- links.5.x: 10
+- links.5.factor: 1
+- species: DF-L
+- grade: Stud
+- size: 2x6
+- spacing: 16
+- plateHeight: 9
+- topPlates: 2
+- bottomPlates: 1
+- length: 40
+- sheathing: both
+- self.assemblyId: WD1
+- area: []
+- walls: []
+- extra: []
+- wind.mode: computed
+- wind.zone: 4
+- deflN: 240
+- packs.0.x: 4
+- packs.0.studs: 2
+- packs.0.label: Jack + king studs, W1 left
+- packs.1.x: 10
+- packs.1.studs: 2
+- packs.1.label: Jack + king studs, W1 right
+- openings.0.label: Window W1
+- openings.0.x1: 4
+- openings.0.x2: 10
+- openings.0.kings: 1
+
+## Member 1W-2 (wall)
+
+- id: m-w2
+- mark: 1W-2
+- description: Interior bearing wall at the ceiling-joist lap
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k20
+- links.0.kind: line
+- links.0.sourceId: m-cj1
+- links.0.support: 1
+- links.0.label: Ceiling joists
+- links.0.factor: 1
+- species: DF-L
+- grade: Stud
+- size: 2x4
+- spacing: 16
+- plateHeight: 9
+- topPlates: 2
+- bottomPlates: 1
+- length: 40
+- sheathing: both
+- self.assemblyId: WD2
+- area: []
+- walls: []
+- extra: []
+- wind.mode: none
+- deflN: 240
+- packs: []
+- openings: []
+
+## Member 1W-3 (wall)
+
+- id: m-w3
+- mark: 1W-3
+- description: Rear exterior bearing wall
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k16
+- links.0.kind: line
+- links.0.sourceId: m-r1
+- links.0.support: 0
+- links.0.label: Rafters
+- links.0.factor: 1
+- links.1.id: k17
+- links.1.kind: line
+- links.1.sourceId: m-cj1
+- links.1.support: 2
+- links.1.label: Ceiling joists
+- links.1.factor: 1
+- species: DF-L
+- grade: Stud
+- size: 2x6
+- spacing: 16
+- plateHeight: 9
+- topPlates: 2
+- bottomPlates: 1
+- length: 40
+- sheathing: both
+- self.assemblyId: WD1
+- area: []
+- walls: []
+- extra: []
+- wind.mode: computed
+- wind.zone: 4
+- deflN: 240
+- packs: []
+- openings: []
+
+## Member CN-1 (connector)
+
+- id: m-cn1
+- mark: CN-1
+- description: Rafter-to-plate tie for wind uplift
+- structureId: S1
+- levelId: RF
+- status: new
+- links: []
+- hardwareId: H2.5A
+- quantity: 1
+- sourceId: m-r1
+- support: 0
+
+## Member P-1 (post)
+
+- id: m-p1
+- mark: P-1
+- description: Crawl-space post under girder B-1
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k30
+- links.0.kind: point
+- links.0.sourceId: m-b1
+- links.0.support: 0
+- links.0.label: Girder
+- links.0.x: 0
+- links.0.factor: 1
+- material.kind: sawn
+- material.species: DF-L
+- material.grade: No.1
+- material.size: 4x4
+- material.plies: 1
+- height: 2.5
+- Ke: 1
+- extra: []
+- bearing.on: concrete
+- selfWeight: true
+
+## Member PF-1 (footing)
+
+- id: m-pf1
+- mark: PF-1
+- description: Pier pad under P-1
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k40
+- links.0.kind: point
+- links.0.sourceId: m-p1
+- links.0.support: 0
+- links.0.label: Post
+- links.0.x: 0
+- links.0.factor: 1
+- type: pad
+- B: 1.5
+- L: 1.5
+- h: 12
+- depth: 18
+- soilOver: 6
+- c1: 3.5
+- c2: 3.5
+- extra: []
+- stories: 1
+
+## Member F-1 (footing)
+
+- id: m-f1
+- mark: F-1
+- description: Perimeter footing and stem wall, front (Line 1)
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k50
+- links.0.kind: line
+- links.0.sourceId: m-w1
+- links.0.support: 0
+- links.0.label: Bearing wall
+- links.0.factor: 1
+- links.1.id: k51
+- links.1.kind: point
+- links.1.sourceId: m-w1
+- links.1.support: 1
+- links.1.label: Stud pack
+- links.1.x: 4
+- links.1.factor: 1
+- links.2.id: k52
+- links.2.kind: point
+- links.2.sourceId: m-w1
+- links.2.support: 2
+- links.2.label: Stud pack
+- links.2.x: 10
+- links.2.factor: 1
+- links.3.id: k53
+- links.3.kind: line
+- links.3.sourceId: m-fj1
+- links.3.support: 0
+- links.3.label: Floor joists
+- links.3.x1: 0
+- links.3.x2: 24
+- links.3.factor: 1
+- links.4.id: k54
+- links.4.kind: line
+- links.4.sourceId: m-ij1
+- links.4.support: 0
+- links.4.label: I-joists
+- links.4.x1: 24
+- links.4.x2: 40
+- links.4.factor: 1
+- links.5.id: k55
+- links.5.kind: point
+- links.5.sourceId: m-b1
+- links.5.support: 1
+- links.5.label: Girder
+- links.5.x: 30
+- links.5.factor: 1
+- type: strip
+- B: 1.25
+- h: 12
+- depth: 18
+- soilOver: 6
+- c1: 6
+- stem.width: 6
+- stem.height: 18
+- longitudinal.size: #4
+- longitudinal.top: 1
+- longitudinal.bottom: 1
+- extra: []
+- stories: 1
+
+## Member F-2 (footing)
+
+- id: m-f2
+- mark: F-2
+- description: Interior footing and stem wall under 1W-2
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k60
+- links.0.kind: line
+- links.0.sourceId: m-w2
+- links.0.support: 0
+- links.0.label: Bearing wall
+- links.0.factor: 1
+- links.1.id: k61
+- links.1.kind: line
+- links.1.sourceId: m-fj1
+- links.1.support: 1
+- links.1.label: Floor joists both sides
+- links.1.x1: 0
+- links.1.x2: 24
+- links.1.factor: 2
+- type: strip
+- B: 1.25
+- h: 12
+- depth: 18
+- soilOver: 6
+- c1: 6
+- stem.width: 6
+- stem.height: 18
+- longitudinal.size: #4
+- longitudinal.top: 1
+- longitudinal.bottom: 1
+- extra: []
+- stories: 1
+
+## Member F-3 (footing)
+
+- id: m-f3
+- mark: F-3
+- description: Perimeter footing and stem wall, rear (Line 2)
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k62
+- links.0.kind: line
+- links.0.sourceId: m-w3
+- links.0.support: 0
+- links.0.label: Bearing wall
+- links.0.factor: 1
+- links.1.id: k63
+- links.1.kind: line
+- links.1.sourceId: m-fj1
+- links.1.support: 0
+- links.1.label: Floor joists
+- links.1.x1: 0
+- links.1.x2: 24
+- links.1.factor: 1
+- type: strip
+- B: 1.25
+- h: 12
+- depth: 18
+- soilOver: 6
+- c1: 6
+- stem.width: 6
+- stem.height: 18
+- longitudinal.size: #4
+- longitudinal.top: 1
+- longitudinal.bottom: 1
+- extra: []
+- stories: 1
+
+## Member 1SW-1 (shearWall)
+
+- id: m-sw1
+- mark: 1SW-1
+- description: Front wall from the left corner through window W1 (FTAO)
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k70
+- links.0.kind: line
+- links.0.sourceId: m-r1
+- links.0.support: 0
+- links.0.label: Rafters
+- links.0.factor: 1
+- links.1.id: k71
+- links.1.kind: line
+- links.1.sourceId: m-cj1
+- links.1.support: 0
+- links.1.label: Ceiling joists
+- links.1.factor: 1
+- lineId: LN1
+- b: 22
+- h: 9
+- sides.0.key: SI-15/32-8d
+- sides.0.spacing: 6
+- stud.species: DF-L
+- stud.grade: No.2
+- stud.size: 2x6
+- stud.spacing: 16
+- endPost.size: 2x6
+- endPost.plies: 2
+- endPost.holeDia: 0.75
+- top.D: 0
+- top.L: 0
+- top.Lr: 0
+- top.S: 0
+- self.assemblyId: WD1
+- overturning: full
+- holdownId: HDU2-SDS2.5
+- sill.type: cast-in
+- sill.d: 0.625
+- sill.spacing: 48
+- sill.embed: 7
+- sill.edge: 1.75
+- sillSize: 2x6
+- windService.factor: 0.42
+- windService.limitN: 600
+- x: 0
+- opening.L1: 4
+- opening.Lo: 6
+- opening.L2: 12
+- opening.ha: 2.33
+- opening.hb: 3
+- opening.strapId: CS16
+- holdownAnchor.d: 0.625
+- holdownAnchor.steel: ASTM F1554 Grade 36
+- holdownAnchor.hef: 10
+- holdownAnchor.edges: [7.5,7.5,30,30]
+- holdownAnchor.plate: 2
+- holdownAnchor.cracked: true
+- holdownAnchor.omega: true
+
+## Member 1SW-2 (shearWall)
+
+- id: m-sw2
+- mark: 1SW-2
+- description: Front wall, right end
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k72
+- links.0.kind: line
+- links.0.sourceId: m-r1
+- links.0.support: 0
+- links.0.label: Rafters
+- links.0.factor: 1
+- links.1.id: k73
+- links.1.kind: line
+- links.1.sourceId: m-cj1
+- links.1.support: 0
+- links.1.label: Ceiling joists
+- links.1.factor: 1
+- lineId: LN1
+- b: 14
+- h: 9
+- sides.0.key: SI-15/32-8d
+- sides.0.spacing: 6
+- stud.species: DF-L
+- stud.grade: No.2
+- stud.size: 2x6
+- stud.spacing: 16
+- endPost.size: 2x6
+- endPost.plies: 2
+- endPost.holeDia: 0.75
+- top.D: 0
+- top.L: 0
+- top.Lr: 0
+- top.S: 0
+- self.assemblyId: WD1
+- overturning: full
+- holdownId: HDU2-SDS2.5
+- sill.type: cast-in
+- sill.d: 0.625
+- sill.spacing: 48
+- sill.embed: 7
+- sill.edge: 1.75
+- sillSize: 2x6
+- windService.factor: 0.42
+- windService.limitN: 600
+- x: 26
+
+## Member 1SW-3 (shearWall)
+
+- id: m-sw3
+- mark: 1SW-3
+- description: Rear wall
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k74
+- links.0.kind: line
+- links.0.sourceId: m-r1
+- links.0.support: 0
+- links.0.label: Rafters
+- links.0.factor: 1
+- links.1.id: k75
+- links.1.kind: line
+- links.1.sourceId: m-cj1
+- links.1.support: 0
+- links.1.label: Ceiling joists
+- links.1.factor: 1
+- lineId: LN2
+- b: 24
+- h: 9
+- sides.0.key: SI-15/32-8d
+- sides.0.spacing: 6
+- stud.species: DF-L
+- stud.grade: No.2
+- stud.size: 2x6
+- stud.spacing: 16
+- endPost.size: 2x6
+- endPost.plies: 2
+- endPost.holeDia: 0.75
+- top.D: 0
+- top.L: 0
+- top.Lr: 0
+- top.S: 0
+- self.assemblyId: WD1
+- overturning: full
+- holdownId: HDU2-SDS2.5
+- sill.type: cast-in
+- sill.d: 0.625
+- sill.spacing: 48
+- sill.embed: 7
+- sill.edge: 1.75
+- sillSize: 2x6
+- windService.factor: 0.42
+- windService.limitN: 600
+- x: 8
+
+## Member 1SW-4 (shearWall)
+
+- id: m-sw4
+- mark: 1SW-4
+- description: Left gable-end wall
+- structureId: S1
+- levelId: L1
+- status: new
+- links: []
+- lineId: LNA
+- b: 16
+- h: 9
+- sides.0.key: SI-15/32-8d
+- sides.0.spacing: 6
+- stud.species: DF-L
+- stud.grade: No.2
+- stud.size: 2x6
+- stud.spacing: 16
+- endPost.size: 2x6
+- endPost.plies: 2
+- endPost.holeDia: 0.75
+- top.D: 60
+- top.L: 0
+- top.Lr: 0
+- top.S: 0
+- self.assemblyId: WD1
+- overturning: full
+- holdownId: HDU2-SDS2.5
+- sill.type: cast-in
+- sill.d: 0.625
+- sill.spacing: 48
+- sill.embed: 7
+- sill.edge: 1.75
+- sillSize: 2x6
+- windService.factor: 0.42
+- windService.limitN: 600
+- x: 4
+
+## Member 1SW-5 (shearWall)
+
+- id: m-sw5
+- mark: 1SW-5
+- description: Right gable-end wall
+- structureId: S1
+- levelId: L1
+- status: new
+- links: []
+- lineId: LNB
+- b: 16
+- h: 9
+- sides.0.key: SI-15/32-8d
+- sides.0.spacing: 6
+- stud.species: DF-L
+- stud.grade: No.2
+- stud.size: 2x6
+- stud.spacing: 16
+- endPost.size: 2x6
+- endPost.plies: 2
+- endPost.holeDia: 0.75
+- top.D: 60
+- top.L: 0
+- top.Lr: 0
+- top.S: 0
+- self.assemblyId: WD1
+- overturning: full
+- holdownId: HDU2-SDS2.5
+- sill.type: cast-in
+- sill.d: 0.625
+- sill.spacing: 48
+- sill.embed: 7
+- sill.edge: 1.75
+- sillSize: 2x6
+- windService.factor: 0.42
+- windService.limitN: 600
+- x: 4
+
+## Member R-2 (rafter)
+
+- id: m-r2
+- mark: R-2
+- description: Rear porch rafters, ledger to steel beam SB-1
+- structureId: S1
+- levelId: RF
+- status: new
+- links: []
+- species: DF-L
+- grade: No.2
+- size: 2x6
+- spacing: 24
+- rise: 3
+- run: 8
+- overhang: 1
+- ridge: beam
+- plateSeat: 3.5
+- ridgeSeat: 1.5
+- seatCut: 0
+- dead.assemblyId: RD1
+- roofLive: true
+- snow: true
+- deflection.preset: roof-nonplaster
+- luBottom: 4
+- rule441: false
+- gable: false
+
+## Member LG-1 (ledger)
+
+- id: m-lg1
+- mark: LG-1
+- description: Porch ledger on the rear wall framing
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k80
+- links.0.kind: line
+- links.0.sourceId: m-r2
+- links.0.support: 1
+- links.0.label: Porch rafters
+- links.0.factor: 1
+- ledger.species: DF-L
+- ledger.grade: No.2
+- ledger.size: 2x8
+- extra: []
+- lateral.W: 0
+- lateral.E: 0
+- fastener.type: lag
+- fastener.D: 0.5
+- fastener.Fyb: 45000
+- fastener.spacing: 16
+- fastener.label: 1/2 in. lag screws
+- support.kind: wood
+- support.species: DF-L
+- support.thickness: 3
+- continuity: 1.25
+
+## Member SB-1 (steelBeam)
+
+- id: m-sb1
+- mark: SB-1
+- description: Rear porch beam
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k81
+- links.0.kind: line
+- links.0.sourceId: m-r2
+- links.0.support: 0
+- links.0.label: Porch rafters
+- links.0.factor: 1
+- role: beam
+- shape: W8x10
+- grade: A992
+- method: LRFD
+- spans: [16]
+- area: []
+- walls: []
+- extra: []
+- Lb: 2
+- deflection.preset: roof-nonplaster
+- selfWeight: true
+- bearing.0.lb: 4
+- bearing.0.support: steel
+- bearing.1.lb: 4
+- bearing.1.support: steel
+
+## Member SC-1 (steelColumn)
+
+- id: m-sc1
+- mark: SC-1
+- description: Porch post, left end of SB-1
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k820
+- links.0.kind: point
+- links.0.sourceId: m-sb1
+- links.0.support: 0
+- links.0.label: Steel beam
+- links.0.x: 0
+- links.0.factor: 1
+- shape: HSS4x4x1/4
+- grade: A500C
+- method: LRFD
+- height: 9
+- Kx: 1
+- Ky: 1
+- extra: []
+- ex: 0
+- ey: 0
+- wind.psf: 20
+- wind.width: 1
+- selfWeight: true
+
+## Member SC-2 (steelColumn)
+
+- id: m-sc2
+- mark: SC-2
+- description: Porch post, right end of SB-1
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k821
+- links.0.kind: point
+- links.0.sourceId: m-sb1
+- links.0.support: 1
+- links.0.label: Steel beam
+- links.0.x: 0
+- links.0.factor: 1
+- shape: HSS4x4x1/4
+- grade: A500C
+- method: LRFD
+- height: 9
+- Kx: 1
+- Ky: 1
+- extra: []
+- ex: 0
+- ey: 0
+- wind.psf: 20
+- wind.width: 1
+- selfWeight: true
+
+## Member BP-1 (basePlate)
+
+- id: m-bp1
+- mark: BP-1
+- description: Base plate of SC-1
+- structureId: S1
+- levelId: L1
+- status: new
+- links: []
+- method: LRFD
+- sourceId: m-sc1
+- column: HSS4x4x1/4
+- P.D: 0
+- P.L: 0
+- P.Lr: 0
+- P.S: 0
+- P.W: 0
+- P.E: 0
+- M.D: 0
+- M.L: 0
+- M.Lr: 0
+- M.S: 0
+- M.W: 0
+- M.E: 0
+- V.D: 0
+- V.L: 0
+- V.Lr: 0
+- V.S: 0
+- V.W: 0
+- V.E: 0
+- plate.N: 10
+- plate.B: 10
+- plate.tp: 0.5
+- plate.grade: A36-PL
+- rod.d: 0.625
+- rod.steel: 0
+- rod.nx: 2
+- rod.ny: 2
+- rod.sx: 6
+- rod.sy: 6
+- rod.e1: 2
+- rod.hef: 7
+- rod.type: headed
+- rod.Abrg: 0.7
+- rod.eh: 3
+- rod.washer: 0
+- rod.groutPad: false
+- foundation.edges: [9,9,9,9]
+- foundation.ha: 12
+- foundation.cracked: true
+- foundation.condition: B
+- weld.w: 0.1875
+- weld.FEXX: 70
+
+## Member BP-2 (basePlate)
+
+- id: m-bp2
+- mark: BP-2
+- description: Base plate of SC-2
+- structureId: S1
+- levelId: L1
+- status: new
+- links: []
+- method: LRFD
+- sourceId: m-sc2
+- column: HSS4x4x1/4
+- P.D: 0
+- P.L: 0
+- P.Lr: 0
+- P.S: 0
+- P.W: 0
+- P.E: 0
+- M.D: 0
+- M.L: 0
+- M.Lr: 0
+- M.S: 0
+- M.W: 0
+- M.E: 0
+- V.D: 0
+- V.L: 0
+- V.Lr: 0
+- V.S: 0
+- V.W: 0
+- V.E: 0
+- plate.N: 10
+- plate.B: 10
+- plate.tp: 0.5
+- plate.grade: A36-PL
+- rod.d: 0.625
+- rod.steel: 0
+- rod.nx: 2
+- rod.ny: 2
+- rod.sx: 6
+- rod.sy: 6
+- rod.e1: 2
+- rod.hef: 7
+- rod.type: headed
+- rod.Abrg: 0.7
+- rod.eh: 3
+- rod.washer: 0
+- rod.groutPad: false
+- foundation.edges: [9,9,9,9]
+- foundation.ha: 12
+- foundation.cracked: true
+- foundation.condition: B
+- weld.w: 0.1875
+- weld.FEXX: 70
+
+## Member PF-2 (footing)
+
+- id: m-pf2
+- mark: PF-2
+- description: Pad under SC-1 / BP-1
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k840
+- links.0.kind: point
+- links.0.sourceId: m-bp1
+- links.0.support: 0
+- links.0.label: Steel post
+- links.0.x: 0
+- links.0.factor: 1
+- type: pad
+- B: 1.5
+- L: 1.5
+- h: 12
+- depth: 18
+- soilOver: 0
+- c1: 10
+- c2: 10
+- extra: []
+- stories: 1
+
+## Member PF-3 (footing)
+
+- id: m-pf3
+- mark: PF-3
+- description: Pad under SC-2 / BP-2
+- structureId: S1
+- levelId: L1
+- status: new
+- links.0.id: k841
+- links.0.kind: point
+- links.0.sourceId: m-bp2
+- links.0.support: 0
+- links.0.label: Steel post
+- links.0.x: 0
+- links.0.factor: 1
+- type: pad
+- B: 1.5
+- L: 1.5
+- h: 12
+- depth: 18
+- soilOver: 0
+- c1: 10
+- c2: 10
+- extra: []
+- stories: 1
+
+## Member RD-1 (diaphragm)
+
+- id: m-rd1
+- mark: RD-1
+- description: Roof diaphragm, X-direction load
+- structureId: S1
+- levelId: RF
+- status: new
+- links: []
+- level: roof
+- storyId: ST1
+- dir: X
+- sheathing: SH-15/32-8d
+- blocked: false
+- edge: 6/6
+- unblockedCase: 1
+- chord.species: DF-L
+- chord.grade: No.2
+- chord.size: 2x6
+- chord.splice.type: nails
+- chord.splice.nail: 16d-common
+- chord.splice.nails: 12
+- collectorOmega: false
+
+## Member RD-2 (diaphragm)
+
+- id: m-rd2
+- mark: RD-2
+- description: Roof diaphragm, Y-direction load
+- structureId: S1
+- levelId: RF
+- status: new
+- links: []
+- level: roof
+- storyId: ST1
+- dir: Y
+- sheathing: SH-15/32-8d
+- blocked: false
+- edge: 6/6
+- unblockedCase: 2
+- chord.species: DF-L
+- chord.grade: No.2
+- chord.size: 2x6
+- chord.splice.type: nails
+- chord.splice.nail: 16d-common
+- chord.splice.nails: 12
+- collectorOmega: false
+
+## Member ST-1 (transfer)
+
+- id: m-st1
+- mark: ST-1
+- description: Roof blocking to top plate over 1SW-3
+- structureId: S1
+- levelId: RF
+- status: new
+- links: []
+- interface: diaphragm-to-wall
+- source.kind: wall
+- source.id: m-sw3
+- connector.type: nails
+- connector.nail: 16d-common
+- connector.ts: 1.5
+- connector.tm: 3
+- connector.species: DF-L
+- connector.toenail: true
+- connector.rows: 1
+- spacing: 6
+
+## Member UP-1 (uplift)
+
+- id: m-up1
+- mark: UP-1
+- description: Main roof uplift, rafter to foundation
+- structureId: S1
+- levelId: RF
+- status: new
+- links: []
+- sourceId: m-r1
+- support: 0
+- levels.0.label: Rafter to top plate
+- levels.0.deadAbove: 0
+- levels.0.connector.type: hardware
+- levels.0.connector.hardwareId: H2.5A
+- levels.0.spacing: 24
+- levels.1.label: Top plate to sill (stud strap)
+- levels.1.deadAbove: 0
+- levels.1.connector.type: hardware
+- levels.1.connector.hardwareId: CS16
+- levels.1.spacing: 48
