@@ -27,11 +27,14 @@
  *   sheet leaves out keep the current value (existing member / project) or the template
  *   default (new member) — the report lists them. A field the sheet gives for a new member
  *   replaces the template's value for that field as a whole.
- * - Lists: a list the sheet gives (by index or as JSON) replaces the list in the project —
- *   give every item (Export .md writes them all).
- * - mode "new": start from a new project; each top-level item the sheet gives (info,
- *   criteria, assemblies, …) comes only from the sheet, the rest keeps the new-project
- *   defaults, and the members are the sheet's members.
+ * - Lists: a list given as a JSON value (`spans: [14, 12]`) replaces the list; indexed paths
+ *   (`extra.0.w`) edit that item. In a complete export the sheet's lists replace the
+ *   project's lists.
+ * - mode "new": start from a new project (defaults for everything the sheet does not give)
+ *   with only the sheet's members.
+ * - Headings other than "## Project" / "## Member …" and lines outside them are ignored
+ *   (counted in the report). A drawing-data document is recognised and reported as such —
+ *   convert it with convertDrawingData() (drawingData.ts).
  * - Complete records (Export .md): a sheet with `schemaVersion` takes nothing from the
  *   new-project defaults in mode "new", and a member section with `id` takes nothing from
  *   the template — the sheet is the whole record.
@@ -39,6 +42,7 @@
  *   field is missing or a value is invalid, and the report names each one.
  */
 
+import { looksLikeDrawingData } from "./drawingData";
 import { newProject } from "./example";
 import { newMemberSpec, NEW_MEMBER_LABEL, newId, type NewMemberKind } from "./templates";
 import { projectSchema, type MemberSpec, type Project } from "./schema";
@@ -150,6 +154,10 @@ export interface MarkdownReport {
   errors: string[];
   /** template defaults used for new members, per mark (fields the sheet did not give) */
   defaulted: Array<{ mark: string; fields: string[] }>;
+  /** headings that are not "## Project" / "## Member" sections, and lines outside sections (ignored) */
+  skipped: { sections: string[]; lines: number };
+  /** the text is a drawing-data document, not an input sheet — convert it first */
+  drawingData?: boolean;
 }
 
 export type MarkdownOutcome =
@@ -174,7 +182,7 @@ const splitPath = (k: string) =>
     .split(".")
     .filter(Boolean);
 
-function parseSheet(text: string, errors: string[]): Section[] {
+function parseSheet(text: string, errors: string[], skipped: MarkdownReport["skipped"]): Section[] {
   const sections: Section[] = [];
   let cur: Section | undefined;
   const lines = text.replace(/\r\n?/g, "\n").split("\n");
@@ -203,7 +211,7 @@ function parseSheet(text: string, errors: string[]): Section[] {
       else if (mem) cur = { type: "member", mark: mem[1].trim(), kind: mem[2], heading: title, line: n, entries: [] };
       else {
         cur = undefined;
-        errors.push(`Line ${n}: section "## ${title}" is not "## Project" or "## Member MARK (kind)" — skipped`);
+        skipped.sections.push(title);
         return;
       }
       sections.push(cur);
@@ -217,7 +225,7 @@ function parseSheet(text: string, errors: string[]): Section[] {
     else if (bullet && !/^\s*#/.test(ln)) [key, raw] = [bullet[1], bullet[2]];
     if (key === undefined || raw === undefined) return;
     if (!cur) {
-      errors.push(`Line ${n}: "${key}" is outside a "## Project" or "## Member" section — skipped`);
+      skipped.lines++;
       return;
     }
     cur.entries.push({ path: splitPath(key), raw, value: parseValue(raw), line: n });
@@ -276,10 +284,26 @@ function leafPaths(v: unknown, prefix: string[], out: string[][]) {
  * report; ok = false when the sheet has errors or the result fails the schema.
  */
 export function applyMarkdown(current: Project, text: string, opts: { mode?: "fill" | "new" } = {}): MarkdownOutcome {
-  const report: MarkdownReport = { applied: 0, updated: [], added: [], ignored: [], errors: [], defaulted: [] };
-  const sections = parseSheet(text, report.errors);
+  const report: MarkdownReport = {
+    applied: 0,
+    updated: [],
+    added: [],
+    ignored: [],
+    errors: [],
+    defaulted: [],
+    skipped: { sections: [], lines: 0 },
+  };
+  const sections = parseSheet(text, report.errors, report.skipped);
   if (!sections.length) {
-    report.errors.unshift('No "## Project" or "## Member MARK (kind)" sections found — see Export .md for the format.');
+    if (looksLikeDrawingData(text)) {
+      report.drawingData = true;
+      report.errors.unshift(
+        "This is a drawing-data document (schedules, notes and OCR text from the drawings), not a HouseCalc input sheet. Use Convert to build an input sheet from its tables, review it, then apply.",
+      );
+    } else
+      report.errors.unshift(
+        'No "## Project" or "## Member MARK (kind)" sections found — see Export .md for the format.',
+      );
     return { ok: false, report };
   }
 
@@ -293,16 +317,12 @@ export function applyMarkdown(current: Project, text: string, opts: { mode?: "fi
   delete draft.software;
   const complete = sections.some((x) => x.type === "project" && x.entries.some((e) => e.path[0] === "schemaVersion"));
   if (mode === "new" && complete) for (const k of Object.keys(draft)) delete draft[k];
-  if (mode === "new") {
-    draft.members = [];
-    for (const sec of sections.filter((x) => x.type === "project"))
-      for (const e of sec.entries)
-        if (e.path[0] !== "schemaVersion" && e.path[0] !== "members") delete draft[e.path[0]];
-  }
-  // a list the sheet gives replaces the list: clear it the first time the sheet indexes into it
+  if (mode === "new") draft.members = [];
+  // complete export: a list the sheet gives replaces the list (cleared the first time the sheet
+  // indexes into it); partial sheets edit list items by index
   const listsSeen = new Set<string>();
   const put = (root: Record<string, unknown>, path: string[], value: unknown, scope: string) => {
-    for (let i = 0; i < path.length - 1; i++) {
+    for (let i = 0; i < path.length - 1 && complete; i++) {
       if (!/^\d+$/.test(path[i + 1])) continue;
       const key = `${scope}:${path.slice(0, i + 1).join(".")}`;
       if (listsSeen.has(key)) continue;

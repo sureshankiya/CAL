@@ -83,6 +83,8 @@ const common = {
   /** existing members: properties confirmed in the field */
   fieldVerified: z.boolean().optional(),
   existingNote: z.string().optional(),
+  /** inputs still to be entered (e.g. from a drawing-data conversion); each prints VERIFY */
+  pendingInputs: z.array(z.string()).optional(),
   links: z.array(linkedLoadSchema).default([]),
 };
 

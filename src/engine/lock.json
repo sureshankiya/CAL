@@ -1,10 +1,10 @@
 {
   "engine": {
-    "version": "1.0.1-wip.5",
-    "hash": "97952bdf2a85"
+    "version": "1.0.1-wip.7",
+    "hash": "d7937e7292b7"
   },
   "data": {
-    "version": "1.1-wip.5",
+    "version": "1.1-wip.7",
     "hash": "7ddd80934f91"
   },
   "lockedOn": "2026-10-09",
@@ -55,6 +55,20 @@
       "engine": "1.0.1-wip.5",
       "engineHash": "97952bdf2a85",
       "data": "1.1-wip.5",
+      "dataHash": "7ddd80934f91",
+      "lockedOn": "2026-10-09"
+    },
+    {
+      "engine": "1.0.1-wip.6",
+      "engineHash": "ed9ed78f504a",
+      "data": "1.1-wip.6",
+      "dataHash": "7ddd80934f91",
+      "lockedOn": "2026-10-09"
+    },
+    {
+      "engine": "1.0.1-wip.7",
+      "engineHash": "d7937e7292b7",
+      "data": "1.1-wip.7",
       "dataHash": "7ddd80934f91",
       "lockedOn": "2026-10-09"
     }

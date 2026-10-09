@@ -12,3 +12,4 @@ export * from "./sanMiguel";
 export * from "./eastLincoln";
 export * from "./deckExample";
 export * from "./markdown";
+export * from "./drawingData";

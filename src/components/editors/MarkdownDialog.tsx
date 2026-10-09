@@ -8,6 +8,9 @@
 import { useRef, useState } from "react";
 import {
   applyMarkdown,
+  convertDrawingData,
+  looksLikeDrawingData,
+  type DrawingDataResult,
   fileNameFor,
   MD_EXT,
   projectToMarkdown,
@@ -54,9 +57,24 @@ export function MarkdownImportDialog({
   const [name, setName] = useState<string>();
   const [mode, setMode] = useState<"fill" | "new">("fill");
   const [result, setResult] = useState<MarkdownOutcome>();
+  const [converted, setConverted] = useState<DrawingDataResult>();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const check = (t = text, m = mode) => setResult(t.trim() ? applyMarkdown(project, t, { mode: m }) : undefined);
+  /** drawing-data document → input sheet (shown in the box for review), checked as a new project */
+  const convert = (t = text) => {
+    const c = convertDrawingData(t);
+    setConverted(c);
+    setText(c.sheet);
+    setMode("new");
+    check(c.sheet, "new");
+  };
+  const load = (t: string) => {
+    setConverted(undefined);
+    setText(t);
+    if (looksLikeDrawingData(t)) convert(t);
+    else check(t);
+  };
   const r = result?.report;
 
   return (
@@ -80,9 +98,8 @@ export function MarkdownImportDialog({
             e.target.value = "";
             if (!f) return;
             f.text().then((t) => {
-              setText(t);
               setName(f.name);
-              check(t);
+              load(t);
             });
           }}
         />
@@ -130,10 +147,45 @@ export function MarkdownImportDialog({
           A new project — only the sheet's members; items not in the sheet take the new-project defaults
         </label>
       </fieldset>
+      {converted ? (
+        <div className="space-y-2 rounded-md border border-border p-3 text-xs">
+          <div className="font-semibold">
+            Converted from a drawing-data document: {converted.read.length} project values and {converted.members}{" "}
+            members read from its tables. The sheet above is editable — review it before applying.
+          </div>
+          <details>
+            <summary className="cursor-pointer">Values read ({converted.read.length})</summary>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              {converted.read.map((x, i) => (
+                <li key={i}>{x}</li>
+              ))}
+            </ul>
+          </details>
+          <details open>
+            <summary className="cursor-pointer text-destructive">
+              Open items — not on the drawings, conflicts, items skipped ({converted.notes.length})
+            </summary>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              {converted.notes.map((x, i) => (
+                <li key={i}>{x}</li>
+              ))}
+            </ul>
+          </details>
+          <div className="text-muted-foreground">
+            Each member lists its missing inputs (spans, lengths, heights, trib widths, nailing) as REQUIRED INPUT; its
+            sheet prints VERIFY and the cover prints DRAFT until you mark them entered in the member editor.
+          </div>
+        </div>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <button type="button" className={btn} disabled={!text.trim()} onClick={() => check()}>
           Check sheet
         </button>
+        {result?.report.drawingData ? (
+          <button type="button" className={primary} onClick={() => convert()}>
+            Convert to input sheet
+          </button>
+        ) : null}
         <button
           type="button"
           className={primary}
@@ -143,7 +195,7 @@ export function MarkdownImportDialog({
             const rp = result.report;
             onApply(
               result.project,
-              `Filled from ${name ?? "the pasted sheet"}: ${rp.applied} values; ${rp.added.length} members added, ${rp.updated.length} updated${rp.ignored.length ? `; ${rp.ignored.length} keys ignored` : ""}.`,
+              `Filled from ${name ?? "the pasted sheet"}: ${rp.applied} values; ${rp.added.length} members added, ${rp.updated.length} updated${rp.ignored.length ? `; ${rp.ignored.length} keys ignored` : ""}.${converted ? ` Converted from drawing data — ${converted.notes.length} open items are in the project notes; members list their REQUIRED INPUT.` : ""}`,
             );
           }}
         >
@@ -163,6 +215,12 @@ export function MarkdownImportDialog({
                 <li key={i}>{e}</li>
               ))}
             </ul>
+          ) : null}
+          {r.skipped.sections.length || r.skipped.lines ? (
+            <div className="text-muted-foreground">
+              Ignored (not input-sheet content): {r.skipped.sections.length} headings, {r.skipped.lines} lines outside
+              sections.
+            </div>
           ) : null}
           {r.added.length ? <div>Added: {r.added.join(", ")}</div> : null}
           {r.updated.length ? <div>Updated: {r.updated.join(", ")}</div> : null}

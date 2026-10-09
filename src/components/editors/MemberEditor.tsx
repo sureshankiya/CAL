@@ -565,6 +565,28 @@ function CommonFields({ p, m, upd }: { p: Project; m: MemberSpec; upd: Upd<Membe
           />
         </Field>
       ) : null}
+      {m.pendingInputs?.length ? (
+        <div className="space-y-1 rounded-md border border-destructive/60 p-2 text-xs">
+          <div className="font-semibold text-destructive">Required input — not on the drawings (prints VERIFY)</div>
+          <ul className="space-y-1">
+            {m.pendingInputs.map((x, i) => (
+              <li key={i} className="flex items-center justify-between gap-2">
+                <span>{x}</span>
+                <button
+                  type="button"
+                  className="shrink-0 rounded border border-border px-2 py-0.5 hover:bg-muted"
+                  onClick={() => {
+                    const rest = m.pendingInputs!.filter((_, j) => j !== i);
+                    upd({ pendingInputs: rest.length ? rest : undefined });
+                  }}
+                >
+                  Entered
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </>
   );
 }

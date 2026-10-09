@@ -571,6 +571,21 @@ function markExisting(m: MemberSpec, r: AnyResult) {
   );
 }
 
+/** Inputs not yet entered: a VERIFY assumption (DRAFT banner on the cover) and a sheet flag. */
+function markPending(m: MemberSpec, r: AnyResult) {
+  const list = m.pendingInputs?.filter((x) => x.trim());
+  if (!list?.length) return;
+  r.assumptions.unshift(
+    fromDefault(
+      "Inputs not yet entered",
+      `${list.join("; ")} — HouseCalc template values in use`,
+      "not on the drawings",
+      true,
+    ),
+  );
+  r.flags.unshift(`REQUIRED INPUT — ${list.join("; ")}: template values in use; results are not valid until entered.`);
+}
+
 export function designProject(p: Project): ProjectDesign {
   const ctx = contextOf(p);
   let lateral: LateralResult | undefined;
@@ -605,6 +620,7 @@ export function designProject(p: Project): ProjectDesign {
         o.linked = linkLoads(p, m, outcomes);
         o.result = designOne(p, ctx, m, o.linked, outcomes, lateral);
         markExisting(m, o.result);
+        markPending(m, o.result);
       } catch (e) {
         o.error = e instanceof Error ? e.message : String(e);
       }
