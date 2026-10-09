@@ -6,7 +6,7 @@
  * (no unblocked edges or continuous joints parallel to load) and cases 2–6,
  * nails at 6 in. on supported edges.
  *
- * Nominal values; ASD = v / 2.0 (SDPWS 4.2.3). Wind v_w = 1.4 v_s.
+ * Nominal values; ASD = v / 2.0 (SDPWS-2021 4.2, Table 4.2A). Wind v_w = 1.4 v_s.
  *
  * Status: VERIFY — entered from SDPWS-2015 / 2021 Table 4.2A; confirm every
  * cell against the printed table of the adopted edition before issue.
@@ -82,5 +82,5 @@ export function diaphragmValues(
   return { vs, vw, row: r, text };
 }
 
-/** SDPWS Table 4.2.4 maximum diaphragm aspect ratio L/W (wood structural panels). */
+/** SDPWS maximum diaphragm aspect ratio L/W (wood structural panels; Table 4.2.4 in 2015). */
 export const diaphragmMaxAspect = (blocked: boolean) => (blocked ? 4 : 3);

@@ -194,12 +194,12 @@ export function designDiaphragm(ctx: DesignContext, d: DiaphragmInput, dem: Diap
     };
   });
   if (segments.some((s) => s.cantilever && s.L > D / 4))
-    flags.push("Cantilevered diaphragm beyond the end wall line — check SDPWS 4.2.5.2 limits (EOR review)");
+    flags.push("Cantilevered diaphragm beyond the end wall line — check the SDPWS cantilevered-diaphragm limits (EOR review)");
 
   const checks: Check[] = [];
   const gs = segments.reduce((a, s) => (s.vE > a.vE ? s : a), segments[0]);
   checks.push({
-    name: "Diaphragm unit shear, seismic 0.7F_px (SDPWS 4.2.3, v_s / 2.0)",
+    name: "Diaphragm unit shear, seismic 0.7F_px (SDPWS-2021 Table 4.2A, v_s / 2.0)",
     demand: 0.7 * gs.vE,
     capacity: vAllowS,
     ratio: (0.7 * gs.vE) / vAllowS,
@@ -210,7 +210,7 @@ export function designDiaphragm(ctx: DesignContext, d: DiaphragmInput, dem: Diap
   });
   const gw = segments.reduce((a, s) => (s.vW > a.vW ? s : a), segments[0]);
   checks.push({
-    name: "Diaphragm unit shear, wind 0.6W (SDPWS 4.2.3, v_w / 2.0)",
+    name: "Diaphragm unit shear, wind 0.6W (SDPWS-2021 Table 4.2A, v_w / 2.0)",
     demand: 0.6 * gw.vW,
     capacity: vAllowW,
     ratio: (0.6 * gw.vW) / vAllowW,
@@ -222,7 +222,7 @@ export function designDiaphragm(ctx: DesignContext, d: DiaphragmInput, dem: Diap
   const maxAspect = diaphragmMaxAspect(d.blocked);
   const ga = segments.reduce((a, s) => (s.aspect > a.aspect ? s : a), segments[0]);
   checks.push({
-    name: `Diaphragm aspect ratio L/W (SDPWS Table 4.2.4) — ${ga.label}`,
+    name: `Diaphragm aspect ratio L/W (SDPWS max. diaphragm aspect ratio) — ${ga.label}`,
     category: "detailing",
     demand: ga.aspect,
     capacity: maxAspect,

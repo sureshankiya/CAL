@@ -914,7 +914,7 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         />
       ))}
       <TR
-        desc="Combined nominal capacities (SDPWS 4.3.3.2)"
+        desc="Combined nominal capacities (SDPWS-2021 4.3.5.4)"
         expr={
           <>
             v<sub>sc</sub> = {f0(r.vsc)} plf; v<sub>wc</sub> = {f0(r.vwc)} plf
@@ -924,7 +924,7 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         }
       />
       <TR
-        desc="Aspect ratio factor (SDPWS 4.3.4.2)"
+        desc="Aspect ratio factor (SDPWS-2021 4.3.3.2)"
         expr={
           <>
             {rich(

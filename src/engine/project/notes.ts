@@ -179,7 +179,7 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
         "Wood in contact with concrete or masonry, or within 8 in. of earth: preservative-treated per AWPA U1; fasteners and connectors in treated wood hot-dip galvanized (ASTM A153) or stainless steel.",
         ...(has("shearWall")
           ? [
-              "Shear walls: wood structural panels APA-rated, all panel edges blocked, edge and field nailing as scheduled, 3/8 in. minimum edge distance; sill anchor bolts with 3 in. × 3 in. × 0.229 in. plate washers (SDPWS 4.3.6.4.3) unless noted; hold-downs installed per the manufacturer with the specified fasteners.",
+              "Shear walls: wood structural panels APA-rated, all panel edges blocked, edge and field nailing as scheduled, 3/8 in. minimum edge distance; sill anchor bolts with 3 in. × 3 in. × 0.229 in. plate washers (SDPWS shear wall anchorage) unless noted; hold-downs installed per the manufacturer with the specified fasteners.",
             ]
           : []),
         ...(has("diaphragm")

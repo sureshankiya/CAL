@@ -87,7 +87,11 @@ export function DesignBasis({
                 if (!t) return null;
                 return (
                   <span key={id} className="block">
-                    {t.source} ({t.edition}) {t.status === "verified" ? "— checked" : <Flag>— VERIFY</Flag>}
+                    {t.source} ({t.edition}) {t.status === "verified" ? (
+                      "— checked"
+                    ) : (
+                      <Flag>{t.status === "corroborated" ? "— corroborated; VERIFY" : "— VERIFY"}</Flag>
+                    )}
                   </span>
                 );
               })}

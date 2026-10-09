@@ -7,10 +7,14 @@
  * Status:
  *  - verified: every value checked against the publisher's document (or the code text);
  *    `checked` names the document(s) and the date of the check
+ *  - corroborated: every value checked used agrees with secondary reproductions of the
+ *    source (published verification examples, course notes, software verification
+ *    documents, distributor copies), but the printed document itself was not available —
+ *    still prints VERIFY (second-pass check against the printed source outstanding)
  *  - unverified: not yet checked — prints VERIFY on every sheet that uses it
  */
 
-export type CheckStatus = "unverified" | "verified";
+export type CheckStatus = "unverified" | "corroborated" | "verified";
 
 export interface TableMeta {
   id: string;
@@ -19,7 +23,7 @@ export interface TableMeta {
   edition: string;
   status: CheckStatus;
   note?: string;
-  /** verification record: document(s) checked against and the date (verified tables) */
+  /** verification record: document(s) checked against and the date (verified / corroborated tables) */
   checked?: { against: string; on: string };
 }
 
@@ -245,7 +249,9 @@ export const tableRef = (id: string) => TABLES[id];
 export function tableStatusText(id: string): string {
   const t = TABLES[id];
   if (!t) return "—";
-  return t.status === "verified"
-    ? `${t.source} (${t.edition}) — checked against ${t.checked?.against ?? "the published source"}`
-    : `${t.source} (${t.edition}) — VERIFY`;
+  if (t.status === "verified")
+    return `${t.source} (${t.edition}) — checked against ${t.checked?.against ?? "the published source"}`;
+  if (t.status === "corroborated")
+    return `${t.source} (${t.edition}) — corroborated by secondary sources; VERIFY against the printed source`;
+  return `${t.source} (${t.edition}) — VERIFY`;
 }

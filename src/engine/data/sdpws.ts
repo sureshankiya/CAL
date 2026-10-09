@@ -1,7 +1,7 @@
 /**
  * SDPWS nominal unit shear capacities and apparent shear stiffness for
  * wood-frame shear walls (SDPWS Table 4.3A wood structural panels, blocked;
- * Table 4.3B particleboard; Table 4.3C gypsum). Nominal values: ASD capacity = v / 2.0 (SDPWS 4.3.3).
+ * Table 4.3B particleboard; Table 4.3C gypsum). Nominal values: ASD capacity = v / 2.0 (SDPWS-2021 4.3, Tables 4.3A–4.3C).
  *
  * Wind capacity v_w = 1.4 v_s for wood structural panels (Table 4.3A);
  * gypsum v_w = v_s (Table 4.3C).
@@ -28,7 +28,7 @@ export interface SheathingRow {
   vs: Partial<Record<6 | 4 | 3 | 2, number>>;
   /** apparent shear stiffness G_a by edge spacing, kips/in (OSB / plywood for WSP) */
   Ga: Partial<Record<6 | 4 | 3 | 2, number>>;
-  /** maximum aspect ratio h / b_s (SDPWS Table 4.3.4) */
+  /** maximum aspect ratio h / b_s (SDPWS-2021 Table 4.3.3; Table 4.3.4 in 2015) */
   maxAspect: number;
   /** cells taken from the engineer's Tedds sheets, as "spacing" keys */
   portfolio?: Array<6 | 4 | 3 | 2>;
@@ -291,7 +291,7 @@ export function panel1532Shear(key: string, spacing: number): { vs: number; key:
 }
 
 /**
- * SDPWS-2021 4.3.4.2 aspect ratio factor for wood structural panel shear walls,
+ * SDPWS-2021 4.3.3.2 (2015: 4.3.4.2) aspect ratio factor for wood structural panel shear walls,
  * 2 < h/b_s ≤ 3.5: 1.25 − 0.125 h/b_s (wind and seismic). Gypsum walls are
  * limited to 2:1 without reduction.
  */

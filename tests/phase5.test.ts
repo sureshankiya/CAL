@@ -67,7 +67,7 @@ const wall = (sides: ShearWallInput["sides"], studSpacing = 16): ShearWallInput 
 });
 
 describe("SDPWS fixes from the portfolio validation", () => {
-  it("wind: wood structural panel + gypsum wallboard on opposite faces is additive (4.3.3.2.1 exception)", () => {
+  it("wind: wood structural panel + gypsum wallboard on opposite faces is additive (SDPWS-2021 4.3.5.4.2 exception)", () => {
     const r = designShearWall(
       ctx,
       wall([

@@ -5,7 +5,7 @@
  *
  * Checks:
  *  - unit shear vs v_s / 2.0 (seismic) and v_w / 2.0 (wind), aspect-ratio factor
- *    1.25 − 0.125 h/b_s for WSP walls with h/b_s > 2 (SDPWS 4.3.4.2); two-sided walls:
+ *    1.25 − 0.125 h/b_s for WSP walls with h/b_s > 2 (SDPWS-2021 4.3.3.2); two-sided walls:
  *    same material added, dissimilar materials max(2 × smaller, larger) (4.3.3.2)
  *  - aspect ratio limit (Table 4.3.4)
  *  - chord forces: overturning T and C for every ASCE 7 §2.4 lateral combination;
@@ -158,7 +158,7 @@ export interface ShearWallResult extends MemberResultBase {
   sides: Array<{ row: SheathingRow; vs: number; vw: number; Ga: number; spacing: number; override: boolean }>;
   vsc: number;
   vwc: number;
-  /** wind: WSP + gypsum wallboard on opposite faces combined additively (SDPWS 4.3.3.2.1 exception) */
+  /** wind: WSP + gypsum wallboard on opposite faces combined additively (SDPWS-2021 4.3.5.4.2 exception) */
   windSum: boolean;
   /** seismic ASD unit shear before C_ar (gypsum v / 2.8, wood-based v / 2.0, combined per SDPWS) */
   asdS: number;
@@ -481,7 +481,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
       unit: "lb",
     });
   checks.push({
-    name: ftao ? "Pier aspect ratio h_o / L_pier (SDPWS 4.3.5.2)" : "Aspect ratio h/b_s (SDPWS Table 4.3.4)",
+    name: ftao ? "Pier aspect ratio h_o / L_pier (SDPWS 4.3.5.2)" : "Aspect ratio h/b_s (SDPWS-2021 Table 4.3.3)",
     category: "detailing",
     demand: aspect,
     capacity: maxAspect,
@@ -494,7 +494,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   checks.push({
     name: ftao
       ? "Unit shear, seismic — max(pier, above / below opening) (ASD v_s / 2.0)"
-      : "Unit shear, seismic (SDPWS 4.3.3, ASD v_s / 2.0)",
+      : "Unit shear, seismic (SDPWS-2021 Table 4.3A–4.3C, ASD)",
     demand: vS,
     capacity: vAllowS,
     ratio: vS / vAllowS,
@@ -506,7 +506,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   checks.push({
     name: ftao
       ? "Unit shear, wind — max(pier, above / below opening) (ASD v_w / 2.0)"
-      : "Unit shear, wind (SDPWS 4.3.3, ASD v_w / 2.0)",
+      : "Unit shear, wind (SDPWS-2021 Table 4.3A–4.3C, ASD v_w / 2.0)",
     demand: vW,
     capacity: vAllowW,
     ratio: vW / vAllowW,
@@ -683,7 +683,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
       ),
     );
     flags.push(
-      "Plate washers 3 in. × 3 in. × 0.229 in. at each sill anchor (SDPWS 4.3.6.4.3); anchors within 12 in. of each end of each sill piece",
+      "Plate washers 3 in. × 3 in. × 0.229 in. at each sill anchor (SDPWS shear wall anchorage); anchors within 12 in. of each end of each sill piece",
     );
   } else {
     if (!s.sill.allowShear)
@@ -766,7 +766,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
 
   if (sides.some((x) => x.spacing <= 2))
     flags.push(
-      "Edge nailing at 2 in. o.c.: 3x nominal framing at adjoining panel edges and staggered nails (SDPWS 4.3.7.1)",
+      "Edge nailing at 2 in. o.c.: 3x nominal framing at adjoining panel edges and staggered nails (SDPWS Table 4.3A footnotes)",
     );
   flags.push(
     `Blocked panels; edge nailing at all panel edges, ${sides.map((x) => `${x.row.nail} @ ${x.spacing} in. edge / 12 in. field`).join("; ")}`,
