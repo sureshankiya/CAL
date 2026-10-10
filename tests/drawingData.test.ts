@@ -69,6 +69,24 @@ const DOC = `# 12 Test Court - Full-house calculation data extraction
 | NBW typical | 2x4 at 16 in | Nonbearing interior |
 
 New wood posts: nominal 6x6. New/existing steel: HSS 6x6x1/4 in.
+
+| Item | Value |
+|---|---|
+| Roof live / total deflection | L/360 / L/240 |
+| Floor live / total deflection | L/480 / L/360 |
+
+## 9. Openings
+
+| Area | Opening | Labels | Sheet |
+|---|---|---|---|
+| First | 9 ft x 6 ft | 3 windows | S-3 |
+| Second | 4 ft x 2 ft | 2 windows | S-4 |
+| Master | Existing windows | 2 labels | S-2 |
+
+| Clear opening | Header | Remark |
+|---|---|---|
+| To 4 ft | 4x4 or 4x6 | - |
+| 8 ft 1 in to 10 ft | 4x10 or 6x8 | Double trimmers |
 `;
 
 describe("drawing-data documents", () => {
@@ -99,7 +117,7 @@ describe("drawing-data documents", () => {
     expect(c.notes.some((n) => n.startsWith("Shear walls 1SW1"))).toBe(true);
 
     const marks = p.members.map((m) => m.mark);
-    expect(marks).toEqual(["B101", "B201", "1BW1", "F1", "F2", "P-1", "SC-1", "FJ-1", "RJ-1"]);
+    expect(marks).toEqual(["B101", "B201", "1BW1", "F1", "F2", "P-1", "SC-1", "FJ-1", "RJ-1", "H-1", "H-2"]);
     const b101 = p.members.find((m) => m.mark === "B101")!;
     expect(b101.kind === "beam" && b101.material).toEqual({
       kind: "scl",
@@ -129,5 +147,24 @@ describe("drawing-data documents", () => {
       expect(o.error).toBeUndefined();
       expect(o.result!.assumptions.some((a) => a.verify && a.item === "Inputs not yet entered")).toBe(true);
     }
+  });
+
+  it("reads deflection criteria and sizes headers from the openings and the typical header schedule", () => {
+    const c = convertDrawingData(DOC);
+    const r = applyMarkdown(newProject(), c.sheet, { mode: "new" });
+    expect(r.report.errors).toEqual([]);
+    if (!r.ok) return;
+    const fj = r.project.members.find((m) => m.mark === "FJ-1")!;
+    expect(fj.kind === "joist" && fj.deflection).toEqual({ preset: "custom", live: 480, total: 360 });
+    const h = r.project.members.filter((m) => m.kind === "beam" && m.role === "header");
+    expect(
+      h.map(
+        (m) => m.kind === "beam" && [m.mark, m.material.kind === "sawn" && m.material.size, m.spans[0], m.bearing[0]],
+      ),
+    ).toEqual([
+      ["H-1", "4x10", 9.25, 3],
+      ["H-2", "4x4", 4.125, 1.5],
+    ]);
+    expect(c.notes.some((n) => /Openings without a size .*Master Existing windows/.test(n))).toBe(true);
   });
 });

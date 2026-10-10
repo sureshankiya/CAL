@@ -15,6 +15,8 @@
  * The engineer reviews and edits the sheet before applying it.
  */
 
+import { SAWN_SIZES } from "../data/sections";
+
 export interface DrawingDataResult {
   sheet: string;
   /** values read, by item */
@@ -163,6 +165,30 @@ export function convertDrawingData(text: string): DrawingDataResult {
     loads.roofDead = firstNum(rdAlt.value);
   }
 
+  if (loads.roofDead !== undefined) read.push(`Roof dead load: ${loads.roofDead} psf (rafters, roof beams)`);
+  if (loads.floorDead !== undefined) read.push(`Floor dead load: ${loads.floorDead} psf (floor joists, floor beams)`);
+
+  // deflection criteria: "Roof live / total deflection | L/360 / L/240"
+  const defl = (re: RegExp) => {
+    const r = kv.find((x) => re.test(x.label) && /deflection/i.test(x.label));
+    const v = r ? [...r.value.matchAll(/L\s*\/\s*(\d+)/gi)].map((m) => Number(m[1])) : [];
+    return v.length ? { live: v[0], total: v[1] } : undefined;
+  };
+  const deflRoof = defl(/^roof/i);
+  const deflFloor = defl(/^floor/i);
+  const wallDefl = defl(/^wall/i)?.live;
+  if (deflRoof)
+    read.push(`Roof deflection: L/${deflRoof.live}${deflRoof.total ? ` live, L/${deflRoof.total} total` : ""}`);
+  if (deflFloor)
+    read.push(`Floor deflection: L/${deflFloor.live}${deflFloor.total ? ` live, L/${deflFloor.total} total` : ""}`);
+  if (wallDefl) read.push(`Wall deflection: L/${wallDefl}`);
+  const deflFor = (roof: boolean): [string, string] => {
+    const d = roof ? deflRoof : deflFloor;
+    return d
+      ? ["deflection", JSON.stringify({ preset: "custom", live: d.live, ...(d.total ? { total: d.total } : {}) })]
+      : ["deflection.preset", roof ? "roof-nonplaster" : "floor"];
+  };
+
   const occ = find(/occupancy category|risk category/i);
   const roman = occ && /\b(IV|III|II|I)\b/.exec(occ.value)?.[1];
   if (roman) set("criteria.riskCategory", roman, `Risk category: ${roman}`);
@@ -192,6 +218,22 @@ export function convertDrawingData(text: string): DrawingDataResult {
         `Seismic: printed S_D1 = ${got.SD1} > S_DS = ${got.SDS} — the labels on the drawings may be swapped (values entered as printed). Recompute S_DS / S_D1 from the site data. VERIFY.`,
       );
   }
+  // printed mapped values: check the design values against S_DS = 2/3 Fa Ss, S_D1 = 2/3 Fv S1 (ASCE 7 Eq. 11.4-1 to 11.4-4)
+  const ssRow = kv.find((r) => /^ss\s*\/\s*s1$/i.test(r.label.trim()));
+  const faRow = kv.find((r) => /^fa\s*\/\s*fv$/i.test(r.label.trim()));
+  if (ssRow && faRow) {
+    const [Ss, S1] = ssRow.value.split("/").map((x) => firstNum(x));
+    const [Fa, Fv] = faRow.value.split("/").map((x) => firstNum(x));
+    if (Ss !== undefined && S1 !== undefined && Fa !== undefined && Fv !== undefined) {
+      const sds = (2 / 3) * Fa * Ss;
+      const sd1 = (2 / 3) * Fv * S1;
+      read.push(`Mapped: S_s = ${Ss}, S_1 = ${S1}, F_a = ${Fa}, F_v = ${Fv}`);
+      notes.push(
+        `Seismic check from the printed mapped values: S_DS = 2/3 × ${Fa} × ${Ss} = ${sds.toFixed(2)}, S_D1 = 2/3 × ${Fv} × ${S1} = ${sd1.toFixed(2)} (ASCE 7 §11.4.5) — compare with the printed S_DS / S_D1 and confirm F_a / F_v for the site class. VERIFY.`,
+      );
+    }
+  }
+
   const v = find(/basic wind speed|wind speed/i);
   if (v && firstNum(v.value)) set("criteria.wind.V", String(firstNum(v.value)), `Wind speed: ${firstNum(v.value)} mph`);
   const exp = find(/^exposure$/i);
@@ -247,6 +289,13 @@ export function convertDrawingData(text: string): DrawingDataResult {
     });
   };
   const deadPsf = (roof: boolean) => (roof ? loads.roofDead : loads.floorDead);
+
+  // carport post / support dimension (figured geometry)
+  const cpRow = kv.find((r) => /carport post|carport support/i.test(r.label));
+  const cpFi = cpRow && /(\d+)\s*ft(?:\s*(\d+)\s*in)?/i.exec(cpRow.value);
+  const carportSpan = cpFi
+    ? { ft: Number(cpFi[1]) + (cpFi[2] ? Number(cpFi[2]) / 12 : 0), text: `${cpFi[1]}'-${cpFi[2] ?? 0}"` }
+    : undefined;
 
   // beams
   for (const t of tables.filter(
@@ -307,14 +356,14 @@ export function convertDrawingData(text: string): DrawingDataResult {
           },
         ]),
       ]);
-      lines.push(["deflection.preset", roof ? "roof-nonplaster" : "floor"]);
-      add(
-        mark,
-        "beam",
-        lines,
-        ["span", "tributary width (area.0.trib)", "point loads", "bearing lengths"],
-        `${raw}: ${size}${note ? ` — ${note}` : ""}`,
-      );
+      lines.push(deflFor(roof));
+      const pending = ["span", "tributary width (area.0.trib)", "point loads", "bearing lengths"];
+      if (/carport/i.test(raw) && carportSpan) {
+        lines.push(["spans", JSON.stringify([carportSpan.ft])]);
+        pending[0] = `confirm span (${carportSpan.text} post / support dimension used; support axes to verify)`;
+        read.push(`${mark}: span ${carportSpan.text} (carport post / support dimension)`);
+      }
+      add(mark, "beam", lines, pending, `${raw}: ${size}${note ? ` — ${note}` : ""}`);
     }
   }
 
@@ -364,6 +413,7 @@ export function convertDrawingData(text: string): DrawingDataResult {
               ["spacing", String(sp)],
               ["sheathing", ext ? "both" : "both"],
               ["wind.mode", ext ? "computed" : "none"],
+              ...(wallDefl ? ([["deflN", String(wallDefl)]] as Array<[string, string]>) : []),
             ],
             ["plate height", "wall length", "loads from above (area / links)"],
             `${marksCell}: ${framing}, ${use}`,
@@ -488,6 +538,7 @@ export function convertDrawingData(text: string): DrawingDataResult {
               ...(loads.roofDead !== undefined
                 ? ([["dead", JSON.stringify({ psf: loads.roofDead })]] as Array<[string, string]>)
                 : []),
+              deflFor(true),
             ],
             ["rafter run / span", "slope (no pitch on the drawings)", "overhang"],
             `${area}: new ${size} roof joists at ${spc} in. o.c.`,
@@ -505,6 +556,7 @@ export function convertDrawingData(text: string): DrawingDataResult {
                 ? ([["dead", JSON.stringify({ psf: loads.floorDead })]] as Array<[string, string]>)
                 : []),
               ["live", JSON.stringify({ use: deck ? "deck" : "living" })],
+              deflFor(false),
             ],
             ["span", ...(deck ? ["cantilever"] : [])],
             `${area}: new ${size} ${use} joists at ${spc} in. o.c.`,
@@ -513,6 +565,103 @@ export function convertDrawingData(text: string): DrawingDataResult {
       }
     }
   }
+
+  // headers: openings on the wall plans sized from the typical header schedule (used only where
+  // the plans do not size the header, as the schedule itself says)
+  const openT = tables.find((t) => /^area$/i.test(t.header[0]) && t.header.some((h) => /^opening$/i.test(h)));
+  const hdrT = tables.find((t) => /clear opening/i.test(t.header[0] ?? "") && /header/i.test(t.header[1] ?? ""));
+  if (openT && hdrT) {
+    const iOpen = openT.header.findIndex((h) => /^opening$/i.test(h));
+    const iLab = openT.header.findIndex((h) => /labels?/i.test(h));
+    const ranges = hdrT.rows
+      .map((r) => {
+        const ft = [...r[0].matchAll(/(\d+)\s*ft(?:\s*(\d+)\s*in)?/gi)].map(
+          (m) => Number(m[1]) + (m[2] ? Number(m[2]) / 12 : 0),
+        );
+        const sizes = (r[1] ?? "").split(/\s+or\s+/i).map((x) => x.trim());
+        return { upTo: ft.length ? Math.max(...ft) : NaN, sizes, double: /double trimmer/i.test(r.slice(2).join(" ")) };
+      })
+      .filter((r) => Number.isFinite(r.upTo))
+      .sort((a, b) => a.upTo - b.upTo);
+    const seen = new Map<string, string>();
+    let h = 0;
+    const skippedOpen: string[] = [];
+    for (const r of openT.rows) {
+      const area = r[0] ?? "";
+      const opening = r[iOpen] ?? "";
+      const w = /^(\d+)\s*ft(?:\s*(\d+)\s*in)?\s*x/i.exec(opening);
+      if (!w) {
+        skippedOpen.push(`${area} ${opening}`.trim());
+        continue;
+      }
+      const width = Number(w[1]) + (w[2] ? Number(w[2]) / 12 : 0);
+      const lv = /second/i.test(area) ? "L2" : "L1";
+      const key = `${lv}:${width}`;
+      const count = iLab >= 0 ? (r[iLab] ?? "") : "";
+      if (seen.has(key)) {
+        notes.push(`${seen.get(key)}: also covers ${area} ${opening} (${count}).`);
+        continue;
+      }
+      const rule = ranges.find((x) => width <= x.upTo + 1e-6);
+      const size = rule?.sizes.find((x) => (SAWN_SIZES as readonly string[]).includes(x.toLowerCase()));
+      if (!rule || !size) {
+        notes.push(
+          `Opening ${area} ${opening}: no header in the typical schedule for ${width} ft${rule ? ` (${rule.sizes.join(" or ")} not in the library)` : ""} — size it on the plans.`,
+        );
+        continue;
+      }
+      let mark = `H-${++h}`;
+      while (used.has(mark)) mark = `H-${++h}`;
+      const bearing = rule.double ? 3 : 1.5;
+      const span = Math.round((width + bearing / 12) * 1000) / 1000;
+      seen.set(key, mark);
+      add(
+        mark,
+        "beam",
+        [
+          ["role", "header"],
+          ["levelId", lv],
+          [
+            "material",
+            JSON.stringify({ kind: "sawn", species: "DF-L", grade: "No.2", size: size.toLowerCase(), plies: 1 }),
+          ],
+          ["spans", JSON.stringify([span])],
+          ["bearing", JSON.stringify([bearing, bearing])],
+          [
+            "area",
+            JSON.stringify([
+              {
+                label: "Tributary floor / roof (enter width)",
+                trib: 1,
+                dead: deadPsf(lv === "L2") !== undefined ? { psf: deadPsf(lv === "L2") } : undefined,
+                ...(lv === "L2" ? { roofLive: true } : { live: { use: "living" } }),
+              },
+            ]),
+          ],
+          deflFor(lv === "L2"),
+        ],
+        [
+          "tributary width (area.0.trib)",
+          "loads from above (roof / floor / wall)",
+          "header size where the plans give one",
+        ],
+        `${area} ${opening} (${count}): typical header schedule (S-8.1) ${rule.sizes.join(" or ")} — ${size} used; span = clear opening ${width} ft + ${bearing} in. bearing (${rule.double ? "double" : "single"} trimmers)`,
+      );
+      read.push(`${mark}: ${area} ${opening} — ${size} header, span ${span} ft`);
+    }
+    if (h)
+      notes.push(
+        "Headers H-#: sized from the typical header schedule (S-8.1), which the drawings say applies only where the plans do not size the header — plan headers such as (2) 2x6 / (2) 2x10 are not tied to openings in the data; replace with the plan size where given. VERIFY.",
+      );
+    if (skippedOpen.length) notes.push(`Openings without a size (no header created): ${skippedOpen.join("; ")}.`);
+  }
+
+  // I-joists named on the drawings that are not in the library
+  const tji = /TJI[-\s]?(\d{3})/i.exec(text)?.[1];
+  if (tji && !["110", "210", "230", "360", "560"].includes(tji))
+    notes.push(
+      `TJI ${tji} (sections) is not in the HouseCalc I-joist library (TJI 110 / 210 / 230 / 360 / 560) — no I-joist member created; design it from the manufacturer's tables or add an equivalent series. VERIFY.`,
+    );
 
   // conflicts listed by the document itself
   const cT = tables.find((t) => /^id$/i.test(t.header[0]) && /issue/i.test(t.header.join(" ")));

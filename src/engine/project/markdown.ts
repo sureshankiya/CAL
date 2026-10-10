@@ -43,13 +43,26 @@
  */
 
 import { looksLikeDrawingData } from "./drawingData";
+import {
+  PROJECT_FIELDS,
+  kindFromMark,
+  kindFromText,
+  looksLikeMark,
+  memberField,
+  memberLabelsFor,
+  norm,
+  pathValueWithUnits,
+  projectField,
+  schemaKind,
+  suggest,
+  type Json,
+  type Resolved,
+} from "./mdFriendly";
 import { newProject } from "./example";
 import { newMemberSpec, NEW_MEMBER_LABEL, newId, type NewMemberKind } from "./templates";
-import { projectSchema, type MemberSpec, type Project } from "./schema";
+import { memberSpecSchema, projectSchema, type MemberSpec, type Project } from "./schema";
 
 export const MD_EXT = ".housecalc.md";
-
-type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
 /* --------------------------------------------------------------- export */
 
@@ -134,13 +147,26 @@ export function projectToMarkdown(p: Project): string {
 
 /* ---------------------------------------------------------------- parse */
 
+interface Entry {
+  /** key as written ("Wind speed", "criteria.wind.V", "Span") */
+  key: string;
+  /** dotted path, when the key is written as one */
+  path?: string[];
+  raw: string;
+  value: Json;
+  line: number;
+}
+
 interface Section {
   type: "project" | "member";
   mark?: string;
+  /** kind as written in the heading / schedule */
   kind?: string;
+  /** template kind resolved from the kind text, the schedule heading or the mark prefix */
+  tk?: NewMemberKind;
   heading: string;
   line: number;
-  entries: Array<{ path: string[]; raw: string; value: Json; line: number }>;
+  entries: Entry[];
 }
 
 export interface MarkdownReport {
@@ -148,14 +174,16 @@ export interface MarkdownReport {
   applied: number;
   updated: string[];
   added: string[];
-  /** keys that are not fields of the project / member (ignored) */
+  /** keys that are not fields of the project / member (ignored), with the nearest labels */
   ignored: string[];
   /** sheet problems and schema errors — nothing is applied while any remain */
   errors: string[];
   /** template defaults used for new members, per mark (fields the sheet did not give) */
   defaulted: Array<{ mark: string; fields: string[] }>;
-  /** headings that are not "## Project" / "## Member" sections, and lines outside sections (ignored) */
+  /** headings that are not project / member / schedule sections, and lines outside sections (ignored) */
   skipped: { sections: string[]; lines: number };
+  /** labels and values with units read into fields ("Span: 14'-6\"" → spans = [14.5]) */
+  converted: string[];
   /** the text is a drawing-data document, not an input sheet — convert it first */
   drawingData?: boolean;
 }
@@ -182,15 +210,128 @@ const splitPath = (k: string) =>
     .split(".")
     .filter(Boolean);
 
-function parseSheet(text: string, errors: string[], skipped: MarkdownReport["skipped"]): Section[] {
+const PATH_KEY = /^[A-Za-z_][\w]*(?:\.[\w]+|\[\d+\])*$/;
+const KINDS = Object.keys(NEW_MEMBER_LABEL) as NewMemberKind[];
+
+const stripMd = (s: string) =>
+  s
+    .replace(/\*\*|__/g, "")
+    .replace(/`/g, "")
+    .trim();
+
+/** heading text → member mark and kind, or undefined */
+function memberHeading(title: string): { mark: string; kind?: string; tk?: NewMemberKind } | undefined {
+  const t = stripMd(title).replace(/^\d+(\.\d+)*\.?\s+(?=\S)/, "");
+  const kindOf = (text: string | undefined, mark: string) =>
+    (text ? (templateKind(text) ?? kindFromText(text, KINDS)) : undefined) ?? kindFromMark(mark);
+  let m = /^member\s+(\S+?)\s*\(\s*(.+?)\s*\)$/i.exec(t) ?? /^(\S+)\s*\(\s*(.+?)\s*\)$/.exec(t);
+  if (m && (/^member\s/i.test(t) || looksLikeMark(m[1]))) return { mark: m[1], kind: m[2], tk: kindOf(m[2], m[1]) };
+  m = /^(?:member\s+)?(\S+)\s*(?:[—–:]|\s-)\s*(.+)$/i.exec(t);
+  if (m && looksLikeMark(m[1])) return { mark: m[1], kind: m[2], tk: kindOf(m[2], m[1]) };
+  m = /^(.+?)\s+(\S+)$/.exec(t);
+  if (m && looksLikeMark(m[2]) && !looksLikeMark(m[1]) && kindFromText(m[1], KINDS))
+    return { mark: m[2], kind: m[1], tk: kindOf(m[1], m[2]) };
+  m = /^(?:member\s+)?(\S+)$/i.exec(t);
+  if (m && looksLikeMark(m[1])) return { mark: m[1], tk: kindFromMark(m[1]) };
+  return undefined;
+}
+
+const PROJECT_HEADING =
+  /^(project|project information|project info|information|job|design criteria|criteria|design basis|loads|design loads|site|site data|code|codes|seismic|wind|snow|soil|foundation criteria|concrete)\b/i;
+
+const isSeparator = (cells: string[]) => cells.length > 0 && cells.every((c) => /^:?-{2,}:?$/.test(c));
+const MARK_COL = /^(mark|marks|tag|member mark|id mark)$/i;
+const KIND_COL = /^(kind|type|member type|member|element|item type)$/i;
+const BLANK = /^(|-|—|–|n\/?a|none given|not stated)$/i;
+
+function parseSheet(text: string, skipped: MarkdownReport["skipped"]): Section[] {
   const sections: Section[] = [];
   let cur: Section | undefined;
+  /** kind suggested by the current heading ("Beam schedule") for schedule tables */
+  let hint: NewMemberKind | undefined;
   const lines = text.replace(/\r\n?/g, "\n").split("\n");
   let inComment = false;
   let inFence = false;
+  let table: Array<{ cells: string[]; line: number }> = [];
+
+  const flushTable = () => {
+    if (!table.length) return;
+    const rows = table;
+    table = [];
+    const header = rows.length > 1 && isSeparator(rows[1].cells) ? rows[0].cells.map(stripMd) : undefined;
+    const body = (header ? rows.slice(2) : rows).filter((r) => !isSeparator(r.cells));
+    const iMark = header?.findIndex((h) => MARK_COL.test(h)) ?? -1;
+    if (header && iMark >= 0) {
+      // member schedule: one member per row, columns are labels
+      const iKind = header.findIndex((h, i) => i !== iMark && KIND_COL.test(h));
+      for (const r of body) {
+        const mark = stripMd(r.cells[iMark] ?? "");
+        if (!mark || BLANK.test(mark)) continue;
+        const kindText = iKind >= 0 ? stripMd(r.cells[iKind] ?? "") : "";
+        const byMark = kindFromMark(mark);
+        // the mark refines the schedule's kind (H-1 in a beam schedule is a header, PF-1 a pad)
+        const fromHint = hint && byMark && schemaKind(byMark) === schemaKind(hint) ? byMark : hint;
+        const tk =
+          (kindText ? (templateKind(kindText) ?? kindFromText(kindText, KINDS)) : undefined) ?? fromHint ?? byMark;
+        const sec: Section = {
+          type: "member",
+          mark,
+          kind: kindText || tk,
+          tk,
+          heading: `schedule row ${mark}`,
+          line: r.line,
+          entries: [],
+        };
+        header.forEach((h, i) => {
+          if (i === iMark || i === iKind || !h) return;
+          let raw = stripMd(r.cells[i] ?? "");
+          if (BLANK.test(raw)) return;
+          // unit in the column header: "Span (ft)", "Spacing [in]"
+          const unit = /[([]\s*(ft|in|psf|plf|lb|kips?|psi|ksi|mph)\.?\s*[)\]]/i.exec(h)?.[1];
+          if (unit && /^-?[\d.,]+$/.test(raw)) raw = `${raw} ${unit}`;
+          const key = h.replace(/\s*[([].*?[)\]]\s*/g, " ").trim();
+          sec.entries.push({
+            key,
+            path: PATH_KEY.test(key) ? splitPath(key) : undefined,
+            raw,
+            value: parseValue(raw),
+            line: r.line,
+          });
+        });
+        sections.push(sec);
+      }
+      return;
+    }
+    if (!cur) {
+      skipped.lines += body.length;
+      return;
+    }
+    // two-column (key | value [| unit | source]) rows
+    const keyHead =
+      header &&
+      (/^(field|key|path|item|parameter|input|property|label)$/i.test(header[0]) || /^value/i.test(header[1] ?? ""));
+    const iUnit = header?.findIndex((h) => /^units?$/i.test(h)) ?? -1;
+    const data = header && !keyHead ? [rows[0], ...body] : body;
+    for (const r of data) {
+      if (r.cells.length < 2) continue;
+      const key = stripMd(r.cells[0]);
+      let raw = stripMd(r.cells[1]);
+      if (!key || /^-+$/.test(raw)) continue;
+      if (iUnit >= 0 && r.cells[iUnit] && /^-?[\d.,]+$/.test(raw)) raw = `${raw} ${stripMd(r.cells[iUnit])}`;
+      cur.entries.push({
+        key,
+        path: PATH_KEY.test(key) ? splitPath(key) : undefined,
+        raw,
+        value: parseValue(raw),
+        line: r.line,
+      });
+    }
+  };
+
   lines.forEach((ln, i) => {
     const n = i + 1;
     if (/^\s*```/.test(ln)) {
+      flushTable();
       inFence = !inFence;
       return;
     }
@@ -203,33 +344,74 @@ function parseSheet(text: string, errors: string[], skipped: MarkdownReport["ski
       if (!ln.includes("-->")) inComment = true;
       return;
     }
-    const h2 = /^##\s+(.+?)\s*$/.exec(ln);
-    if (h2 && !ln.startsWith("###")) {
-      const title = h2[1];
-      const mem = /^member\s+(.+?)\s*\(\s*([A-Za-z]+)\s*\)\s*$/i.exec(title);
-      if (/^project\b/i.test(title)) cur = { type: "project", heading: title, line: n, entries: [] };
-      else if (mem) cur = { type: "member", mark: mem[1].trim(), kind: mem[2], heading: title, line: n, entries: [] };
-      else {
-        cur = undefined;
-        skipped.sections.push(title);
-        return;
-      }
-      sections.push(cur);
+    if (/^\s*\|.*\|\s*$/.test(ln)) {
+      table.push({
+        cells: ln
+          .trim()
+          .replace(/^\||\|$/g, "")
+          .split("|")
+          .map((c) => c.trim()),
+        line: n,
+      });
       return;
     }
-    let key: string | undefined;
-    let raw: string | undefined;
-    const bullet = /^\s*(?:[-*+]\s+)?([A-Za-z_][\w.[\]-]*)\s*:\s?(.*)$/.exec(ln);
-    const row = /^\s*\|\s*([A-Za-z_][\w.[\]-]*)\s*\|\s*(.*?)\s*\|\s*$/.exec(ln);
-    if (row && !/^-+$/.test(row[2]) && !/^(field|key|path)$/i.test(row[1])) [key, raw] = [row[1], row[2]];
-    else if (bullet && !/^\s*#/.test(ln)) [key, raw] = [bullet[1], bullet[2]];
-    if (key === undefined || raw === undefined) return;
+    flushTable();
+    const h = /^(#{1,4})\s+(.+?)\s*#*\s*$/.exec(ln);
+    if (h) {
+      const level = h[1].length;
+      const title = stripMd(h[2]);
+      if (level === 1) return;
+      const bare = title.replace(/^\d+(\.\d+)*\.?\s+(?=\S)/, "");
+      const mem = memberHeading(title);
+      hint = /schedule|register|list|members|framing|beams|joists|rafters|headers|posts|columns|footings|walls/i.test(
+        bare,
+      )
+        ? kindFromText(bare, KINDS)
+        : undefined;
+      if (mem) {
+        cur = {
+          type: "member",
+          mark: mem.mark,
+          kind: mem.kind ?? mem.tk,
+          tk: mem.tk,
+          heading: title,
+          line: n,
+          entries: [],
+        };
+        sections.push(cur);
+      } else if (PROJECT_HEADING.test(bare)) {
+        if (!(cur?.type === "project" && level > 2)) {
+          cur = { type: "project", heading: title, line: n, entries: [] };
+          sections.push(cur);
+        }
+      } else if (level === 2) {
+        cur = undefined;
+        if (!hint) skipped.sections.push(title);
+      }
+      // other ### headings: sub-headings of the current section
+      return;
+    }
+    if (/^\s*#/.test(ln)) return;
+    const kvm = /^\s*(?:[-*+]\s+|\d+\.\s+)?(?:\*\*)?([A-Za-z_][^:=|]{0,48}?)(?:\*\*)?\s*(?::|=)(?:\*\*)?\s?(.*)$/.exec(
+      ln,
+    );
+    if (!kvm) return;
+    const key = kvm[1].trim();
+    const raw = kvm[2].replace(/\*\*\s*$/, "").trim();
+    if (/^https?$/i.test(key)) return;
     if (!cur) {
       skipped.lines++;
       return;
     }
-    cur.entries.push({ path: splitPath(key), raw, value: parseValue(raw), line: n });
+    cur.entries.push({
+      key,
+      path: PATH_KEY.test(key) ? splitPath(key) : undefined,
+      raw,
+      value: parseValue(raw),
+      line: n,
+    });
   });
+  flushTable();
   return sections;
 }
 
@@ -256,6 +438,36 @@ function getPath(root: unknown, path: (string | number)[]): unknown {
     o = (o as Record<string, unknown>)[k as string];
   }
   return o;
+}
+
+const memberFields = new Map<string, Set<string>>();
+/** field names of a member kind (schema) */
+function fieldsOf(kind: string): Set<string> {
+  let f = memberFields.get(kind);
+  if (!f) {
+    const o = memberSpecSchema.optionsMap.get(kind) as { shape?: Record<string, unknown> } | undefined;
+    f = new Set(Object.keys(o?.shape ?? {}));
+    memberFields.set(kind, f);
+  }
+  return f;
+}
+
+/** a project label, or "A / B: v1 / v2" for two labels written together */
+function resolveProject(key: string, raw: string): Resolved | undefined {
+  const f = projectField(key);
+  if (f) return f.to(raw);
+  const ks = key.split(/\s*\/\s*/);
+  const vs = raw.split(/\s*\/\s*/);
+  if (ks.length > 1 && ks.length === vs.length && ks.every((k) => projectField(k))) {
+    const set: Extract<Resolved, { ok: true }>["set"] = [];
+    for (let i = 0; i < ks.length; i++) {
+      const r = projectField(ks[i])!.to(vs[i]);
+      if (!r.ok) return r;
+      set.push(...r.set);
+    }
+    return { ok: true, set };
+  }
+  return undefined;
 }
 
 /** template kind for a member kind written in the sheet (schema kind or "Add member" kind) */
@@ -292,18 +504,20 @@ export function applyMarkdown(current: Project, text: string, opts: { mode?: "fi
     errors: [],
     defaulted: [],
     skipped: { sections: [], lines: 0 },
+    converted: [],
   };
-  const sections = parseSheet(text, report.errors, report.skipped);
+  if (looksLikeDrawingData(text)) {
+    report.drawingData = true;
+    report.errors.unshift(
+      "This is a drawing-data document (schedules, notes and OCR text from the drawings), not a HouseCalc input sheet. Use Convert to build an input sheet from its tables, review it, then apply.",
+    );
+    return { ok: false, report };
+  }
+  const sections = parseSheet(text, report.skipped);
   if (!sections.length) {
-    if (looksLikeDrawingData(text)) {
-      report.drawingData = true;
-      report.errors.unshift(
-        "This is a drawing-data document (schedules, notes and OCR text from the drawings), not a HouseCalc input sheet. Use Convert to build an input sheet from its tables, review it, then apply.",
-      );
-    } else
-      report.errors.unshift(
-        'No "## Project" or "## Member MARK (kind)" sections found — see Export .md for the format.',
-      );
+    report.errors.unshift(
+      'No project or member sections found — use "## Project" for project data and "## B-1 (beam)" (or a member schedule table with a Mark column) for members; see Export .md for the format.',
+    );
     return { ok: false, report };
   }
 
@@ -315,7 +529,7 @@ export function applyMarkdown(current: Project, text: string, opts: { mode?: "fi
     members: MemberSpec[];
   };
   delete draft.software;
-  const complete = sections.some((x) => x.type === "project" && x.entries.some((e) => e.path[0] === "schemaVersion"));
+  const complete = sections.some((x) => x.type === "project" && x.entries.some((e) => e.path?.[0] === "schemaVersion"));
   if (mode === "new" && complete) for (const k of Object.keys(draft)) delete draft[k];
   if (mode === "new") draft.members = [];
   // complete export: a list the sheet gives replaces the list (cleared the first time the sheet
@@ -331,55 +545,130 @@ export function applyMarkdown(current: Project, text: string, opts: { mode?: "fi
     }
     setPath(root, path, value);
   };
+  /** append to a list, skipping an identical item (re-applying a sheet does not double loads) */
+  const push = (root: Record<string, unknown>, path: string[], value: unknown) => {
+    const cur = getPath(root, path);
+    const list = Array.isArray(cur) ? cur : [];
+    if (!list.some((x) => JSON.stringify(x) === JSON.stringify(value))) list.push(value);
+    setPath(root, path, list);
+  };
+  const show = (v: unknown) => (typeof v === "string" ? v : JSON.stringify(v));
+  const where = (sec: Section, e: Entry) => `Line ${e.line}${sec.type === "member" ? ` (${sec.mark})` : ""}`;
   // where each sheet line landed in the draft, for the unknown-key check after validation
   const placed: Array<{ path: (string | number)[]; label: string }> = [];
   const sheetPaths = new Map<number, Set<string>>();
+  const TOP = new Set(Object.keys(projectSchema.shape));
 
-  for (const sec of sections.filter((s) => s.type === "project")) {
+  for (const sec of sections.filter((x) => x.type === "project")) {
     for (const e of sec.entries) {
-      if (e.path[0] === "members") {
+      if (e.path?.[0] === "members") {
         report.errors.push(`Line ${e.line}: give members in "## Member MARK (kind)" sections, not as members.* paths`);
         continue;
       }
-      if (e.path[0] === "software") continue;
-      put(draft, e.path, e.value, "project");
-      placed.push({ path: e.path, label: e.path.join(".") });
+      if (e.path?.[0] === "software") continue;
+      const asPath =
+        e.path && (e.path.length > 1 || TOP.has(e.path[0])) && !(e.path.length === 1 && projectField(e.key));
+      if (asPath) {
+        const u = pathValueWithUnits("project", "", e.path!, e.raw);
+        if (u && "error" in u) {
+          report.errors.push(`${where(sec, e)}: ${e.key}: ${u.error}`);
+          continue;
+        }
+        const value = u ? u.value : e.value;
+        if (u) report.converted.push(`${where(sec, e)}: ${e.key}: ${e.raw} → ${show(value)}`);
+        put(draft, e.path!, value, "project");
+        placed.push({ path: e.path!, label: e.path!.join(".") });
+        report.applied++;
+        continue;
+      }
+      const r = resolveProject(e.key, e.raw);
+      if (!r) {
+        const near = suggest(
+          e.key,
+          PROJECT_FIELDS.flatMap((f) => f.labels),
+        );
+        report.ignored.push(
+          `${where(sec, e)}: "${e.key}" — not a project field${near.length ? ` (did you mean ${near.map((x) => `"${x}"`).join(", ")}?)` : ""}`,
+        );
+        continue;
+      }
+      if (!r.ok) {
+        report.errors.push(`${where(sec, e)}: ${e.key}: ${r.error}`);
+        continue;
+      }
+      for (const a of r.set) {
+        if (a.push) push(draft, a.path, a.value);
+        else put(draft, a.path, a.value, "project");
+        placed.push({ path: a.path, label: `${e.key} (${a.path.join(".")})` });
+      }
+      report.converted.push(
+        `${where(sec, e)}: ${e.key}: ${e.raw} → ${r.set.map((a) => `${a.path.join(".")} = ${show(a.value)}`).join("; ")}${r.note ? ` (${r.note})` : ""}`,
+      );
       report.applied++;
     }
   }
 
+  const levelOf = (structureId: string | undefined) => (raw: string) => {
+    const p = draft as unknown as Project;
+    const all = (p.structures ?? []).flatMap((st) => st.levels.map((l) => ({ ...l, st: st.id })));
+    const pool = [...all.filter((l) => l.st === structureId), ...all.filter((l) => l.st !== structureId)];
+    const t = norm(raw);
+    const ord: Record<string, number> = { first: 1, ground: 1, main: 1, second: 2, upper: 2, third: 3 };
+    const n = Number(/(\d+)/.exec(raw)?.[1] ?? ord[t.split(" ")[0]] ?? NaN);
+    return (
+      pool.find((l) => l.id === raw.trim())?.id ??
+      pool.find((l) => norm(l.name) === t)?.id ??
+      (/roof/.test(t) ? pool.find((l) => /roof/i.test(l.name))?.id : undefined) ??
+      pool.find((l) => t.length > 2 && norm(l.name).includes(t))?.id ??
+      (Number.isFinite(n) ? pool.find((l) => l.number === n)?.id : undefined)
+    );
+  };
+
   // members: after the project section so new members see the sheet's structures / assemblies
-  for (const sec of sections.filter((s) => s.type === "member")) {
+  for (const sec of sections.filter((x) => x.type === "member")) {
     const mark = sec.mark!;
     let idx = draft.members.findIndex((m) => m.mark === mark);
+    const record = sec.entries.some((e) => e.path?.[0] === "id");
     if (idx < 0) {
-      const tk = templateKind(sec.kind!);
+      let tk = sec.tk ?? (sec.kind ? templateKind(sec.kind) : undefined);
       if (!tk) {
         report.errors.push(
-          `Line ${sec.line}: member kind "${sec.kind}" is not known — use one of: ${Object.keys(NEW_MEMBER_LABEL).join(", ")}`,
+          `Line ${sec.line}: ${mark}: member kind ${sec.kind ? `"${sec.kind}" ` : ""}not known — write it after the mark, e.g. "## ${mark} (beam)", or use one of: ${KINDS.join(", ")}`,
         );
         continue;
       }
+      // a footing written with three dimensions or "pad" is a pad footing
+      if (
+        tk === "footing" &&
+        sec.entries.some(
+          (e) =>
+            (/^(size|dimensions|footing size)$/i.test(norm(e.key)) &&
+              (e.raw.match(/\d+(?:\.\d+)?/g) ?? []).length >= 3) ||
+            (/^(type|footing type)$/i.test(norm(e.key)) && /pad|spread|isolated/i.test(e.raw)),
+        )
+      )
+        tk = "pad";
       const p = draft as unknown as Project;
-      const s = p.structures?.[0];
-      const lv = s?.levels?.[0];
-      if ((!s || !lv) && !sec.entries.some((e) => e.path[0] === "id")) {
+      const st = p.structures?.[0];
+      const lv = st?.levels?.[0];
+      if ((!st || !lv) && !record) {
         report.errors.push(`Line ${sec.line}: ${mark}: the project has no structure / level to place the member on`);
         continue;
       }
-      const record = sec.entries.some((e) => e.path[0] === "id");
-      const m = (record ? { kind: tk } : newMemberSpec(p, tk, s!.id, lv!.id)) as unknown as Record<string, unknown>;
+      const m = (record ? { kind: tk } : newMemberSpec(p, tk, st!.id, lv!.id)) as unknown as Record<string, unknown>;
       if (record) m.kind = sec.kind;
       m.mark = mark;
-      // the sheet's fields replace the template's fields as a whole
-      for (const e of sec.entries) if (!["kind", "mark"].includes(e.path[0])) delete m[e.path[0]];
+      // a field given as a dotted path replaces the template's value for that field as a whole
+      for (const e of sec.entries)
+        if (e.path && !["kind", "mark"].includes(e.path[0]) && (record || e.path.length > 1)) delete m[e.path[0]];
       draft.members.push(m as unknown as MemberSpec);
       idx = draft.members.length - 1;
       report.added.push(mark);
       sheetPaths.set(idx, new Set());
     } else if (!report.updated.includes(mark) && !report.added.includes(mark)) {
       report.updated.push(mark);
-      if (draft.members[idx].kind !== sec.kind && templateKind(sec.kind!) !== templateKind(draft.members[idx].kind)) {
+      const sk = sec.tk ?? (sec.kind ? templateKind(sec.kind) : undefined);
+      if (sec.kind && sk && schemaKind(sk) !== draft.members[idx].kind && draft.members[idx].kind !== sec.kind) {
         report.errors.push(
           `Line ${sec.line}: ${mark} is a ${draft.members[idx].kind} in the project, the sheet says ${sec.kind} — change the mark or the kind`,
         );
@@ -387,16 +676,92 @@ export function applyMarkdown(current: Project, text: string, opts: { mode?: "fi
       }
     }
     const m = draft.members[idx] as unknown as Record<string, unknown>;
-    for (const e of sec.entries) {
-      if (e.path[0] === "kind") continue;
-      if (e.path[0] === "mark" && e.value !== mark) {
-        report.errors.push(`Line ${e.line}: mark "${String(e.value)}" differs from the section heading "${mark}"`);
+    const kind = String(m.kind);
+    const supports = () => (Array.isArray(m.spans) ? m.spans.length : 1) + 1;
+    const ctx = {
+      kind,
+      get supports() {
+        return supports();
+      },
+      level: levelOf(m.structureId as string | undefined),
+    };
+    // bearing lengths after the spans they follow
+    const entries = [...sec.entries].sort((x, y) => Number(/bearing/i.test(x.key)) - Number(/bearing/i.test(y.key)));
+    let gaveBearing = false;
+    for (const e of entries) {
+      if (e.path?.[0] === "kind" && e.path.length === 1) continue;
+      if (e.path?.[0] === "mark" && e.path.length === 1) {
+        if (e.value !== mark)
+          report.errors.push(`Line ${e.line}: mark "${String(e.value)}" differs from the section heading "${mark}"`);
         continue;
       }
-      put(m, e.path, e.value, `member:${idx}`);
-      placed.push({ path: ["members", idx, ...e.path], label: `${mark} ${e.path.join(".")}` });
-      sheetPaths.get(idx)?.add(e.path.join("."));
+      if (/bearing/i.test(e.key)) gaveBearing = true;
+      const jsonish = /^\s*[[{"]/.test(e.raw) || SIMPLE.test(e.raw.trim());
+      const exact = !!e.path && e.path.length === 1 && fieldsOf(kind).has(e.path[0]);
+      let field = memberField(e.key, kind);
+      // a key that is the member's own field name keeps that field (diaphragm "level", …)
+      if (field && exact) {
+        const t = field.to(e.raw, ctx);
+        if (t.ok && !t.set.some((a) => a.path[0] === e.path![0])) field = undefined;
+      }
+      const known = e.path && (e.path.length > 1 || exact || e.path[0] in m || record);
+      if (e.path && (known || !field) && (jsonish || e.path.length > 1 || !field)) {
+        const u = pathValueWithUnits("member", kind, e.path, e.raw);
+        if (u && "error" in u) {
+          report.errors.push(`${where(sec, e)}: ${e.key}: ${u.error}`);
+          continue;
+        }
+        if (!known && !field) {
+          const near = suggest(e.key, [...memberLabelsFor(kind), ...Object.keys(m)]);
+          report.ignored.push(
+            `${where(sec, e)}: "${e.key}" — not a field of a ${kind}${near.length ? ` (did you mean ${near.map((x) => `"${x}"`).join(", ")}?)` : ""}`,
+          );
+          continue;
+        }
+        const value = u ? u.value : e.value;
+        if (u) report.converted.push(`${where(sec, e)}: ${e.key}: ${e.raw} → ${show(value)}`);
+        put(m, e.path, value, `member:${idx}`);
+        placed.push({ path: ["members", idx, ...e.path], label: `${mark} ${e.path.join(".")}` });
+        sheetPaths.get(idx)?.add(e.path.join("."));
+        report.applied++;
+        continue;
+      }
+      if (!field) {
+        const near = suggest(e.key, memberLabelsFor(kind));
+        report.ignored.push(
+          `${where(sec, e)}: "${e.key}" — not a field of a ${kind}${near.length ? ` (did you mean ${near.map((x) => `"${x}"`).join(", ")}?)` : ""}`,
+        );
+        continue;
+      }
+      const r = field.to(e.raw, ctx);
+      if (!r.ok) {
+        report.errors.push(`${where(sec, e)}: ${e.key}: ${r.error}`);
+        continue;
+      }
+      for (const a of r.set) {
+        if (a.push) push(m, a.path, a.value);
+        else put(m, a.path, a.value, `member:${idx}`);
+        placed.push({ path: ["members", idx, ...a.path], label: `${mark} ${e.key}` });
+        sheetPaths.get(idx)?.add(a.path.join("."));
+      }
+      report.converted.push(
+        `${where(sec, e)}: ${e.key}: ${e.raw} → ${r.set.map((a) => `${a.path.join(".")}${a.push ? " +=" : " ="} ${show(a.value)}`).join("; ")}${r.note ? ` (${r.note})` : ""}`,
+      );
       report.applied++;
+    }
+    // one bearing length per support when the sheet changed the number of spans
+    if (
+      !gaveBearing &&
+      Array.isArray(m.bearing) &&
+      Array.isArray(m.spans) &&
+      m.bearing.length !== m.spans.length + 1 &&
+      m.bearing.every((x) => typeof x === "number")
+    ) {
+      const b = m.bearing as number[];
+      m.bearing = Array.from({ length: (m.spans as unknown[]).length + 1 }, (_, i) => b[Math.min(i, b.length - 1)]);
+      report.converted.push(
+        `${mark}: bearing set for ${(m.spans as unknown[]).length + 1} supports (${show(m.bearing)} in.)`,
+      );
     }
     if (typeof m.id !== "string" || !m.id || draft.members.some((x, j) => j !== idx && x.id === m.id)) m.id = newId();
   }

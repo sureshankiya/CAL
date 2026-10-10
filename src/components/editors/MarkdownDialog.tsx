@@ -7,6 +7,7 @@
 
 import { useRef, useState } from "react";
 import { saveFile, saveMessage } from "@/lib/download";
+import { STARTER_SHEET, labelReference } from "@/engine/project/mdFriendly";
 import {
   applyMarkdown,
   convertDrawingData,
@@ -81,8 +82,12 @@ export function MarkdownImportDialog({
   return (
     <Shell title="Fill project from a Markdown sheet (.md)" onClose={onClose}>
       <p className="text-xs text-muted-foreground">
-        One <code>- path: value</code> line per field under <code>## Project</code> and{" "}
-        <code>## Member MARK (kind)</code> headings. Use Export .md for the full template of the current project.
+        Write the sheet in plain engineering terms: <code>## Project</code> / <code>## Design criteria</code> with lines
+        such as <code>- Wind speed: 95 mph</code>, one heading per member (<code>## B-1 (beam)</code>,{" "}
+        <code>## Floor joist FJ-1</code>) with <code>- Span: 16&apos;-6&quot;</code>,{" "}
+        <code>- Size: (3) 1-3/4 x 11-7/8 LVL</code>, <code>- Spacing: 16 in. o.c.</code>, or a schedule table with a{" "}
+        <b>Mark</b> column. Units are converted; dotted paths from Export .md (<code>criteria.wind.V: 95</code>) also
+        work.
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className={btn} onClick={() => fileRef.current?.click()}>
@@ -104,6 +109,17 @@ export function MarkdownImportDialog({
             });
           }}
         />
+        <button
+          type="button"
+          className={btn}
+          title="A plain-language sheet with the common project and member fields"
+          onClick={() => {
+            setName(undefined);
+            load(STARTER_SHEET);
+          }}
+        >
+          Starter sheet
+        </button>
         {name ? <span className="text-xs text-muted-foreground">{name}</span> : null}
       </div>
       <label className="block text-xs font-medium" htmlFor="md-text">
@@ -114,7 +130,7 @@ export function MarkdownImportDialog({
         className="h-56 w-full rounded-md border border-input bg-background p-2 font-mono text-xs"
         value={text}
         placeholder={
-          "## Project\n- info.name: 12 Oak Lane\n- criteria.wind.V: 95\n\n## Member B-1 (beam)\n- spans: [16]"
+          "## Project\n- Project name: 12 Oak Lane\n- Wind speed: 95 mph\n\n## B-1 (beam)\n- Size: 4x12 DF-L No.1\n- Span: 16'-6\"\n- Trib: 6 ft\n- Dead load: 15 psf\n- Live load: 40 psf"
         }
         onChange={(e) => {
           setText(e.target.value);
@@ -226,7 +242,26 @@ export function MarkdownImportDialog({
           {r.added.length ? <div>Added: {r.added.join(", ")}</div> : null}
           {r.updated.length ? <div>Updated: {r.updated.join(", ")}</div> : null}
           {r.ignored.length ? (
-            <div className="text-destructive">Not fields of the project (ignored): {r.ignored.join(", ")}</div>
+            <details open>
+              <summary className="cursor-pointer text-destructive">
+                Not read — labels that are not fields ({r.ignored.length})
+              </summary>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                {r.ignored.map((x, i) => (
+                  <li key={i}>{x}</li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+          {r.converted.length ? (
+            <details>
+              <summary className="cursor-pointer">Read from labels and units ({r.converted.length})</summary>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 font-mono">
+                {r.converted.map((x, i) => (
+                  <li key={i}>{x}</li>
+                ))}
+              </ul>
+            </details>
           ) : null}
           {r.defaulted.length ? (
             <details>
@@ -244,7 +279,40 @@ export function MarkdownImportDialog({
           ) : null}
         </div>
       ) : null}
+      <LabelReference />
     </Shell>
+  );
+}
+
+function LabelReference() {
+  const ref = labelReference();
+  return (
+    <details className="rounded-md border border-border p-3 text-xs">
+      <summary className="cursor-pointer font-medium">Labels the sheet understands</summary>
+      <div className="mt-2 font-semibold">Project</div>
+      <table className="mt-1 w-full border-collapse">
+        <tbody>
+          {ref.project.map(([l, d]) => (
+            <tr key={l} className="border-t border-border">
+              <td className="py-0.5 pr-3 align-top">{l}</td>
+              <td className="py-0.5 text-muted-foreground">{d}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="mt-3 font-semibold">Members (heading "## MARK (kind)" or a schedule row)</div>
+      <table className="mt-1 w-full border-collapse">
+        <tbody>
+          {ref.member.map(([l, k, d], i) => (
+            <tr key={i} className="border-t border-border">
+              <td className="py-0.5 pr-3 align-top">{l}</td>
+              <td className="py-0.5 pr-3 align-top text-muted-foreground">{k}</td>
+              <td className="py-0.5 text-muted-foreground">{d}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
   );
 }
 
