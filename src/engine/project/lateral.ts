@@ -8,8 +8,9 @@ import type { WeightItem } from "../lateral/analysis";
 import type { LateralSpec, Project } from "./schema";
 
 export function generateWeights(p: Pick<Project, "assemblies">, lat: LateralSpec, index: number): WeightItem[] {
-  const area = lat.Lx * lat.Ly;
-  const perim = 2 * (lat.Lx + lat.Ly);
+  const r2 = (x: number) => Math.round(x * 100) / 100;
+  const area = r2(lat.Lx * lat.Ly);
+  const perim = r2(2 * (lat.Lx + lat.Ly));
   const top = index === lat.stories.length - 1;
   const has = (id: string) => p.assemblies.some((a) => a.id === id);
   const items: WeightItem[] = [];
@@ -44,7 +45,7 @@ export function generateWeights(p: Pick<Project, "assemblies">, lat: LateralSpec
     items.push({
       label: "Interior walls (estimated length = half the perimeter)",
       kind: "wall",
-      qty: perim / 2,
+      qty: r2(perim / 2),
       height: below + above,
       assemblyId: "WD2",
     });

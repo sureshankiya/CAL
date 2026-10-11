@@ -11,6 +11,8 @@
  * reader or manual entry.
  */
 
+import { findHardware } from "./drawingHardware";
+
 export interface DrawingPageText {
   page: number;
   /** sheet number from the title block, if known (S-2.1) */
@@ -38,6 +40,9 @@ const FRACTIONS: Record<string, string> = {
   "⅝": "-5/8",
   "⅞": "-7/8",
 };
+
+/** line separating a page's horizontal text from its rotated (vertical) text */
+export const VERTICAL_TEXT = "[vertical text]";
 
 /** unicode fractions, primes and spacing normalised: 1¾" → 1-3/4", 11 7/8" → 11-7/8" */
 export function normaliseDrawingText(s: string): string {
@@ -402,6 +407,46 @@ export function readDrawingText(name: string, pages: DrawingPageText[]): Drawing
     ]);
   if (headers.length) found.push(`Typical header schedule: ${headers.length} rows`);
 
+  /* ------------------------------------------------ building geometry */
+  // overall plan dimensions: the longest figured dimension read along the sheet (horizontal
+  // text) and across it (rotated text) on the main-building plan sheets
+  const DIM = /\b(\d{1,3})'\s*-?\s*(\d{1,2})(?:-(\d+)\/(\d+))?"/g;
+  const dimsIn = (s: string) =>
+    [...s.matchAll(DIM)]
+      .map((m) => Number(m[1]) + (Number(m[2]) + (m[3] ? Number(m[3]) / Number(m[4]) : 0)) / 12)
+      .filter((f) => f >= 10 && f <= 300);
+  const ftIn = (f: number) => {
+    const ft = Math.floor(f + 1e-9);
+    const inch = Math.round((f - ft) * 12 * 8) / 8;
+    return `${ft} ft ${inch} in`;
+  };
+  let gx: { ft: number; sheet: string } | undefined;
+  let gy: { ft: number; sheet: string } | undefined;
+  for (const p of P) {
+    if (!/\bPLAN\b|\bLAYOUT\b/i.test(p.text) || /^(Carport|Deck|Sections)$/.test(p.area ?? "")) continue;
+    const [hz, vt = ""] = p.text.split(VERTICAL_TEXT);
+    const h = Math.max(0, ...dimsIn(hz));
+    const v = Math.max(0, ...dimsIn(vt));
+    if (h && (!gx || h > gx.ft)) gx = { ft: h, sheet: p.sheet };
+    if (v && (!gy || v > gy.ft)) gy = { ft: v, sheet: p.sheet };
+  }
+  const geom: string[][] = [];
+  if (gx) geom.push([`Overall longitudinal dimension (longest horizontal plan dimension, ${gx.sheet})`, ftIn(gx.ft)]);
+  if (gy) geom.push([`Overall width (longest rotated plan dimension, ${gy.sheet})`, ftIn(gy.ft)]);
+  const PITCH = /\b(\d+(?:\.\d+)?)\s*(?::|\/|IN)\s*12\b/i;
+  const pitch = P.flatMap((p) => p.lines.map((l) => ({ l, sheet: p.sheet }))).find(
+    (x) => /PITCH|SLOPE/i.test(x.l) && PITCH.test(x.l),
+  );
+  const pm = pitch && PITCH.exec(pitch.l);
+  if (pitch && pm) geom.push([`Roof pitch (${pitch.sheet})`, `${pm[1]}:12`]);
+  if (gx && gy) found.push(`Building: ${ftIn(gx.ft)} × ${ftIn(gy.ft)} (overall plan dimensions)`);
+  if (pm) found.push(`Roof pitch: ${pm[1]}:12`);
+
+  /* ------------------------------------------------------------ hardware */
+  const hw = findHardware(P.map((p) => `### PDF page ${p.page} - ${p.sheet}\n${p.text}`).join("\n"));
+  if (hw.models.length) found.push(`Hardware: ${hw.models.map((h) => h.model).join(", ")}`);
+  const hwRows = hw.models.map((h) => [h.model, h.what, h.sheets.join(", ")]);
+
   if (emptyPages.length)
     issues.push(
       `Pages ${emptyPages.join(", ")}: little or no text in the text layer (outlined or scanned) — use the AI reader or enter the values.`,
@@ -436,6 +481,9 @@ export function readDrawingText(name: string, pages: DrawingPageText[]): Drawing
     "## 5. Foundations",
     "",
     ...t(["Mark", "Size/description", "Reinforcement", "Source/status"], ftgs),
+    "## 4. Figured geometry",
+    "",
+    ...t(["Location", "Dimension"], geom),
     "## 7. Beams, joists and posts",
     "",
     ...t(["Mark", "Size", "Material", "Support/notes", "Source"], beams),
@@ -449,6 +497,9 @@ export function readDrawingText(name: string, pages: DrawingPageText[]): Drawing
     "",
     ...t(["Area", "Opening", "Labels", "Sheet"], openings),
     ...t(["Clear opening", "Header", "Remark"], headers),
+    "## 10. Hardware called out",
+    "",
+    ...t(["Model", "Type", "Sheets"], hwRows),
     "## 12. Conflicts and missing inputs",
     "",
     ...t(

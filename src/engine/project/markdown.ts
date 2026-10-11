@@ -61,7 +61,16 @@ import {
 } from "./mdFriendly";
 import { newProject } from "./example";
 import { newMemberSpec, NEW_MEMBER_LABEL, newId, supportCount, supportLabels, type NewMemberKind } from "./templates";
-import { memberSpecSchema, projectSchema, type MemberSpec, type Project } from "./schema";
+import {
+  memberSpecSchema,
+  projectSchema,
+  type HardwareSpec,
+  type LateralSpec,
+  type MemberSpec,
+  type Project,
+} from "./schema";
+import { generateWeights } from "./lateral";
+import { defaultHardware } from "../data/hardware";
 
 export const MD_EXT = ".housecalc.md";
 
@@ -442,7 +451,17 @@ function getPath(root: unknown, path: (string | number)[]): unknown {
 }
 
 const LINK_LABEL = /^(loads? from|load path from|carries|supports? loads? from|reactions? from|supported members?)$/;
-const REPETITIVE = new Set(["joist", "rafter", "ceilingJoist", "ijoist", "wall", "woodTruss", "cfsWall", "masonryWall", "ledger"]);
+const REPETITIVE = new Set([
+  "joist",
+  "rafter",
+  "ceilingJoist",
+  "ijoist",
+  "wall",
+  "woodTruss",
+  "cfsWall",
+  "masonryWall",
+  "ledger",
+]);
 
 /**
  * "B-1 B; FJ-1 right × 2; P-1 at 6 ft" → load-path links. Support by letter (A, B …), number
@@ -876,6 +895,35 @@ export function applyMarkdown(current: Project, text: string, opts: { mode?: "fi
           ![...given].some((g) => p === g || p.startsWith(`${g}.`) || g.startsWith(`${p}.`)),
       );
     if (fields.length) report.defaulted.push({ mark: draft.members[idx].mark, fields });
+  }
+
+  // stories given without weight items: weights generated from the sheet's L_x × L_y (as ↻ weights)
+  const lat = draft.lateral as LateralSpec | undefined;
+  if (lat && Array.isArray(lat.stories) && placed.some((pl) => pl.path[0] === "lateral")) {
+    lat.stories.forEach((st, i) => {
+      if (Array.isArray(st.items) && st.items.length === 0)
+        st.items = generateWeights(draft as unknown as Project, lat, i);
+    });
+  }
+  // a hardware list from the sheet keeps every item a member still refers to
+  const hwList = draft.hardware as HardwareSpec[] | undefined;
+  if (Array.isArray(hwList)) {
+    const have = new Set(hwList.map((h) => h.id));
+    const pool = [...(current.hardware ?? []), ...defaultHardware()];
+    const refs = new Set<string>();
+    const walk = (v: unknown, key = "") => {
+      if (typeof v === "string" && /^(hardwareId|holdownId|strapId)$/.test(key) && v) refs.add(v);
+      else if (Array.isArray(v)) v.forEach((x) => walk(x));
+      else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) walk(x, k);
+    };
+    walk(draft.members);
+    for (const id of refs) {
+      const h = !have.has(id) && pool.find((x) => x.id === id);
+      if (h) {
+        hwList.push(h);
+        have.add(id);
+      }
+    }
   }
 
   // validate; coerce text ↔ number where the sheet's value type differs from the field's

@@ -92,7 +92,10 @@ export function ProjectInfoPanel({ p, set }: { p: Project; set: SetProject }) {
       <Field label="Date">
         <TextInput type="date" value={p.info.date} onChange={(v) => info("date", v)} />
       </Field>
-      <Field label="Project notes" hint="Printed on the general notes sheet (drawing specifications, project-specific notes)">
+      <Field
+        label="Project notes"
+        hint="Printed on the general notes sheet (drawing specifications, project-specific notes)"
+      >
         <textarea
           className={`${inputCls} h-28 font-mono text-xs`}
           value={p.notes}
@@ -485,51 +488,102 @@ export function AssembliesPanel({ p, set }: { p: Project; set: SetProject }) {
   );
 }
 
+/** ✕ that refuses (and says why) while members are still on the level / structure */
+function DeleteButton({ blocked, what, onDelete }: { blocked: number; what: string; onDelete: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={blocked > 0}
+      title={
+        blocked > 0
+          ? `${blocked} member${blocked > 1 ? "s are" : " is"} on ${what} — move or delete ${blocked > 1 ? "them" : "it"} first`
+          : `Delete ${what}`
+      }
+      onClick={onDelete}
+      className="w-4 text-xs text-muted-foreground hover:text-destructive disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      ✕
+    </button>
+  );
+}
+
 export function LevelsPanel({ p, set }: { p: Project; set: SetProject }) {
+  const onLevel = (sid: string, lid: string) =>
+    p.members.filter((m) => m.structureId === sid && m.levelId === lid).length;
+  const onStructure = (sid: string) => p.members.filter((m) => m.structureId === sid).length;
+  const removeLevel = (sid: string, lid: string) =>
+    set((x) => ({
+      ...x,
+      structures: x.structures.map((y) => (y.id === sid ? { ...y, levels: y.levels.filter((z) => z.id !== lid) } : y)),
+    }));
   return (
     <Collapsible title="Structures and levels">
       {p.structures.map((s) => (
         <div key={s.id} className="space-y-2 rounded-md border border-border p-2">
-          <TextInput
-            value={s.name}
-            onChange={(v) =>
-              set((x) => ({ ...x, structures: x.structures.map((y) => (y.id === s.id ? { ...y, name: v } : y)) }))
-            }
-          />
-          {s.levels.map((l) => (
-            <Grid key={l.id}>
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
               <TextInput
-                value={l.name}
+                value={s.name}
                 onChange={(v) =>
-                  set((x) => ({
-                    ...x,
-                    structures: x.structures.map((y) =>
-                      y.id === s.id
-                        ? { ...y, levels: y.levels.map((z) => (z.id === l.id ? { ...z, name: v } : z)) }
-                        : y,
-                    ),
-                  }))
+                  set((x) => ({ ...x, structures: x.structures.map((y) => (y.id === s.id ? { ...y, name: v } : y)) }))
                 }
               />
-              <NumberInput
-                value={l.number}
-                min={0}
-                step="1"
-                onChange={(v) =>
-                  set((x) => ({
-                    ...x,
-                    structures: x.structures.map((y) =>
-                      y.id === s.id
-                        ? {
-                            ...y,
-                            levels: y.levels.map((z) => (z.id === l.id ? { ...z, number: Math.round(v ?? 1) } : z)),
-                          }
-                        : y,
-                    ),
-                  }))
-                }
+            </div>
+            {p.structures.length > 1 ? (
+              <DeleteButton
+                blocked={onStructure(s.id)}
+                what={`structure "${s.name}"`}
+                onDelete={() => set((x) => ({ ...x, structures: x.structures.filter((y) => y.id !== s.id) }))}
               />
-            </Grid>
+            ) : null}
+          </div>
+          {s.levels.map((l) => (
+            <div key={l.id} className="flex items-center gap-2">
+              <div className="flex-1">
+                <Grid>
+                  <TextInput
+                    value={l.name}
+                    onChange={(v) =>
+                      set((x) => ({
+                        ...x,
+                        structures: x.structures.map((y) =>
+                          y.id === s.id
+                            ? { ...y, levels: y.levels.map((z) => (z.id === l.id ? { ...z, name: v } : z)) }
+                            : y,
+                        ),
+                      }))
+                    }
+                  />
+                  <NumberInput
+                    value={l.number}
+                    min={0}
+                    step="1"
+                    onChange={(v) =>
+                      set((x) => ({
+                        ...x,
+                        structures: x.structures.map((y) =>
+                          y.id === s.id
+                            ? {
+                                ...y,
+                                levels: y.levels.map((z) => (z.id === l.id ? { ...z, number: Math.round(v ?? 1) } : z)),
+                              }
+                            : y,
+                        ),
+                      }))
+                    }
+                  />
+                </Grid>
+              </div>
+              {s.levels.length > 1 ? (
+                <DeleteButton
+                  blocked={onLevel(s.id, l.id)}
+                  what={`level "${l.name}"`}
+                  onDelete={() => removeLevel(s.id, l.id)}
+                />
+              ) : (
+                <span className="w-4" title="A structure keeps at least one level" />
+              )}
+            </div>
           ))}
           <AddButton
             onClick={() =>
@@ -566,7 +620,10 @@ export function LevelsPanel({ p, set }: { p: Project; set: SetProject }) {
       >
         + Add structure (ADU, garage …)
       </AddButton>
-      <Hint>Level number feeds the mark templates ({"{L}"}); sheets are ordered from the highest level down.</Hint>
+      <Hint>
+        Level number feeds the mark templates ({"{L}"}); sheets are ordered from the highest level down. ✕ deletes a
+        level or structure once no member is on it (hover the ✕ to see what is still there).
+      </Hint>
     </Collapsible>
   );
 }

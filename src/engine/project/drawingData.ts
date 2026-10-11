@@ -16,6 +16,8 @@
  */
 
 import { SAWN_SIZES } from "../data/sections";
+import { defaultHardware } from "../data/hardware";
+import { findHardware, hardwareFromDrawings } from "./drawingHardware";
 
 export interface DrawingDataResult {
   sheet: string;
@@ -274,6 +276,62 @@ export function convertDrawingData(text: string): DrawingDataResult {
     { id: "RF", name: "Roof", number: 3 },
   ];
   set("structures.0.levels", JSON.stringify(levels), "Levels: first floor, second floor, roof");
+
+  /* ------------------------------------------------- building geometry */
+  const geo = buildingGeometry(text, tables);
+  notes.push(...geo.notes);
+  if (geo.Lx !== undefined && geo.Ly !== undefined) {
+    set("lateral.Lx", String(geo.Lx), `Building length L_x: ${geo.Lx} ft (${geo.xFrom})`);
+    set("lateral.Ly", String(geo.Ly), `Building width L_y: ${geo.Ly} ft (${geo.yFrom})`);
+    set("lateral.ridge", geo.ridge, `Ridge along ${geo.ridge} (longer plan dimension)`);
+  }
+  if (geo.pitchFrom) set("lateral.pitch", String(geo.pitch), `Roof pitch: ${geo.pitch}:12 (${geo.pitchFrom})`);
+  if (geo.roofRise !== undefined)
+    set("lateral.roofRise", String(geo.roofRise), `Roof rise: ${geo.roofRise} ft (pitch × half the width)`);
+  const stories = levels
+    .filter((l) => l.id !== "RF")
+    .map((l, i, all) => {
+      const h = i === all.length - 1 && all.length > 1 ? (geo.upperStory ?? geo.story) : geo.story;
+      return {
+        id: `ST${i + 1}`,
+        name: `${["First", "Second", "Third"][i] ?? `Level ${i + 1}`} story`,
+        height: h ?? 9,
+        items: [],
+      };
+    });
+  set(
+    "lateral.stories",
+    JSON.stringify(stories),
+    `Stories: ${stories.map((s) => `${s.name} ${s.height} ft`).join(", ")} (seismic weights regenerated from L_x × L_y)`,
+  );
+  if (geo.story === undefined)
+    notes.push(
+      `Lateral: ${geo.upperStory !== undefined && stories.length > 1 ? "first-story" : "story"} height not figured on the drawings — 9 ft used; enter the floor-to-floor height. VERIFY.`,
+    );
+
+  /* ------------------------------------------------------------- hardware */
+  const hw = findHardware(text);
+  if (hw.models.length) {
+    set(
+      "hardware",
+      JSON.stringify(hardwareFromDrawings(hw.models)),
+      `Hardware on the drawings: ${hw.models.map((h) => h.model).join(", ")}`,
+    );
+    const blank = hw.models.filter(
+      (h) => !defaultHardware().some((c) => c.model === h.model || c.model === `${h.model}-SDS2.5`),
+    );
+    if (blank.length)
+      notes.push(
+        `Hardware not in the HouseCalc catalogue — listed with blank capacities; enter the allowable loads, fasteners and ICC-ES report: ${blank.map((h) => `${h.model} (${h.sheets.join(", ") || "notes"})`).join("; ")}.`,
+      );
+  } else {
+    set("hardware", "[]", "Hardware: none called out by model on the drawings");
+    notes.push("Hardware: no manufacturer model numbers found on the drawings — hardware list left empty.");
+  }
+  for (const b of hw.bare)
+    notes.push(
+      `Hardware: ${b.family} named without a model size (${b.sheets.join(", ") || "notes"}) — choose the model and add it to the hardware list.`,
+    );
 
   /* ------------------------------------------------------------- members */
   const members: Array<{ mark: string; kind: string; lines: Array<[string, string]>; missing: string[] }> = [];
@@ -807,6 +865,103 @@ export function convertDrawingData(text: string): DrawingDataResult {
   }
   out.push("");
   return { sheet: out.join("\n"), read, notes, members: members.length };
+}
+
+/** 66 ft 6 in · 66'-6" · 66' → feet */
+export function feetOf(s: string): number | undefined {
+  const m =
+    /(\d+(?:\.\d+)?)\s*(?:ft|feet|'|’)\s*-?\s*(?:(\d+(?:\.\d+)?)(?:\s*-?\s*(\d+)\/(\d+))?\s*(?:in\.?|"|”|''))?/i.exec(
+      s,
+    );
+  if (!m) return undefined;
+  const inch = (m[2] ? Number(m[2]) : 0) + (m[3] ? Number(m[3]) / Number(m[4]) : 0);
+  return Math.round((Number(m[1]) + inch / 12) * 100) / 100;
+}
+
+interface Geometry {
+  Lx?: number;
+  Ly?: number;
+  xFrom?: string;
+  yFrom?: string;
+  ridge: "X" | "Y";
+  pitch: number;
+  pitchFrom?: string;
+  roofRise?: number;
+  story?: number;
+  upperStory?: number;
+  notes: string[];
+}
+
+/** rows that are not overall building dimensions */
+const NOT_OVERALL =
+  /carport|deck|balcony|stair|offset|return|segment|partial|local|opening|partition|projection|extension|parapet|railing|clear|window|door|footing|detail|cantilever|existing-window|internal/i;
+
+/**
+ * Overall plan dimensions and heights figured on the drawings (geometry tables, plan text).
+ * L_x / L_y = the bounding rectangle of the main building from the longest figured
+ * longitudinal and cross dimensions; the ridge runs along the longer side.
+ */
+export function buildingGeometry(text: string, tables: Table[]): Geometry {
+  const notes: string[] = [];
+  const rows = tables
+    .filter((t) => t.header.length >= 2 && /dimension|value/i.test(t.header[1]))
+    .flatMap((t) => t.rows.map((r) => ({ label: r[0] ?? "", value: r[1] ?? "", where: t.heading })));
+  const cand = (re: RegExp) =>
+    rows
+      .filter((r) => re.test(r.label) && !NOT_OVERALL.test(r.label))
+      .map((r) => ({ ...r, ft: feetOf(r.value) }))
+      .filter((r): r is typeof r & { ft: number } => r.ft !== undefined && r.ft >= 8)
+      .sort((a, b) => b.ft - a.ft);
+  const xs = cand(/longitudinal|length|overall/i).filter((r) => !/width|cross/i.test(r.label));
+  const ys = cand(/width|cross|depth/i);
+  const g: Geometry = { ridge: "X", pitch: 4, notes };
+  if (xs.length && ys.length) {
+    g.Lx = xs[0].ft;
+    g.Ly = ys[0].ft;
+    g.xFrom = `${xs[0].label}, ${xs[0].where}`;
+    g.yFrom = `${ys[0].label}, ${ys[0].where}`;
+    g.ridge = g.Lx >= g.Ly ? "X" : "Y";
+    notes.push(
+      `Lateral geometry: L_x × L_y = ${g.Lx} × ${g.Ly} ft — the bounding rectangle of the longest figured dimensions (${xs[0].label}; ${ys[0].label}). Seismic weights and wind areas use this rectangle (conservative for an irregular plan); ridge taken along the longer side. VERIFY.`,
+    );
+  } else
+    notes.push(
+      "Lateral geometry: overall plan length and width not both figured on the drawings — L_x / L_y left at the HouseCalc defaults; enter them. VERIFY.",
+    );
+  // roof pitch: "4:12", "4/12", "4 in 12" on a pitch / slope line
+  const pitchLine = [...rows.map((r) => `${r.label} ${r.value}`), ...text.split(/\n/)].find(
+    (l) => /pitch|slope/i.test(l) && /\b\d+(?:\.\d+)?\s*(?::|\/|in)\s*12\b/i.test(l),
+  );
+  const pm = pitchLine && /\b(\d+(?:\.\d+)?)\s*(?::|\/|in)\s*12\b/i.exec(pitchLine);
+  if (pm && Number(pm[1]) > 0 && Number(pm[1]) <= 24) {
+    g.pitch = Number(pm[1]);
+    g.pitchFrom = pitchLine!.replace(/\|/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+  } else
+    notes.push(
+      "Lateral: roof pitch not given as a number on the drawings — 4:12 used for the roof rise and wind; enter it. VERIFY.",
+    );
+  const half = g.Lx !== undefined && g.Ly !== undefined ? (g.ridge === "X" ? g.Ly : g.Lx) / 2 : undefined;
+  if (half !== undefined) g.roofRise = Math.round((g.pitch / 12) * half * 100) / 100;
+  // story heights: explicit annotations only
+  const sh = (re: RegExp) => {
+    for (const l of text.split(/\n/)) {
+      const m = re.exec(l);
+      if (m) return feetOf(m[1]);
+    }
+    return undefined;
+  };
+  const ftin = String.raw`(\d+\s*(?:ft|')\s*-?\s*(?:\d+(?:-\d+\/\d+)?\s*(?:in\.?|"))?)`;
+  g.upperStory =
+    sh(new RegExp(`${ftin}\\s*upper[- ]story`, "i")) ??
+    sh(new RegExp(`upper[- ]story(?: height)?\\s*[:=|]?\\s*${ftin}`, "i"));
+  g.story =
+    sh(new RegExp(`(?:story height|floor[- ]to[- ]floor|first[- ]story(?: height)?)\\s*[:=|]?\\s*${ftin}`, "i")) ??
+    sh(new RegExp(`${ftin}\\s*(?:story height|floor[- ]to[- ]floor)`, "i"));
+  if (g.upperStory !== undefined)
+    notes.push(
+      `Lateral: upper story height ${g.upperStory} ft from the section annotation — confirm the endpoints (floor to floor). VERIFY.`,
+    );
+  return g;
 }
 
 const SPEC_HEADING =

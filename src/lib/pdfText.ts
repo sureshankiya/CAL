@@ -6,7 +6,7 @@
  * comments — those comments are read as text too.
  */
 
-import type { DrawingPageText } from "@/engine/project/drawingText";
+import { VERTICAL_TEXT, type DrawingPageText } from "@/engine/project/drawingText";
 import { loadPdfJs } from "./pdfStore";
 
 interface Item {
@@ -131,7 +131,7 @@ export async function pdfPagesText(
       if (an !== "timeout") comments = commentItems(an, flat, vert);
       out.push({
         page: n,
-        text: [...toLines(flat), ...toLines(vert)].join("\n"),
+        text: [...toLines(flat), ...(vert.length ? [VERTICAL_TEXT, ...toLines(vert)] : [])].join("\n"),
         items: items + comments,
         comments,
         timedOut: tc === "timeout" || undefined,
