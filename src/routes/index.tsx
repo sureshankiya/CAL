@@ -56,6 +56,7 @@ function Index() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [mdDialog, setMdDialog] = useState<"import" | "export">();
   const [exporting, setExporting] = useState<"pdf" | "docx">();
+  const [mdInitial, setMdInitial] = useState<{ text: string; name: string }>();
 
   useEffect(() => {
     void prepareDownloads();
@@ -343,12 +344,17 @@ function Index() {
       {mdDialog === "import" ? (
         <MarkdownImportDialog
           project={project}
-          onClose={() => setMdDialog(undefined)}
+          initial={mdInitial}
+          onClose={() => {
+            setMdDialog(undefined);
+            setMdInitial(undefined);
+          }}
           onApply={(p, summary) => {
             setProject(p);
             if (!p.members.some((m) => m.id === activeId)) setActiveId(p.members[0]?.id);
             setSheetKey("cover");
             setMdDialog(undefined);
+            setMdInitial(undefined);
             setMessage({ tone: "info", text: summary });
           }}
         />
@@ -405,7 +411,14 @@ function Index() {
               <MemberEditor p={project} m={active} onChange={updateMember} />
             </>
           ) : null}
-          <DrawingsPanel p={project} set={set} />
+          <DrawingsPanel
+            p={project}
+            set={set}
+            onReadText={(doc, name, info) => {
+              setMdInitial({ text: doc, name: `${name} (drawing text: ${info.found.length} items read)` });
+              setMdDialog("import");
+            }}
+          />
         </aside>
 
         <main className="min-w-0">

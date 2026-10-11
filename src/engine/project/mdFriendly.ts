@@ -606,6 +606,12 @@ function lumberSet(raw: string, prefix = ""): Resolved {
 
 export const MEMBER_FIELDS: MemberField[] = [
   {
+    labels: ["load from", "loads from", "carries", "reactions from"],
+    doc: "links: B-1 B; FJ-1 right × 2; B-2 A at 6 ft (support by letter, number, left / right or name)",
+    // resolved in markdown.ts once every member exists
+    to: () => ({ ok: false, error: "load-path links are resolved after the members" }),
+  },
+  {
     labels: ["description", "desc", "location", "remarks", "remark", "note", "notes", "use"],
     doc: "description",
     to: (raw) => one("description", unquote(raw)),

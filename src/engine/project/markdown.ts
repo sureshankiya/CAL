@@ -53,13 +53,14 @@ import {
   norm,
   pathValueWithUnits,
   projectField,
+  quantity,
   schemaKind,
   suggest,
   type Json,
   type Resolved,
 } from "./mdFriendly";
 import { newProject } from "./example";
-import { newMemberSpec, NEW_MEMBER_LABEL, newId, type NewMemberKind } from "./templates";
+import { newMemberSpec, NEW_MEMBER_LABEL, newId, supportCount, supportLabels, type NewMemberKind } from "./templates";
 import { memberSpecSchema, projectSchema, type MemberSpec, type Project } from "./schema";
 
 export const MD_EXT = ".housecalc.md";
@@ -440,6 +441,74 @@ function getPath(root: unknown, path: (string | number)[]): unknown {
   return o;
 }
 
+const LINK_LABEL = /^(loads? from|load path from|carries|supports? loads? from|reactions? from|supported members?)$/;
+const REPETITIVE = new Set(["joist", "rafter", "ceilingJoist", "ijoist", "wall", "woodTruss", "cfsWall", "masonryWall", "ledger"]);
+
+/**
+ * "B-1 B; FJ-1 right × 2; P-1 at 6 ft" → load-path links. Support by letter (A, B …), number
+ * (1-based), left / right, or the support's name (Plate, Ridge, Base). Point loads on posts,
+ * columns and pads; line loads from repetitive framing; otherwise "at x ft" gives a point load.
+ */
+function parseLinks(
+  raw: string,
+  target: MemberSpec,
+  all: MemberSpec[],
+): { links: MemberSpec["links"] } | { error: string } {
+  const out: MemberSpec["links"] = [];
+  for (const part of raw.split(/\s*[;,]\s*/).filter(Boolean)) {
+    const mk = /^(\S+)/.exec(part)![1];
+    const src = all.find((x) => x.mark.toLowerCase() === mk.toLowerCase());
+    if (!src) return { error: `"${mk}" is not a member mark in the sheet or the project` };
+    if (src.id === target.id) return { error: `${mk} cannot load itself` };
+    let rest = part.slice(mk.length).trim();
+    const at = /\bat\s+(.+)$/i.exec(rest);
+    if (at) rest = rest.slice(0, at.index).trim();
+    const fac = /(?:[×*]|\bx)\s*(\d+(?:\.\d+)?)\s*$/i.exec(rest);
+    if (fac) rest = rest.slice(0, fac.index).trim();
+    rest = rest.replace(/^(support|reaction|end)\s+/i, "").trim();
+    const n = supportCount(src);
+    const names = supportLabels(src);
+    if (n === 0) return { error: `${mk} (${src.kind}) has no reactions to carry` };
+    let sup = 0;
+    if (rest) {
+      const t = rest.toLowerCase();
+      if (/^[a-z]$/.test(t)) sup = t.charCodeAt(0) - 97;
+      else if (/^\d+$/.test(t)) sup = Number(t) - 1;
+      else if (/^left$/.test(t)) sup = 0;
+      else if (/^right$/.test(t)) sup = n - 1;
+      else {
+        const i = names.findIndex((x) => x.toLowerCase().startsWith(t));
+        if (i < 0) return { error: `${mk}: support "${rest}" — use ${names.join(", ")}` };
+        sup = i;
+      }
+    } else if (n > 1 && !["post", "steelColumn", "basePlate"].includes(src.kind))
+      return { error: `${mk}: say which support (${names.join(", ")}), e.g. "${mk} ${names[n - 1]}"` };
+    if (sup < 0 || sup >= n) return { error: `${mk}: support "${rest}" — ${mk} has ${names.join(", ")}` };
+    let x: number | undefined;
+    if (at) {
+      const q = quantity(at[1]);
+      if (!q) return { error: `${mk}: position "${at[1]}" — expected e.g. at 6 ft` };
+      x = q.u === "in" || q.u === '"' ? q.v / 12 : q.v;
+    }
+    const point =
+      x !== undefined ||
+      ["post", "steelColumn", "basePlate"].includes(target.kind) ||
+      (target.kind === "footing" && target.type === "pad");
+    if (!point && !REPETITIVE.has(src.kind) && !(src.kind === "steelColumn" && sup === 0))
+      return { error: `${mk} is a ${src.kind} — give the position on ${target.mark}: "${mk} ${names[sup]} at 6 ft"` };
+    out.push({
+      id: newId("k"),
+      kind: point ? "point" : "line",
+      sourceId: src.id,
+      support: sup,
+      label: `${src.mark} ${names[sup]}`,
+      ...(point ? { x: x ?? 0 } : {}),
+      factor: fac ? Number(fac[1]) : 1,
+    });
+  }
+  return { links: out };
+}
+
 const memberFields = new Map<string, Set<string>>();
 /** field names of a member kind (schema) */
 function fieldsOf(kind: string): Set<string> {
@@ -624,6 +693,9 @@ export function applyMarkdown(current: Project, text: string, opts: { mode?: "fi
     );
   };
 
+  /** "Load from: B-1 B" lines, resolved once every member of the sheet exists */
+  const linkLines: Array<{ idx: number; sec: Section; e: Entry }> = [];
+
   // members: after the project section so new members see the sheet's structures / assemblies
   for (const sec of sections.filter((x) => x.type === "member")) {
     const mark = sec.mark!;
@@ -695,6 +767,10 @@ export function applyMarkdown(current: Project, text: string, opts: { mode?: "fi
           report.errors.push(`Line ${e.line}: mark "${String(e.value)}" differs from the section heading "${mark}"`);
         continue;
       }
+      if (LINK_LABEL.test(norm(e.key))) {
+        linkLines.push({ idx, sec, e });
+        continue;
+      }
       if (/bearing/i.test(e.key)) gaveBearing = true;
       const jsonish = /^\s*[[{"]/.test(e.raw) || SIMPLE.test(e.raw.trim());
       const exact = !!e.path && e.path.length === 1 && fieldsOf(kind).has(e.path[0]);
@@ -764,6 +840,28 @@ export function applyMarkdown(current: Project, text: string, opts: { mode?: "fi
       );
     }
     if (typeof m.id !== "string" || !m.id || draft.members.some((x, j) => j !== idx && x.id === m.id)) m.id = newId();
+  }
+
+  // load-path links by mark
+  for (const { idx, sec, e } of linkLines) {
+    const m = draft.members[idx] as unknown as MemberSpec;
+    const got = parseLinks(e.raw, m, draft.members);
+    if ("error" in got) {
+      report.errors.push(`${where(sec, e)}: ${e.key}: ${got.error}`);
+      continue;
+    }
+    const links = [...(m.links ?? [])];
+    for (const l of got.links) {
+      const same = links.findIndex((x) => x.sourceId === l.sourceId && x.support === l.support);
+      if (same >= 0) links[same] = { ...l, id: links[same].id };
+      else links.push(l);
+    }
+    (m as { links: typeof links }).links = links;
+    placed.push({ path: ["members", idx, "links"], label: `${m.mark} ${e.key}` });
+    report.converted.push(
+      `${where(sec, e)}: ${e.key}: ${e.raw} → ${got.links.map((l) => `${l.label} (${l.kind}${l.factor !== 1 ? ` × ${l.factor}` : ""})`).join("; ")}`,
+    );
+    report.applied++;
   }
 
   // template defaults kept for new members

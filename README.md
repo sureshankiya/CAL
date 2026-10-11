@@ -82,6 +82,21 @@ bun run build:static # browser-only single-page build (dist-artifact/housecalc.h
   - Members are matched by mark: existing marks are updated, new marks are added from the standard template for the kind, then the sheet's values applied. A list given in the sheet replaces the list.
   - **Check sheet** reports the values filled, members added / updated, template defaults used and keys that are not fields. Nothing is applied while a required field is missing or a value is invalid; the report names each one.
   - Apply to the current project, or start a new project from the sheet.
+  - **Drawing PDFs without AI.** In Drawings & review table, **Read text → calc** reads the text layer of every
+    page of an uploaded drawing PDF in the browser (nothing is sent anywhere): design criteria in the notes, beam /
+    wall / footing schedules (beam sizes are matched to the mark on the neighbouring line, schedule rows win over
+    plan labels), joist callouts, posts, HSS sizes, window / door sizes and the typical header schedule. It writes a
+    drawing-data document, converts it and opens it in Fill from .md for review. What the text layer cannot give
+    (outlined or scanned pages, a fraction lost from "HSS 6X6X1") is listed as an open item, not completed.
+  - **Everything from the drawings goes into the calculation:** members and sizes, deflection limits, dead loads,
+    the load path by mark (carport beam → carport posts → carport pads; beams "supported by posts" → posts → the pads
+    at those posts; HSS posts → their pads), carport post height from the clear-height annotation, slab (thickness,
+    reinforcement, vapor retarder, base, joints), concrete cover, soil-bearing source, and the drawing specifications
+    (foundation, concrete / rebar, lap splices, slab, materials, sheathing, framing / fastening, installation,
+    hold-down and connection notes) printed on the general notes sheet. Conflicts and open items go to the
+    **import log** in the Project panel (shown in the app, not printed); each member lists its REQUIRED INPUT.
+  - **Load path in a sheet:** `- Load from: B-1 B` (support by letter, number, left / right or name, `× 2`
+    factor, `at 6 ft` for a point load on a beam or wall) links a member to another member's reaction by mark.
   - **Plain-language sheets.** Besides dotted paths, the reader takes engineering labels and units:
     `## Project` / `## Design criteria` with `- Wind speed: 95 mph`, `- Allowable soil bearing: 1,500 psf`,
     `- SDS / SD1: 1.10 / 0.62`, `| Roof live load | 20 | psf |` tables; one heading per member

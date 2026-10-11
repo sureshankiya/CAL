@@ -167,4 +167,65 @@ describe("drawing-data documents", () => {
     ]);
     expect(c.notes.some((n) => /Openings without a size .*Master Existing windows/.test(n))).toBe(true);
   });
+
+  it("puts the drawing specifications, slab, cover, carport load path and open items into the project", () => {
+    const extra = `${DOC}
+### 5.2 Foundation notes - S-1
+
+Undisturbed soil; minimum 12 in embedment U.N.O.; minimum 3 in cover against earth. No allowable soil bearing pressure or geotechnical parameters supplied.
+
+### 5.6 Slab/base and generic footing details - S-8
+
+- Slab: 1 in deep saw cuts, 1/4 in maximum width, maximum 15 ft interior joint spacing; 4 in aggregate.
+- Both generic details: 3-1/2 in slab with #3 at 18 in each way or \`6x6/6x6 WWM\`; 10 mil Visqueen.
+
+### 7.4 Carport
+
+| Mark | Size | Material | Support/notes | Source |
+|---|---|---|---|---|
+| Carport unmarked | (2) 1-3/4 x 11-7/8 in LVL | Not separately stated | Flush, 6x6 posts/cantilever | S-7.2 |
+
+| Feature | Dimension |
+|---|---|
+| Carport post/support dimension | 16 ft 9 in; verify exact support axes |
+
+| Mark | Size/description | Reinforcement | Source/status |
+|---|---|---|---|
+| F1 carport | 24 x 24 x 12 in | (3) #4 each way | Four pads S-7 |
+
+- Carport: four new 6x6 posts S-7.1 and four F1 pads S-7.
+- Carport S-7.3: 9 ft clear-height annotation.
+
+## 12. Conflicts and missing inputs
+
+| ID | Unresolved issue | Source evidence / needed action for calculations |
+|---|---|---|
+| C01 | Concrete strength | 4500 vs 2500 psi; establish per element |
+`;
+    const c = convertDrawingData(extra);
+    const r = applyMarkdown(newProject(), c.sheet, { mode: "new" });
+    expect(r.report.errors).toEqual([]);
+    if (!r.ok) return;
+    const p = r.project;
+    expect(p.slab).toMatchObject({
+      thickness: 3.5,
+      vaporRetarder: "10 mil",
+      reinforcement: "#3 @ 18 in. o.c. each way or 6x6/6x6 WWM",
+    });
+    expect(p.criteria.concrete.cover).toBe(3);
+    expect(p.criteria.soil.source).toMatch(/Presumptive/);
+    expect(p.notes).toMatch(/Foundation notes:\n- Undisturbed soil/);
+    expect(p.notes).not.toMatch(/open items/i);
+    expect(p.importLog).toEqual(
+      expect.arrayContaining(["C01 — Concrete strength: 4500 vs 2500 psi; establish per element"]),
+    );
+    const cp = p.members.find((m) => m.mark === "CPB1")!;
+    expect(cp.kind === "beam" && cp.spans).toEqual([16.75]);
+    const p2 = p.members.find((m) => m.mark === "P-2")!;
+    expect(p2.kind === "post" && p2.height).toBe(9);
+    expect(p2.links.map((l) => l.label)).toEqual(["CPB1 B"]);
+    expect(p.members.find((m) => m.mark === "F1-CP")!.links.map((l) => l.label)).toEqual(["P-2 Base"]);
+    const d = designProject(p);
+    expect(d.outcomes.get(p2.id)?.error).toBeUndefined();
+  });
 });

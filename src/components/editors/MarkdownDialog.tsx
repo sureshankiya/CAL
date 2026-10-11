@@ -5,7 +5,7 @@
  * which is also the template.
  */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { saveFile, saveMessage } from "@/lib/download";
 import { STARTER_SHEET, labelReference } from "@/engine/project/mdFriendly";
 import {
@@ -48,10 +48,13 @@ function Shell({ title, onClose, children }: { title: string; onClose: () => voi
 
 export function MarkdownImportDialog({
   project,
+  initial,
   onApply,
   onClose,
 }: {
   project: Project;
+  /** a document to load on open (drawing text read in the Drawings panel) */
+  initial?: { text: string; name: string };
   onApply: (p: Project, summary: string) => void;
   onClose: () => void;
 }) {
@@ -78,6 +81,13 @@ export function MarkdownImportDialog({
     else check(t);
   };
   const r = result?.report;
+  useEffect(() => {
+    if (!initial) return;
+    setName(initial.name);
+    load(initial.text);
+    // load once per document handed in
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial?.text]);
 
   return (
     <Shell title="Fill project from a Markdown sheet (.md)" onClose={onClose}>
@@ -212,7 +222,7 @@ export function MarkdownImportDialog({
             const rp = result.report;
             onApply(
               result.project,
-              `Filled from ${name ?? "the pasted sheet"}: ${rp.applied} values; ${rp.added.length} members added, ${rp.updated.length} updated${rp.ignored.length ? `; ${rp.ignored.length} keys ignored` : ""}.${converted ? ` Converted from drawing data — ${converted.notes.length} open items are in the project notes; members list their REQUIRED INPUT.` : ""}`,
+              `Filled from ${name ?? "the pasted sheet"}: ${rp.applied} values; ${rp.added.length} members added, ${rp.updated.length} updated${rp.ignored.length ? `; ${rp.ignored.length} keys ignored` : ""}.${converted ? ` Converted from drawing data — ${converted.notes.length} open items are in the import log (Project panel, not printed); members list their REQUIRED INPUT.` : ""}`,
             );
           }}
         >

@@ -202,6 +202,9 @@ export function convertDrawingData(text: string): DrawingDataResult {
       if (/site/.test(labels[i] ?? "")) set("criteria.seismic.siteClass", v, `Site class: ${v}`);
     });
   }
+  const sc = find(/^site class$/i);
+  if (sc && /^[A-F]$/.test(sc.value.trim()))
+    set("criteria.seismic.siteClass", sc.value.trim(), `Site class: ${sc.value.trim()}`);
   const sd = kv.find((r) => /\bSD[S1]\b/.test(r.label));
   if (sd) {
     const labels = sd.label.split("/").map((s) => s.trim());
@@ -318,7 +321,7 @@ export function convertDrawingData(text: string): DrawingDataResult {
       const roof = /^RB|roof/i.test(mark + note) || /carport/i.test(raw);
       const lines: Array<[string, string]> = [];
       const scl = /\((\d)\)\s*(\d+(?:-\d+\/\d+)?)\s*x\s*(\d+(?:-\d+\/\d+)?)\s*(?:in\.?)?\s*(LVL|LSL|PSL)/i.exec(size);
-      const saw = /\((\d)\)\s*(\d+x\d+)/i.exec(size);
+      const saw = /(?:\((\d)\)\s*)?\b(\d{1,2}x\d{1,2})\b/i.exec(size);
       if (scl) {
         const prod = scl[4].toUpperCase();
         const E = /(\d\.\d+)E/.exec(matTxt)?.[1];
@@ -333,7 +336,13 @@ export function convertDrawingData(text: string): DrawingDataResult {
         const l = lumber(matTxt)!;
         lines.push([
           "material",
-          JSON.stringify({ kind: "sawn", species: l.species, grade: l.grade, size: saw[2], plies: Number(saw[1]) }),
+          JSON.stringify({
+            kind: "sawn",
+            species: l.species,
+            grade: l.grade,
+            size: saw[2],
+            plies: Number(saw[1] ?? 1),
+          }),
         ]);
       } else {
         notes.push(`${mark}: size "${size}" not recognised — member skipped.`);
@@ -429,11 +438,14 @@ export function convertDrawingData(text: string): DrawingDataResult {
     );
 
   // footings
-  const ftgT = tables.find(
-    (t) => /^mark$/i.test(t.header[0]) && /size/i.test(t.header.join(" ")) && /reinforc/i.test(t.header.join(" ")),
-  );
-  if (ftgT) {
-    for (const r of ftgT.rows) {
+  // every footing schedule table (house, carport …), as one list of rows
+  const ftgRows = tables
+    .filter(
+      (t) => /^mark$/i.test(t.header[0]) && /size/i.test(t.header.join(" ")) && /reinforc/i.test(t.header.join(" ")),
+    )
+    .flatMap((t) => t.rows);
+  if (ftgRows.length) {
+    for (const r of ftgRows) {
       const [raw, size = "", reinf = ""] = r;
       const base = raw.replace(/\s.*$/, "");
       if (!/^F\d+$/i.test(base)) {
@@ -462,7 +474,11 @@ export function convertDrawingData(text: string): DrawingDataResult {
           mark,
           "footing",
           lines,
-          ["post load (links / extra)", "depth below grade (18 in. template)"],
+          [
+            "post load (links / extra)",
+            "depth below grade (18 in. template)",
+            ...(bars ? [] : ["reinforcement (not given — template (3) #4 each way)"]),
+          ],
           `${raw}: ${size}; ${reinf}`,
         );
       } else {
@@ -504,6 +520,21 @@ export function convertDrawingData(text: string): DrawingDataResult {
       ["post height", "load from beams (links / extra)"],
       "New 6x6 wood posts (DF-L No.1 assumed; drawings: DF No.2 or better)",
     );
+  // carport posts: own member, with the clear height printed on the carport section
+  if (/carport[^\n]*new 6x6 posts|new 6x6 posts[^\n]*S-7/i.test(text)) {
+    const clear = /(\d+)\s*ft\s*clear[- ]height/i.exec(text);
+    add(
+      "P-2",
+      "post",
+      [["levelId", "L1"], ...(clear ? ([["height", clear[1]]] as Array<[string, string]>) : [])],
+      [
+        clear ? `confirm post height (${clear[1]} ft clear height used)` : "post height",
+        "load from beams (links / extra)",
+      ],
+      "Carport 6x6 posts (DF-L No.1 assumed; drawings: DF No.2 or better)",
+    );
+    if (clear) read.push(`P-2: carport post height ${clear[1]} ft (clear height, carport section)`);
+  }
   const hss = /HSS\s*(\d+x\d+x\d+\/\d+)/i.exec(text);
   if (hss)
     add(
@@ -665,10 +696,97 @@ export function convertDrawingData(text: string): DrawingDataResult {
 
   // conflicts listed by the document itself
   const cT = tables.find((t) => /^id$/i.test(t.header[0]) && /issue/i.test(t.header.join(" ")));
-  if (cT)
-    notes.push(
-      `Document lists ${cT.rows.length} unresolved conflicts / missing inputs (${cT.rows.map((r) => r[0]).join(", ")}) — resolve before issue.`,
+  if (cT) for (const r of cT.rows) notes.push(`${r[0]} — ${r[1]}${r[2] ? `: ${r[2]}` : ""}`);
+
+  /* ------------------------------------------------------------ load path */
+  const byMark = (mk: string) => members.find((m) => m.mark === mk);
+  /** add lines to a member and drop the pending inputs they answer */
+  const extend = (mk: string, lines: Array<[string, string]>, answered?: RegExp, pendingNote?: string) => {
+    const m = byMark(mk);
+    if (!m) return false;
+    m.lines.push(...lines);
+    if (answered) m.missing = m.missing.filter((x) => !answered.test(x));
+    if (pendingNote) m.missing.push(pendingNote);
+    const i = m.lines.findIndex(([k]) => k === "pendingInputs");
+    if (i >= 0) m.lines[i] = ["pendingInputs", JSON.stringify(m.missing)];
+    return true;
+  };
+  const beamWithPosts = (level: "L1" | "L2") =>
+    members.find(
+      (m) =>
+        m.kind === "beam" &&
+        !/^CPB|^H-/.test(m.mark) &&
+        m.lines.some(([k, v]) => k === "levelId" && v === level) &&
+        /posts?\b/i.test(m.lines.find(([k]) => k === "description")?.[1] ?? ""),
     );
+  const linkTo = (target: string, from: string, why: string) => {
+    if (!byMark(target) || !byMark(from.split(" ")[0])) return;
+    extend(target, [["Load from", from]], /load from|reactions/i, `confirm load path (${from} → ${target}: ${why})`);
+    read.push(`Load path: ${from} → ${target} (${why})`);
+  };
+  // carport: beam → posts → pads
+  const cpBeam = members.find((m) => /^CPB/.test(m.mark));
+  if (cpBeam) linkTo("P-2", `${cpBeam.mark} B`, "carport beam on the carport posts");
+  linkTo("F1-CP", "P-2", "carport posts on the carport pads");
+  // house: flush beams "supported by posts" → posts; HSS posts → F4 pads at the new HSS posts
+  const b1 = beamWithPosts("L1");
+  if (b1) linkTo("P-1", `${b1.mark} B`, `${b1.mark} schedule note "posts" — typical post; confirm the governing beam`);
+  const b2 = beamWithPosts("L2");
+  if (b2 && byMark("SC-1")) linkTo("SC-1", `${b2.mark} B`, `${b2.mark} schedule note "posts"; HSS posts on S-4.1`);
+  const hssPad = ftgRows.find((r) => /HSS/i.test(r.join(" ")) && /pad/i.test(r.join(" ")));
+  if (hssPad) linkTo(hssPad[0].replace(/\s.*$/, ""), "SC-1 Base", "pads at the new HSS posts");
+  if (/F1\s*\/\s*new[- ]post|F1[^\n]{0,40}new posts?/i.test(text))
+    linkTo("F1", "P-1", "F1 pads at the new post positions");
+
+  /* ------------------------------------------------- slab, cover, soil */
+  const slabTxt = text
+    .split(/\n/)
+    .filter((l) => /slab/i.test(l) && !/^\s*\|?\s*C\d\d/.test(l))
+    .join(" ");
+  if (slabTxt) {
+    const thick = [...slabTxt.matchAll(/(\d+(?:-\d+\/\d+)?)\s*in\.?\s*slab/gi)].map((m) => m[1]);
+    const generic = /both generic details:\s*(\d+(?:-\d+\/\d+)?)\s*in\s*slab/i.exec(text)?.[1];
+    const t = generic ?? thick[0];
+    if (t) {
+      const reinf = /#(\d)\s*at\s*(\d+)\s*in\.?\s*each way/i.exec(text);
+      const wwm = /or\s*`?(\d+x\d+\s*\/\s*\d+x\d+\s*WWM|\d+x\d+[-\w.]*\s*WW[FM])`?/i.exec(text);
+      const mils = [...text.matchAll(/(\d+)\s*mil\b/gi)].map((m) => Number(m[1]));
+      const base = /(\d+)\s*in\.?\s*(?:compacted\s*)?(aggregate|crushed (?:drain )?rock|granular fill|sand)/i.exec(
+        text,
+      );
+      const joint = /(\d+)\s*in\.?\s*deep saw cuts[^;\n]*?maximum\s*(\d+)\s*ft[^;\n]*/i.exec(text);
+      const thickness = t.includes("-")
+        ? Number(t.split("-")[0]) + Number(t.split("-")[1].split("/")[0]) / Number(t.split("/")[1])
+        : Number(t);
+      const slab = {
+        thickness,
+        reinforcement:
+          [reinf ? `#${reinf[1]} @ ${reinf[2]} in. o.c. each way` : "", wwm ? wwm[1].replace(/\s+/g, " ") : ""]
+            .filter(Boolean)
+            .join(" or ") || "per plans",
+        vaporRetarder: mils.length ? `${Math.max(...mils)} mil` : "per plans",
+        base: base ? `${base[1]} in. ${base[2]}` : "per plans",
+        joints: joint ? `${joint[1]} in. deep saw cuts at ${joint[2]} ft maximum spacing` : "per plans",
+      };
+      set("slab", JSON.stringify(slab), `Slab: ${t} in., ${slab.reinforcement}; ${slab.vaporRetarder}; ${slab.base}`);
+      if (new Set([...thick, t]).size > 1 || new Set(mils).size > 1)
+        notes.push(
+          `Slab: drawings give ${[...new Set(thick)].join(" / ")} in. slabs and ${[...new Set(mils)].join(" / ")} mil vapor retarders — ${t} in. / ${slab.vaporRetarder} (typical slab detail) used in the notes. VERIFY.`,
+        );
+    }
+  }
+  const cover = /minimum\s*(\d+)\s*in\.?\s*cover/i.exec(text)?.[1];
+  if (cover) set("criteria.concrete.cover", cover, `Concrete cover against earth: ${cover} in.`);
+  if (!soil && /no allowable soil bearing/i.test(text))
+    set(
+      "criteria.soil.source",
+      q("Presumptive load-bearing value, CBC Table 1806.2 (no geotechnical report)"),
+      "Soil bearing source: presumptive (no geotechnical report)",
+    );
+
+  /* --------------------------------------- specifications from the drawings */
+  const specs = specNotes(text);
+  if (specs.length) read.push(`Drawing specifications: ${specs.length} notes (general notes sheet)`);
 
   /* ---------------------------------------------------------------- sheet */
   const out: string[] = [
@@ -681,11 +799,81 @@ export function convertDrawingData(text: string): DrawingDataResult {
     "",
   ];
   for (const [k, val] of proj) out.push(`- ${k}: ${val}`);
-  out.push(`- notes: ${q(["Converted from drawing data — open items:", ...notes.map((n) => `- ${n}`)].join("\n"))}`);
+  if (specs.length) out.push(`- notes: ${q(specs.join("\n"))}`);
+  out.push(`- importLog: ${JSON.stringify(notes)}`);
   for (const m of members) {
     out.push("", `## Member ${m.mark} (${m.kind})`, "");
     for (const [k, val] of m.lines) out.push(`- ${k}: ${val}`);
   }
   out.push("");
   return { sheet: out.join("\n"), read, notes, members: members.length };
+}
+
+const SPEC_HEADING =
+  /foundation notes|concrete|rebar|lap.?splice|stem.?wall|slab|material register|sheathing|fastening|framing rules|header schedule|installation|holdowns?|connections|additional source notes|truss criteria|deflection and truss/i;
+const NOT_SPEC = /conflict|appendix|extraction|inventory|readiness|provenance|scope|page \d/i;
+
+/** Specification text of the drawings (notes, materials, concrete, nailing, hardware), one line per item. */
+export function specNotes(text: string): string[] {
+  const out: string[] = [];
+  let take = false;
+  let head = "";
+  let header: string[] | undefined;
+  let inFence = false;
+  for (const ln of text.replace(/\r\n?/g, "\n").split("\n")) {
+    if (/^\s*```/.test(ln)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    const h = /^(#{2,4})\s+(.+)$/.exec(ln);
+    if (h) {
+      head = clean(h[2])
+        .replace(/^\d+(\.\d+)*\.?\s+/, "")
+        .replace(/\s+-\s+S-[\d.]+.*$/, "");
+      take = SPEC_HEADING.test(head) && !NOT_SPEC.test(head);
+      header = undefined;
+      if (take) out.push(`${head}:`);
+      continue;
+    }
+    if (!take) continue;
+    const t = ln.trim();
+    if (!t) {
+      header = undefined;
+      continue;
+    }
+    if (/^\|.*\|$/.test(t)) {
+      const cells = t
+        .replace(/^\||\|$/g, "")
+        .split("|")
+        .map(clean);
+      if (cells.every((c) => /^:?-{2,}:?$/.test(c))) continue;
+      if (!header) {
+        header = cells;
+        continue;
+      }
+      const row =
+        cells.length > 2 && header.length === cells.length && header.slice(1).every((x) => x.length < 12)
+          ? `${cells[0]}: ${cells
+              .slice(1)
+              .map((c, i) => `${header![i + 1]} ${c}`)
+              .join(", ")}`
+          : `${cells[0]}: ${cells
+              .slice(1)
+              .filter((c) => c && c !== "-")
+              .join("; ")}`;
+      out.push(`- ${row}`);
+      continue;
+    }
+    out.push(`- ${clean(t.replace(/^[-*]\s+/, ""))}`);
+  }
+  // drop headings with nothing under them
+  return out.filter(
+    (l, i) =>
+      !(
+        l.endsWith(":") &&
+        !l.startsWith("-") &&
+        (out[i + 1] === undefined || (out[i + 1].endsWith(":") && !out[i + 1].startsWith("-")))
+      ),
+  );
 }

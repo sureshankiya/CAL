@@ -30,6 +30,7 @@ import {
   Select,
   SmallButton,
   TextInput,
+  inputCls,
 } from "./fields";
 
 type SetProject = (fn: (p: Project) => Project) => void;
@@ -91,6 +92,23 @@ export function ProjectInfoPanel({ p, set }: { p: Project; set: SetProject }) {
       <Field label="Date">
         <TextInput type="date" value={p.info.date} onChange={(v) => info("date", v)} />
       </Field>
+      <Field label="Project notes" hint="Printed on the general notes sheet (drawing specifications, project-specific notes)">
+        <textarea
+          className={`${inputCls} h-28 font-mono text-xs`}
+          value={p.notes}
+          onChange={(e) => set((x) => ({ ...x, notes: e.target.value }))}
+        />
+      </Field>
+      {p.importLog?.length ? (
+        <Collapsible title={`Drawing import — open items (${p.importLog.length}, not printed)`}>
+          <ul className="list-disc space-y-1 pl-4 text-xs">
+            {p.importLog.map((x, i) => (
+              <li key={i}>{x}</li>
+            ))}
+          </ul>
+          <SmallButton onClick={() => set((x) => ({ ...x, importLog: undefined }))}>Clear (resolved)</SmallButton>
+        </Collapsible>
+      ) : null}
     </Section>
   );
 }

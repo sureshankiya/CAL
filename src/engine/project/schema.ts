@@ -985,6 +985,8 @@ export const projectSchema = z.object({
   drawings: z.array(drawingSchema).default([]),
   review: z.array(reviewItemSchema).default([]),
   notes: z.string().default(""),
+  /** drawing import: open items, conflicts and assumptions (shown in the app, not printed) */
+  importLog: z.array(z.string()).optional(),
   /** slab-on-grade specification for the notes (thickened slabs are checked as pads) */
   slab: z
     .object({

@@ -14,14 +14,44 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { applyReviewItem, newId, targetFields, type Project, type ReviewItem } from "@/engine/project";
 import { deletePdf, getPdf, loadPdfJs, putPdf } from "@/lib/pdfStore";
+import { pdfPagesText } from "@/lib/pdfText";
+import { readDrawingText } from "@/engine/project/drawingText";
 import { AddButton, Collapsible, Field, Grid, Hint, Select, SmallButton, TextInput } from "../editors/fields";
 
 type SetProject = (fn: (p: Project) => Project) => void;
 
-export function DrawingsPanel({ p, set }: { p: Project; set: SetProject }) {
+export function DrawingsPanel({
+  p,
+  set,
+  onReadText,
+}: {
+  p: Project;
+  set: SetProject;
+  /** the drawing's text read into a drawing-data document → the Fill from .md dialog */
+  onReadText?: (doc: string, name: string, info: { found: string[]; issues: string[] }) => void;
+}) {
   const [viewing, setViewing] = useState<{ id: string; page: number } | undefined>();
   const [status, setStatus] = useState<string | undefined>();
   const fileRef = useRef<HTMLInputElement>(null);
+
+  async function readText(id: string, name: string) {
+    try {
+      const data = await getPdf(id);
+      if (!data) throw new Error("this drawing is not stored in this browser — upload the PDF again");
+      const pages = await pdfPagesText(data, (n, of) => setStatus(`Reading the text of ${name}: page ${n} / ${of} …`));
+      const sheets = p.drawings.find((d) => d.id === id)?.sheets ?? {};
+      const r = readDrawingText(
+        name,
+        pages.map((pg) => ({ ...pg, sheet: sheets[String(pg.page)] || undefined })),
+      );
+      setStatus(
+        `${name}: ${r.found.length} items read from the text of ${pages.length} pages${r.issues.length ? `, ${r.issues.length} to check` : ""}.`,
+      );
+      onReadText?.(r.document, name, { found: r.found, issues: r.issues });
+    } catch (e) {
+      setStatus(`Could not read the text of ${name}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
 
   async function upload(f: File) {
     try {
@@ -70,6 +100,14 @@ export function DrawingsPanel({ p, set }: { p: Project; set: SetProject }) {
             >
               {d.name} <span className="text-muted-foreground">({d.pages} p.)</span>
             </button>
+            {onReadText ? (
+              <SmallButton
+                title="Read the drawing's text (schedules, notes, callouts) into an input sheet — in the browser, no AI"
+                onClick={() => void readText(d.id, d.name)}
+              >
+                Read text → calc
+              </SmallButton>
+            ) : null}
             <SmallButton
               tone="danger"
               title="Remove drawing"
