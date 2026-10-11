@@ -20,6 +20,72 @@ import { AddButton, Collapsible, Field, Grid, Hint, Select, SmallButton, TextInp
 
 type SetProject = (fn: (p: Project) => Project) => void;
 
+interface ReadResult {
+  id: string;
+  name: string;
+  doc: string;
+  found: string[];
+  issues: string[];
+  pages: number;
+  withText: number;
+  emptyPages: number[];
+  comments: number;
+  timedOut: number[];
+}
+
+const pageList = (n: number[]) => (n.length > 12 ? `${n.slice(0, 12).join(", ")} …` : n.join(", "));
+
+/** what the text reader got from the drawing — stays visible after the dialog is closed */
+function ReadSummary({ r, onOpen }: { r: ReadResult; onOpen: () => void }) {
+  const none = r.withText === 0;
+  return (
+    <div className="space-y-1 rounded-md border border-border px-2 py-1.5 text-xs">
+      <div className="font-medium">
+        {r.name}: text found on {r.withText} of {r.pages} pages
+        {r.comments ? ` (${r.comments} AutoCAD text comments)` : ""} — {r.found.length} items read
+        {r.issues.length ? `, ${r.issues.length} to check` : ""}.
+      </div>
+      {none ? (
+        <div>
+          No readable text in this PDF: the lettering is drawn as lines (outlined / SHX text or a scan), so there is
+          nothing to read without OCR. Use <b>Read this page with AI</b> in the drawing viewer, record values in the
+          review table, or load the drawing-data .md through <b>Fill from .md</b>.
+        </div>
+      ) : r.found.length === 0 ? (
+        <div>
+          Text was found but no schedules, member marks or criteria were recognised in it. Open the sheet to see what
+          was read, then add the values by hand.
+        </div>
+      ) : null}
+      {r.emptyPages.length && !none ? (
+        <div className="text-muted-foreground">
+          No text on page(s) {pageList(r.emptyPages)} — lettering there is drawn as lines; enter those values by hand.
+        </div>
+      ) : null}
+      {r.timedOut.length ? (
+        <div className="text-muted-foreground">Page(s) {pageList(r.timedOut)} took too long and were skipped.</div>
+      ) : null}
+      {r.found.length ? (
+        <ul className="list-disc pl-4 text-muted-foreground">
+          {r.found.slice(0, 12).map((f, i) => (
+            <li key={i}>{f}</li>
+          ))}
+          {r.found.length > 12 ? <li>… {r.found.length - 12} more</li> : null}
+        </ul>
+      ) : null}
+      {!none ? (
+        <button
+          type="button"
+          className="rounded border border-border px-2 py-0.5 font-medium hover:bg-muted"
+          onClick={onOpen}
+        >
+          Open the sheet read from this drawing
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function DrawingsPanel({
   p,
   set,
@@ -32,24 +98,45 @@ export function DrawingsPanel({
 }) {
   const [viewing, setViewing] = useState<{ id: string; page: number } | undefined>();
   const [status, setStatus] = useState<string | undefined>();
+  const [busy, setBusy] = useState<string | undefined>();
+  const [result, setResult] = useState<ReadResult | undefined>();
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function readText(id: string, name: string) {
+    if (busy) return;
+    setBusy(id);
+    setResult(undefined);
+    setStatus(`Reading the text of ${name} …`);
     try {
       const data = await getPdf(id);
       if (!data) throw new Error("this drawing is not stored in this browser — upload the PDF again");
-      const pages = await pdfPagesText(data, (n, of) => setStatus(`Reading the text of ${name}: page ${n} / ${of} …`));
+      const pages = await pdfPagesText(data, (n, of) => setStatus(`Reading the text of ${name}: page ${n} of ${of} …`));
       const sheets = p.drawings.find((d) => d.id === id)?.sheets ?? {};
       const r = readDrawingText(
         name,
         pages.map((pg) => ({ ...pg, sheet: sheets[String(pg.page)] || undefined })),
       );
-      setStatus(
-        `${name}: ${r.found.length} items read from the text of ${pages.length} pages${r.issues.length ? `, ${r.issues.length} to check` : ""}.`,
-      );
-      onReadText?.(r.document, name, { found: r.found, issues: r.issues });
+      const withText = pages.filter((pg) => !r.emptyPages.includes(pg.page)).length;
+      const comments = pages.reduce((a, pg) => a + pg.comments, 0);
+      const timedOut = pages.filter((pg) => pg.timedOut).map((pg) => pg.page);
+      setStatus(undefined);
+      setResult({
+        id,
+        name,
+        doc: r.document,
+        found: r.found,
+        issues: r.issues,
+        pages: pages.length,
+        withText,
+        emptyPages: r.emptyPages,
+        comments,
+        timedOut,
+      });
+      if (r.found.length) onReadText?.(r.document, name, { found: r.found, issues: r.issues });
     } catch (e) {
       setStatus(`Could not read the text of ${name}: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusy(undefined);
     }
   }
 
@@ -101,12 +188,15 @@ export function DrawingsPanel({
               {d.name} <span className="text-muted-foreground">({d.pages} p.)</span>
             </button>
             {onReadText ? (
-              <SmallButton
+              <button
+                type="button"
+                disabled={!!busy}
                 title="Read the drawing's text (schedules, notes, callouts) into an input sheet — in the browser, no AI"
                 onClick={() => void readText(d.id, d.name)}
+                className="rounded border border-border px-2 py-0.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
               >
-                Read text → calc
-              </SmallButton>
+                {busy === d.id ? "Reading …" : "Read text → calc"}
+              </button>
             ) : null}
             <SmallButton
               tone="danger"
@@ -125,6 +215,7 @@ export function DrawingsPanel({
           </li>
         ))}
       </ul>
+      {result ? <ReadSummary r={result} onOpen={() => onReadText?.(result.doc, result.name, result)} /> : null}
       <ReviewTable p={p} set={set} />
       <Hint>
         Drawing files stay in this browser. The project file keeps the drawing list and the review table with their
