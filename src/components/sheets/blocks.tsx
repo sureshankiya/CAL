@@ -12,6 +12,7 @@ import {
   Flag,
   useFinal,
   NotesList,
+  scrubText,
   ResultBlock,
   SectionHead,
   SummaryTable,
@@ -177,22 +178,62 @@ export function FinalSummary({ rows }: { rows: Array<[string, React.ReactNode]> 
   return <DataTable caption="Final design summary" head={["Item", "Design"]} rows={rows.map(([a, b]) => [a, b])} />;
 }
 
+/** source of an input as issued: the reference itself, no "Default" / "UNCONFIRMED" wording */
+export function issuedSource(p: AssumptionEntry["provenance"]): string {
+  switch (p.kind) {
+    case "default": {
+      // the reference only: qualifiers after " — " are working notes
+      const s = scrubText(p.source)
+        .replace(/^assumed(?:\s*[—–]\s*)?/i, "")
+        .replace(/^field verify\b/i, "Existing construction; field verify")
+        .split(/\s+—\s+/)[0];
+      const word: Record<string, string> = {
+        engineer: "Engineer of Record",
+        method: "Design method",
+        statics: "Statics",
+        manufacturer: "Manufacturer",
+        "loads sheet": "Loads sheet",
+        "not on the drawings": "Engineer of Record",
+        "Tedds convention": "Design convention",
+        "existing condition": "Existing construction",
+      };
+      const t = word[s] ?? s;
+      return t ? t.charAt(0).toUpperCase() + t.slice(1) : "Engineer of Record";
+    }
+    case "user":
+      return "Engineer of Record";
+    case "drawing":
+      return `Drawing ${p.sheet}`;
+    case "override":
+      return "Engineer of Record";
+  }
+}
+
+/** pending-input rows ("Inputs not yet entered") do not print on an issued package */
+export const issuedAssumptions = (items: AssumptionEntry[], final: boolean) =>
+  final ? items.filter((a) => a.item !== "Inputs not yet entered") : items;
+
 export function AssumptionRows({ items }: { items: AssumptionEntry[] }) {
   const final = useFinal();
+  items = issuedAssumptions(items, final);
   if (!items.length) return null;
   return (
     <>
-      <SectionHead title="Assumptions & overrides" />
+      <SectionHead title={final ? "Design inputs" : "Assumptions & overrides"} />
       <DataTable
-        head={["Item", "Value", "Source"]}
-        rows={items.map((a) => [
-          final && a.item === "Inputs not yet entered" ? "Assumed inputs" : a.item,
-          a.verify || a.provenance.kind === "override" ? <Flag key="v">{a.value}</Flag> : a.value,
-          <>
-            {provenanceLabel(a.provenance)}
-            {a.verify ? <Flag> — VERIFY</Flag> : null}
-          </>,
-        ])}
+        head={["Item", "Value", final ? "Basis" : "Source"]}
+        rows={items.map((a) =>
+          final
+            ? [a.item, scrubText(a.value), issuedSource(a.provenance)]
+            : [
+                a.item,
+                a.verify || a.provenance.kind === "override" ? <Flag key="v">{a.value}</Flag> : a.value,
+                <>
+                  {provenanceLabel(a.provenance)}
+                  {a.verify ? <Flag> — VERIFY</Flag> : null}
+                </>,
+              ],
+        )}
       />
     </>
   );

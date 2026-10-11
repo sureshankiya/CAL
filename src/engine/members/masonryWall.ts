@@ -288,12 +288,12 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
     lines.push({
       type: "W",
       label: "Wind on the wall (out of plane)",
-      expr: "entered, C&C",
+      expr: "C&C pressure",
       value: w.wind.W,
       unit: "psf",
     });
   if (hp > 0 && w.wind.Wp)
-    lines.push({ type: "W", label: "Wind on the parapet", expr: "entered, C&C", value: w.wind.Wp, unit: "psf" });
+    lines.push({ type: "W", label: "Wind on the parapet", expr: "C&C pressure", value: w.wind.Wp, unit: "psf" });
   if (E)
     lines.push({
       type: "E",

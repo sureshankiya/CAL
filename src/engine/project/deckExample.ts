@@ -188,7 +188,7 @@ export function deckExampleProject(): Project {
       },
       soil: {
         efp: 35,
-        efpSource: "assumed active 35 pcf, level drained backfill — confirm with the geotechnical report (IBC 1610.1)",
+        efpSource: "active 35 pcf, level drained backfill (IBC 1610.1) — confirm with the geotechnical report",
         surcharge: 100,
         toeCover: 1,
         countToeSoil: false,

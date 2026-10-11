@@ -145,7 +145,7 @@ export function buildPackage(p: Project, design: ProjectDesign): SheetEntry[] {
       section: "General notes",
       title: "General structural notes and specific notes",
     },
-    { key: "assumptions", kind: "assumptions", section: "Assumption log", title: "Assumption log" },
+    { key: "assumptions", kind: "assumptions", section: "Design input log", title: "Design input log" },
   );
   return out.map((s, i) => ({ ...s, sheetNo: i + 1 }));
 }

@@ -19,26 +19,57 @@ export const useFinal = () => useContext(IssueContext).final;
 
 const SCRUB: Array<[RegExp, string]> = [
   [/\s*[—–-]\s*corroborated(?: by secondary sources)?;\s*VERIFY[^;)\]]*/g, ""],
-  [/HouseCalc template values in use/g, "assumed values used"],
+  [/HouseCalc template values in use/g, ""],
   [/;?\s*results are not valid until entered\.?/g, "."],
   [/\s*\(\s*VERIFY\b[^)]*\)/g, ""],
   [
-    /\s*(?:[—–,;/]|\bor\b)?\s*\bVERIFY\b(?:\s+(?:against|with|basis|method|connection|Table|the|applicability)\b[^;.)\]]*)?/g,
+    /\s*(?:[—–,;/]|\bor\b)?\s*\bVERIFY\b(?:\s+(?:against|with|basis|method|connection|Table|the|applicability|product)\b[^;.)\]]*)?/g,
     "",
   ],
   // EOR-directed "— verify with …" / ", verify" (contractor "field verify" notes stay)
   [/\s*[—–,]\s*verify\b[^;.)]*/g, ""],
   [/\s*\bREQUIRED INPUT\.(?=\s|$)/g, ""],
+  // provenance and working wording: from the drawings, entered, default, assumed, to be confirmed
+  [/\bFrom the drawings:\s*/gi, ""],
+  [/\s*\(enter width\)/gi, ""],
+  [/\s*[—–]\s*assumed values used/g, ""],
+  [/\(entered,\s*/g, "("],
+  [/\s*\(entered\)/g, ""],
+  [/\s+entered directly\b/g, ""],
+  [/\(entered loads only\)/g, "(loads on this sheet only)"],
+  [/\bentered \/ from load path\b/g, "direct / from load path"],
+  [/\bWind: entered,\s*/g, "Wind: "],
+  [/\bvalue entered\b/g, "value"],
+  [/\bNo in-plane load entered\b/g, "No in-plane load"],
+  [/\bgeometry entered there\b/g, "geometry given there"],
+  [/included only where entered as loads/g, "included where shown as loads"],
+  [/\s*\(default\)/gi, ""],
+  [/\s+values used as defaults\b/g, " values"],
+  [/\s*\(Tedds input\)/g, ""],
+  [/\s*\(replace with the ICC-ES report values\)/g, ""],
+  [/\s*\(product to be confirmed\)/g, ""],
+  [/\s*(?:[—–]\s*)?\bto be confirmed(?: by the Engineer of Record)?/g, ""],
+  [/\bare to be detailed\b/g, "shall be detailed"],
+  // "— confirm …" / "— enter …" up to the end of the clause (a parenthesised reference included)
+  [/\s*[—–]\s*(?:confirm|enter)\b(?:[^;()]|\([^)]*\))*/g, ""],
+  [/\s*[—–]\s*S_D1 assumed\b/g, ""],
+  [/\s*[—–]\s*assumed,\s*/g, " — "],
+  [/\s*[—–]\s*assumed\b/g, ""],
+  [/\(assumed\s+/g, "("],
+  [/\s+assumed(?= as | at )/g, ""],
+  [/\s+each way assumed\b/g, " each way"],
+  [/\s+assumed(?=\s*[;)]|\s+[—–])/g, ""],
+  [/\(estimated length = /g, "(length = "],
+  [/\s*\(UNCONFIRMED\)/g, ""],
   [/\s*\(\s*\)/g, ""],
   [/\s+([;,.)])/g, "$1"],
   [/\.\./g, "."],
 ];
-/** Text as issued: the VERIFY / review wording removed (final issue). */
+/** Text as issued: the VERIFY / review / provisional wording removed (final issue). */
 export function scrubText(s: string): string {
-  if (!/VERIFY|[—–,]\s*verify\b|template values|not valid until|REQUIRED INPUT\./.test(s)) return s;
   let t = s;
   for (const [re, by] of SCRUB) t = t.replace(re, by);
-  return t.trim() ? t : "";
+  return t === s ? s : t.trim() ? t : "";
 }
 /** scrubText over every string in a React node tree (strings and element children). */
 export function scrub(node: React.ReactNode): React.ReactNode {

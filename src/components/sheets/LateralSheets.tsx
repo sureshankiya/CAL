@@ -422,7 +422,7 @@ export function LoadPathSheet({ m, design }: { m: SheetMeta; design: ProjectDesi
               <>
                 Loads from{" "}
                 {o.spec.links.map((l) => p.members.find((x) => x.id === l.sourceId)?.mark ?? "?").join(", ") ||
-                  "entered loads"}{" "}
+                  "loads on this sheet"}{" "}
                 to soil
               </>
             }

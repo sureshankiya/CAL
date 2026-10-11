@@ -194,7 +194,9 @@ export function designDiaphragm(ctx: DesignContext, d: DiaphragmInput, dem: Diap
     };
   });
   if (segments.some((s) => s.cantilever && s.L > D / 4))
-    flags.push("Cantilevered diaphragm beyond the end wall line — check the SDPWS cantilevered-diaphragm limits (EOR review)");
+    flags.push(
+      "Cantilevered diaphragm beyond the end wall line — check the SDPWS cantilevered-diaphragm limits (EOR review)",
+    );
 
   const checks: Check[] = [];
   const gs = segments.reduce((a, s) => (s.vE > a.vE ? s : a), segments[0]);

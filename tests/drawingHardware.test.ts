@@ -72,7 +72,13 @@ describe("building geometry from the drawings", () => {
       },
       { page: 2, text: `PROPOSED CARPORT FRAMING PLAN\n96'-0"\nS-7.2` },
     ]);
-    expect(r.found).toEqual(expect.arrayContaining(["Building: 41 ft 3 in × 28 ft 0 in (overall plan dimensions)", "Roof pitch: 4:12", "Hardware: LUS210"]));
+    expect(r.found).toEqual(
+      expect.arrayContaining([
+        "Building: 41 ft 3 in × 28 ft 0 in (overall plan dimensions)",
+        "Roof pitch: 4:12",
+        "Hardware: LUS210",
+      ]),
+    );
     const c = convertDrawingData(r.document);
     expect(c.sheet).toMatch(/- lateral\.Lx: 41\.25/);
     expect(c.sheet).toMatch(/- lateral\.Ly: 28/);

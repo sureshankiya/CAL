@@ -81,6 +81,17 @@ const dim = (s: string) => {
 
 const q = (v: string) => JSON.stringify(v);
 
+/** posts: the grade the drawings specify ("DF No.2 or better") */
+const POST_6X6 = JSON.stringify({ kind: "sawn", species: "DF-L", grade: "No.2", size: "6x6", plies: 1 });
+
+/** schedule text as a member description: extraction remarks ("notes cell blank", "in schedule") removed */
+const issuedText = (s: string) =>
+  s
+    .replace(/;\s*notes cell blank/gi, "")
+    .replace(/\s+in schedule\b/gi, "")
+    .replace(/\s*—\s*Same$/i, "")
+    .trim();
+
 function lumber(s: string): { species: string; grade: string; size: string } | undefined {
   const m = /(\d+x\d+)/i.exec(s);
   if (!m) return undefined;
@@ -345,7 +356,7 @@ export function convertDrawingData(text: string): DrawingDataResult {
     members.push({
       mark,
       kind,
-      lines: [["description", q(`From the drawings: ${src}`)], ["pendingInputs", JSON.stringify(missing)], ...lines],
+      lines: [["description", q(issuedText(src))], ["pendingInputs", JSON.stringify(missing)], ...lines],
       missing,
     });
   };
@@ -416,7 +427,7 @@ export function convertDrawingData(text: string): DrawingDataResult {
         "area",
         JSON.stringify([
           {
-            label: "Tributary floor / roof (enter width)",
+            label: "Tributary floor / roof",
             trib: 1,
             dead: dp !== undefined ? { psf: dp } : undefined,
             ...(roof ? { roofLive: true } : { live: { use: "living" } }),
@@ -574,9 +585,12 @@ export function convertDrawingData(text: string): DrawingDataResult {
     add(
       "P-1",
       "post",
-      [["levelId", "L1"]],
+      [
+        ["levelId", "L1"],
+        ["material", POST_6X6],
+      ],
       ["post height", "load from beams (links / extra)"],
-      "New 6x6 wood posts (DF-L No.1 assumed; drawings: DF No.2 or better)",
+      "New 6x6 wood posts, DF-L No.2",
     );
   // carport posts: own member, with the clear height printed on the carport section
   if (/carport[^\n]*new 6x6 posts|new 6x6 posts[^\n]*S-7/i.test(text)) {
@@ -584,12 +598,16 @@ export function convertDrawingData(text: string): DrawingDataResult {
     add(
       "P-2",
       "post",
-      [["levelId", "L1"], ...(clear ? ([["height", clear[1]]] as Array<[string, string]>) : [])],
+      [
+        ["levelId", "L1"],
+        ["material", POST_6X6],
+        ...(clear ? ([["height", clear[1]]] as Array<[string, string]>) : []),
+      ],
       [
         clear ? `confirm post height (${clear[1]} ft clear height used)` : "post height",
         "load from beams (links / extra)",
       ],
-      "Carport 6x6 posts (DF-L No.1 assumed; drawings: DF No.2 or better)",
+      "Carport 6x6 posts, DF-L No.2",
     );
     if (clear) read.push(`P-2: carport post height ${clear[1]} ft (clear height, carport section)`);
   }
@@ -720,7 +738,7 @@ export function convertDrawingData(text: string): DrawingDataResult {
             "area",
             JSON.stringify([
               {
-                label: "Tributary floor / roof (enter width)",
+                label: "Tributary floor / roof",
                 trib: 1,
                 dead: deadPsf(lv === "L2") !== undefined ? { psf: deadPsf(lv === "L2") } : undefined,
                 ...(lv === "L2" ? { roofLive: true } : { live: { use: "living" } }),
@@ -969,6 +987,27 @@ const SPEC_HEADING =
 const NOT_SPEC = /conflict|appendix|extraction|inventory|readiness|provenance|scope|page \d/i;
 
 /** Specification text of the drawings (notes, materials, concrete, nailing, hardware), one line per item. */
+/** extraction commentary in a note (OCR, "verify", "not stated", conflicts) — not specification text */
+const COMMENTARY =
+  /\bOCR\b|unclear|\bverif|not stated|not recovered|blank cells?|source (?:cites|says|has|requires|associates)|as printed|\bconfirm|conflict|retained|repeat|extraction|typo|reconcile|coordinat(?:e|ion) (?:required|layers)/i;
+
+/** a specification note as issued: commentary sentences and "Not stated" cells removed */
+export function issuedNoteLine(line: string): string {
+  const bullet = /^-\s+/.test(line) ? "- " : "";
+  const body = line.replace(/^-\s+/, "");
+  const lead = /^([^:]{1,60}:\s*)/.exec(body)?.[1] ?? "";
+  const kept = body
+    .slice(lead.length)
+    .replace(/(?:^|,\s*)[^,:;]*\bNot stated\b/g, "")
+    .split(/(?<=[.;])\s+/)
+    .filter((x) => x.trim() && !COMMENTARY.test(x))
+    .join(" ")
+    .replace(/[;,]\s*$/, "")
+    .replace(/^,\s*/, "")
+    .trim();
+  return kept ? `${bullet}${lead}${kept}` : "";
+}
+
 export function specNotes(text: string): string[] {
   const out: string[] = [];
   let take = false;
@@ -1022,13 +1061,14 @@ export function specNotes(text: string): string[] {
     }
     out.push(`- ${clean(t.replace(/^[-*]\s+/, ""))}`);
   }
-  // drop headings with nothing under them
-  return out.filter(
+  // drop commentary, then headings with nothing under them
+  const notes = out.map((l) => (l.startsWith("- ") ? issuedNoteLine(l) : l)).filter(Boolean);
+  return notes.filter(
     (l, i) =>
       !(
         l.endsWith(":") &&
         !l.startsWith("-") &&
-        (out[i + 1] === undefined || (out[i + 1].endsWith(":") && !out[i + 1].startsWith("-")))
+        (notes[i + 1] === undefined || (notes[i + 1].endsWith(":") && !notes[i + 1].startsWith("-")))
       ),
   );
 }

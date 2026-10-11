@@ -11,6 +11,7 @@ import { LIVE_LOADS, liveLoad } from "@/engine/loads/live";
 import { snowLoads } from "@/engine/loads/snow";
 import { hardwareLabel } from "@/engine/data/hardware";
 import { fmtInFraction } from "@/engine/core/fmt";
+import { issuedNoteLine } from "@/engine/project/drawingData";
 import { generateNotes, hardwareSchedule, type AnyResult, type Project, type ProjectDesign } from "@/engine/project";
 import {
   B,
@@ -23,8 +24,10 @@ import {
   TextRow,
   TR,
   eq,
+  scrubText,
   useFinal,
 } from "../report/primitives";
+import { issuedAssumptions, issuedSource } from "./blocks";
 import type { PackageCheck, SheetEntry } from "../report/package";
 import { DESIGN_AID, DesignBasis, f0, f1, f2, f3, footers, rich, titleFields, type SheetMeta } from "./common";
 
@@ -399,6 +402,7 @@ export function CriteriaSheet({ m, design }: { m: SheetMeta; design: ProjectDesi
 }
 
 export function LoadsSheet({ m }: { m: SheetMeta }) {
+  const final = useFinal();
   const p = m.project;
   const ft = footers(m);
   const liveUses = new Set<string>();
@@ -468,13 +472,23 @@ export function LoadsSheet({ m }: { m: SheetMeta }) {
                   c.overridden ? <Flag key="n">{c.name}</Flag> : c.name,
                   needsVerify(c) ? <Flag key="v">{f2(c.psf)}</Flag> : f2(c.psf),
                   c.overridden ? (
-                    <Flag key="s">Override — VERIFY</Flag>
+                    final ? (
+                      "Engineer of Record"
+                    ) : (
+                      <Flag key="s">Override — VERIFY</Flag>
+                    )
                   ) : c.source === "C3.1-1a" ? (
                     "ASCE 7 Table C3.1-1a"
                   ) : c.source === "typical" ? (
-                    <Flag key="t">Typical value — VERIFY with product</Flag>
+                    final ? (
+                      "Material unit weight"
+                    ) : (
+                      <Flag key="t">Typical value — VERIFY with product</Flag>
+                    )
                   ) : c.source === "computed" ? (
                     "Computed"
+                  ) : final ? (
+                    "Engineer of Record"
                   ) : (
                     "Entered"
                   ),
@@ -1199,14 +1213,20 @@ export function GeneralNotesSheet({ m, design }: { m: SheetMeta; design: Project
         <NotesList key={sec.title} title={sec.title} notes={sec.notes.map((t) => rich(t))} />
       ))}
       {m.project.notes.trim() ? (
-        <NotesList title="Project notes (entered)" notes={m.project.notes.split(/\n+/).filter(Boolean)} />
+        <NotesList
+          title={final ? "Project notes" : "Project notes (entered)"}
+          notes={m.project.notes
+            .split(/\n+/)
+            .map((l) => (final ? issuedNoteLine(l) : l))
+            .filter(Boolean)}
+        />
       ) : null}
       {final ? null : <NotesList title="Responsibility" notes={[DESIGN_AID]} />}
       {hw.length ? (
         <>
           <SectionHead title="Hardware schedule" />
           <DataTable
-            head={["Model", "Description", "Fasteners", "Used at", "Max D/C", "Report", "Status"]}
+            head={["Model", "Description", "Fasteners", "Used at", "Max D/C", "Report", ...(final ? [] : ["Status"])]}
             small
             rows={hw.map((h) => [
               h.model,
@@ -1215,7 +1235,7 @@ export function GeneralNotesSheet({ m, design }: { m: SheetMeta; design: Project
               h.usedAt.join("; "),
               f3(h.maxRatio),
               h.report || "—",
-              h.checked ? "Checked" : <Flag key="v">VERIFY</Flag>,
+              ...(final ? [] : [h.checked ? "Checked" : <Flag key="v">VERIFY</Flag>]),
             ])}
           />
         </>
@@ -1265,16 +1285,20 @@ export function AssumptionLogSheet({ m, design }: { m: SheetMeta; design: Projec
   const rows: React.ReactNode[][] = [];
   for (const o of design.outcomes.values()) {
     if (o.error) rows.push([o.spec.mark, "Design error", <Flag key="e">{o.error}</Flag>, "—"]);
-    for (const a of o.result?.assumptions ?? [])
-      rows.push([
-        o.spec.mark,
-        final && a.item === "Inputs not yet entered" ? "Assumed inputs" : a.item,
-        a.verify || a.provenance.kind === "override" ? <Flag key="v">{a.value}</Flag> : a.value,
-        <>
-          {provenanceLabel(a.provenance)}
-          {a.verify ? <Flag> — VERIFY</Flag> : null}
-        </>,
-      ]);
+    for (const a of issuedAssumptions(o.result?.assumptions ?? [], final))
+      rows.push(
+        final
+          ? [o.spec.mark, a.item, scrubText(a.value), issuedSource(a.provenance)]
+          : [
+              o.spec.mark,
+              a.item,
+              a.verify || a.provenance.kind === "override" ? <Flag key="v">{a.value}</Flag> : a.value,
+              <>
+                {provenanceLabel(a.provenance)}
+                {a.verify ? <Flag> — VERIFY</Flag> : null}
+              </>,
+            ],
+      );
   }
   const verify = [...design.outcomes.values()].reduce(
     (n, o) => n + (o.result?.assumptions.filter((a) => a.verify).length ?? 0) + (o.error ? 1 : 0),
@@ -1283,16 +1307,16 @@ export function AssumptionLogSheet({ m, design }: { m: SheetMeta; design: Projec
   return (
     <Sheet f={titleFields(m)} footerLeft={ft.left} footerCenter={ft.center} first={m.first} id="sheet-assumptions">
       <SheetTitle
-        title="Assumption log"
+        title={final ? "Design input log" : "Assumption log"}
         subtitle={
           final ? (
-            <>Design defaults, assumed values and overrides, by member</>
+            <>Design parameters and their basis, by member</>
           ) : (
             <>Every default, override and item requiring verification, by member</>
           )
         }
       />
-      <DataTable head={["Mark", "Item", "Value", "Source"]} small rows={rows} />
+      <DataTable head={["Mark", "Item", "Value", final ? "Basis" : "Source"]} small rows={rows} />
       {final ? (
         <TextRow italic>{rows.length} entries.</TextRow>
       ) : (

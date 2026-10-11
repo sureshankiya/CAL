@@ -561,7 +561,7 @@ function markExisting(m: MemberSpec, r: AnyResult) {
   r.assumptions.unshift(
     fromDefault(
       what,
-      `${r.callout} — size, species / grade, condition and bearing ${m.fieldVerified ? "verified in the field" : "assumed; field verify before construction"}${m.existingNote ? ` (${m.existingNote})` : ""}`,
+      `${r.callout} — size, species / grade, condition and bearing ${m.fieldVerified ? "verified in the field" : "as shown; field verify before construction"}${m.existingNote ? ` (${m.existingNote})` : ""}`,
       m.fieldVerified ? "field verified" : "assumed existing condition",
       !m.fieldVerified,
     ),
