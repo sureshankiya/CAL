@@ -3,6 +3,7 @@
  * layout of the other sheets.
  */
 
+import { DowelRebar, FootingRebar, WallRebar } from "../report/rebarDiagrams";
 import { DC } from "../report/diagramColors";
 import type React from "react";
 import { fmt } from "@/engine/core/fmt";
@@ -247,6 +248,13 @@ export function MasonryWallSheet({ m, r, index, total, received, connections }: 
             / {f0(w.horizontal.spacing)} = {f3(r.bars.Ah)} in²/ft
           </>
         }
+      />
+      <WallRebar
+        material={w.material}
+        t={w.t}
+        cover={cmu ? 0 : (w.concrete?.cover ?? 0)}
+        vertical={w.vertical}
+        horizontal={w.horizontal}
       />
       <SectionHead title="Section properties (per ft of wall)" />
       <TR
@@ -584,6 +592,16 @@ export function HoldownFootingSheet({ m, r, index, total, received, connections 
         }
       />
       <LoadPath received={[...received, `${r.wallMark} in-plane forces and gravity`]} connections={connections} />
+      <FootingRebar
+        title="Reinforcement — section across the footing"
+        kind="holdown"
+        width={f.B * 12}
+        h={f.h}
+        cover={f.cover}
+        depth={f.depth}
+        stem={f.stem}
+        longitudinal={f.longitudinal}
+      />
       <LoadLines lines={r.loadLines} title="Loads on the footing (whole footing)" />
       <SectionHead title="Soil" />
       <TR
@@ -776,6 +794,14 @@ export function TieInSheet({ m, r, index, total }: SheetProps<TieInResult>) {
             <sub>shear</sub> (breakout, pryout) = {f2(t.product.phiConcrete)}
           </>
         }
+      />
+      <DowelRebar
+        size={t.anchor.kind === "rebar" ? t.anchor.size : `${t.anchor.size} in. rod`}
+        hef={t.hef}
+        spacing={t.spacing}
+        ca1={t.ca1}
+        ha={t.ha}
+        product={t.product.name}
       />
       <SectionHead title="Demand (strength level)" />
       <TR

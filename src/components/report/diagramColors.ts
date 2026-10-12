@@ -24,6 +24,7 @@ export const DC = {
   concreteFill: "#e0e0e0",
   soil: "#8d6e63",
   pressure: "#ef6c00",
+  rebar: "#b3261e",
   /** fill opacity of a diagram area under its outline */
   tint: 0.16,
 } as const;

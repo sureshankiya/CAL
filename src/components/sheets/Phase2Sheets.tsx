@@ -4,6 +4,7 @@
  * the Phase 1 member sheets.
  */
 
+import { FootingRebar } from "../report/rebarDiagrams";
 import type React from "react";
 import { fmt, fmtFtIn, fmtInFraction } from "@/engine/core/fmt";
 import type { ConnectorResult } from "@/engine/members/connector";
@@ -669,6 +670,18 @@ export function FootingSheet({ m, r, index, total, received }: SheetProps<Footin
             {eq(`${f0(f.qa)} psf`)} — {f.qaSource}
           </>
         }
+      />
+      <FootingRebar
+        kind={strip ? "strip" : "pad"}
+        width={f.B * 12}
+        length={(f.L ?? f.B) * 12}
+        h={f.h}
+        cover={f.cover}
+        depth={f.depth}
+        stem={f.stem}
+        bearing={f.stem ? undefined : f.c1}
+        bars={f.rebar}
+        longitudinal={f.longitudinal}
       />
       <LoadLines lines={r.loadLines} title={`Loads on the footing (${strip ? "per ft" : "total"})`} />
       <LoadPathRows received={received} />

@@ -3,6 +3,7 @@
  * Tedds-style layout of the other sheets.
  */
 
+import { RetainingRebar } from "../report/rebarDiagrams";
 import { DC } from "../report/diagramColors";
 import type React from "react";
 import type { CfsWallResult } from "@/engine/members/cfsWall";
@@ -153,6 +154,15 @@ export function RetainingWallSheet({ m, r, index, total, received, connections }
       <SectionHead title="Geometry" />
       <TR desc="Mark" expr={<B>{`${r.mark} — ${r.callout}`}</B>} />
       <RetainingSection r={r} />
+      <RetainingRebar
+        B={r.geo.B}
+        hf={r.geo.hf * 12}
+        toe={w.footing.toe}
+        ts={r.geo.ts * 12}
+        stemH={w.stem.height}
+        stem={{ ...w.stem.vertical, cover: w.stem.material === "cmu" ? 0 : (w.stem.concrete?.cover ?? 2) }}
+        footing={w.footing}
+      />
       <TR
         desc="Wall"
         expr={
