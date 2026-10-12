@@ -1,329 +1,215 @@
 /**
- * Reinforcement diagrams for the concrete and masonry sheets: footing sections (continuous,
- * pad, hold-down), a pad plan with the bars each way, a wall section through the vertical
- * bars, and the dowel detail of a tie-in to existing concrete. Bars are drawn to scale at
- * their clear cover from the member's own input, so the diagram always matches the
- * calculation. Colours from diagramColors.ts.
+ * Reinforcement details for the concrete and masonry sheets, drafted as on structural
+ * drawings (drafting.tsx): concrete stipple, earth hatch, bars as solid dots / runs at their
+ * clear cover, leaders to the bar callouts, dimension lines. Drawn from the member's own
+ * input so the detail always matches the calculation.
  */
 
 import type React from "react";
 import { BARS } from "@/engine/design/concrete";
 import { fmt } from "@/engine/core/fmt";
-import { DC } from "./diagramColors";
+import { BarDot, BarRun, Dim, Figure, Grade, INK, Leader, LW, TimberSection, TS, ViewTitle } from "./drafting";
 
-const W = 470;
-const txt: React.CSSProperties = { fontFamily: "Arial, Helvetica, sans-serif", fontSize: 8, fill: DC.ink };
-const callout: React.CSSProperties = { ...txt, fill: DC.rebar };
-const dimTxt: React.CSSProperties = { ...txt, fontSize: 7.5, fill: DC.dim };
 const db = (size: string) => BARS[size]?.d ?? 0.5;
-const inch = (v: number) => `${fmt(v, Number.isInteger(Math.round(v * 8) / 8) ? 0 : 2)} in.`;
-
-function Row({ title, height, children }: { title: string; height: number; children: React.ReactNode }) {
-  return (
-    <tr className="avoid-break">
-      <td colSpan={2} className="px-3 pb-2">
-        <div className="avoid-break mb-1 block">
-          <svg
-            width="100%"
-            viewBox={`0 -14 ${W} ${height + 14}`}
-            preserveAspectRatio="xMidYMid meet"
-            role="img"
-            aria-label={title}
-          >
-            <text x={0} y={-3} style={{ ...txt, fontSize: 9.5, fontWeight: 700 }}>
-              {title}
-            </text>
-            {children}
-          </svg>
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-/** bar seen end-on */
-const Dot = ({ x, y, r }: { x: number; y: number; r: number }) => (
-  <circle cx={x} cy={y} r={Math.max(1.8, r)} fill={DC.rebar} stroke="#7f1d1d" strokeWidth={0.4} />
-);
-
-/** bar seen along its length */
-const BarLine = ({ x1, y1, x2, y2, w }: { x1: number; y1: number; x2: number; y2: number; w: number }) => (
-  <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={DC.rebar} strokeWidth={Math.max(1.4, w)} strokeLinecap="round" />
-);
-
-function HDim({ x1, x2, y, label }: { x1: number; x2: number; y: number; label: string }) {
-  return (
-    <g>
-      <line x1={x1} y1={y} x2={x2} y2={y} stroke={DC.dim} strokeWidth={0.6} />
-      <line x1={x1} y1={y - 3} x2={x1} y2={y + 3} stroke={DC.dim} strokeWidth={0.6} />
-      <line x1={x2} y1={y - 3} x2={x2} y2={y + 3} stroke={DC.dim} strokeWidth={0.6} />
-      <text x={(x1 + x2) / 2} y={y + 9} textAnchor="middle" style={dimTxt}>
-        {label}
-      </text>
-    </g>
-  );
-}
-
-function VDim({ x, y1, y2, label }: { x: number; y1: number; y2: number; label: string }) {
-  return (
-    <g>
-      <line x1={x} y1={y1} x2={x} y2={y2} stroke={DC.dim} strokeWidth={0.6} />
-      <line x1={x - 3} y1={y1} x2={x + 3} y2={y1} stroke={DC.dim} strokeWidth={0.6} />
-      <line x1={x - 3} y1={y2} x2={x + 3} y2={y2} stroke={DC.dim} strokeWidth={0.6} />
-      <text x={x - 4} y={(y1 + y2) / 2 + 3} textAnchor="end" style={dimTxt}>
-        {label}
-      </text>
-    </g>
-  );
-}
-
-/** callouts listed at the right with a leader to the bar they name */
-function Callouts({ x, y0, items }: { x: number; y0: number; items: Array<{ text: string; to?: [number, number] }> }) {
-  return (
-    <g>
-      {items.map((c, i) => {
-        const y = y0 + i * 12;
-        return (
-          <g key={i}>
-            {c.to ? (
-              <polyline
-                points={`${c.to[0]},${c.to[1]} ${x - 8},${y - 3} ${x - 2},${y - 3}`}
-                fill="none"
-                stroke={DC.rebar}
-                strokeWidth={0.5}
-              />
-            ) : null}
-            <text x={x} y={y} style={c.to ? callout : txt}>
-              {c.text}
-            </text>
-          </g>
-        );
-      })}
-    </g>
-  );
-}
-
+const inch = (v: number) => `${+v.toFixed(3)}"`;
 const spread = (n: number, a: number, b: number) =>
   n <= 1 ? [(a + b) / 2] : Array.from({ length: n }, (_, i) => a + ((b - a) * i) / (n - 1));
 
 export interface FootingRebarProps {
   title?: string;
   kind: "strip" | "pad" | "holdown";
-  /** section width shown, in (strip / hold-down: footing width; pad: B) */
   width: number;
-  /** pad: plan dimension L, in */
   length?: number;
   h: number;
   cover: number;
-  /** bottom of footing below grade, in */
   depth: number;
   stem?: { width: number; height: number };
-  /** wall / post bearing width, in (no stem) */
   bearing?: number;
-  /** strip: transverse bars; pad: bars each way */
   bars?: { size: string; spacing?: number; count?: number };
-  /** strip / hold-down: continuous bars */
   longitudinal?: { size: string; top: number; bottom: number };
 }
 
-/** footing cross-section (and plan for a pad) with the bars at their clear cover */
+/** footing section (and plan for a reinforced pad) */
 export function FootingRebar(p: FootingRebarProps) {
   const pad = p.kind === "pad";
   const soilAbove = Math.max(0, p.depth - p.h);
-  const stemShown = p.stem
-    ? Math.min(p.stem.height, Math.max(18, 1.5 * p.h, soilAbove + 6))
-    : p.bearing
-      ? Math.max(8, soilAbove + 4)
-      : 0;
-  const broken = !!p.stem && stemShown < p.stem.height;
-  const totalIn = p.h + Math.max(stemShown, soilAbove);
-  const drawW = pad ? 200 : 230;
-  const drawH = 120;
-  const sc = Math.min(drawW / (p.width + 16), drawH / (totalIn + 6));
-  const x0 = 46;
-  const yTop = 12 + Math.max(stemShown, soilAbove) * sc; // top of footing
-  const X = (v: number) => x0 + v * sc;
-  const Y = (v: number) => yTop + v * sc; // v measured down from the top of the footing
-  const bottom = Y(p.h);
-  const grade = bottom - p.depth * sc;
-  const height = Math.max(bottom + 28, pad && p.bars ? 170 : 0);
+  const stemShown = p.stem ? Math.min(p.stem.height, Math.max(14, soilAbove + 8)) : Math.max(8, soilAbove + 6);
+  const above = Math.max(stemShown, soilAbove);
+  const sc = Math.min(200 / (p.width + 24), 120 / (p.h + above));
+  const cxSec = pad && p.bars ? 130 : 170;
+  const X = (v: number) => cxSec - (p.width * sc) / 2 + v * sc;
+  const yTop = 14 + above * sc;
+  const Y = (v: number) => yTop + v * sc;
+  const bot = Y(p.h);
+  const grade = bot - p.depth * sc;
   const cv = p.cover;
-  const items: Array<{ text: string; to?: [number, number] }> = [];
-  const shapes: React.ReactNode[] = [];
-
   const tb = p.bars ? db(p.bars.size) : 0;
+  const shapes: React.ReactNode[] = [];
+  const calls: Array<{ x: number; y: number; label: string }> = [];
+
   if (p.bars && !pad) {
-    // transverse bars, seen along their length
     const y = Y(p.h - cv - tb / 2);
-    shapes.push(<BarLine key="tb" x1={X(cv)} y1={y} x2={X(p.width - cv)} y2={y} w={tb * sc} />);
-    items.push({
-      text: `${p.bars.size} @ ${inch(p.bars.spacing ?? 12)} o.c. transverse, bottom`,
-      to: [X(p.width * 0.3), y],
-    });
+    shapes.push(
+      <BarRun
+        key="t"
+        points={`${X(cv)},${y - 4} ${X(cv)},${y} ${X(p.width - cv)},${y} ${X(p.width - cv)},${y - 4}`}
+        w={tb * sc}
+      />,
+    );
+    calls.push({ x: X(p.width * 0.75), y, label: `${p.bars.size} @ ${inch(p.bars.spacing ?? 12)} o.c. transverse` });
   }
   if (p.bars && pad) {
     const n = p.bars.count ?? 2;
-    const yLine = Y(p.h - cv - tb / 2);
-    const yDot = Y(p.h - cv - tb - tb / 2);
-    shapes.push(<BarLine key="pl" x1={X(cv)} y1={yLine} x2={X(p.width - cv)} y2={yLine} w={tb * sc} />);
-    const xs = spread(n, cv + tb / 2, p.width - cv - tb / 2);
-    xs.forEach((x, i) => shapes.push(<Dot key={`pd${i}`} x={X(x)} y={yDot} r={(tb / 2) * sc} />));
-    items.push({ text: `(${n}) ${p.bars.size} each way, bottom`, to: [X(xs[Math.floor(n / 2)]), yDot] });
+    const y1 = Y(p.h - cv - tb / 2);
+    const y2 = Y(p.h - cv - 1.5 * tb);
+    shapes.push(<BarRun key="pl" points={`${X(cv)},${y1} ${X(p.width - cv)},${y1}`} w={tb * sc} />);
+    spread(n, cv + tb / 2, p.width - cv - tb / 2).forEach((x, i) =>
+      shapes.push(<BarDot key={`pd${i}`} x={X(x)} y={y2} r={(tb / 2) * sc} />),
+    );
+    calls.push({ x: X(p.width - cv - tb / 2), y: y2, label: `(${n}) ${p.bars.size} each way, bottom` });
   }
   if (p.longitudinal) {
     const lb = db(p.longitudinal.size);
-    const xs = (n: number) => spread(n, cv + lb / 2, p.width - cv - lb / 2);
+    const xs = (n: number) =>
+      spread(n, cv + lb / 2 + (p.bars && !pad ? tb : 0), p.width - cv - lb / 2 - (p.bars && !pad ? tb : 0));
     if (p.longitudinal.top > 0) {
       const y = Y(cv + lb / 2);
       const pts = xs(p.longitudinal.top);
-      pts.forEach((x, i) => shapes.push(<Dot key={`lt${i}`} x={X(x)} y={y} r={(lb / 2) * sc} />));
-      items.unshift({
-        text: `(${p.longitudinal.top}) ${p.longitudinal.size} continuous, top`,
-        to: [X(pts[pts.length - 1]), y],
+      pts.forEach((x, i) => shapes.push(<BarDot key={`lt${i}`} x={X(x)} y={y} r={(lb / 2) * sc} />));
+      calls.unshift({
+        x: X(pts[pts.length - 1]),
+        y,
+        label: `(${p.longitudinal.top}) ${p.longitudinal.size} continuous top`,
       });
     }
     if (p.longitudinal.bottom > 0) {
       const y = Y(p.h - cv - (p.bars && !pad ? tb : 0) - lb / 2);
       const pts = xs(p.longitudinal.bottom);
-      pts.forEach((x, i) => shapes.push(<Dot key={`lb${i}`} x={X(x)} y={y} r={(lb / 2) * sc} />));
-      items.push({
-        text: `(${p.longitudinal.bottom}) ${p.longitudinal.size} continuous, bottom`,
-        to: [X(pts[pts.length - 1]), y],
+      pts.forEach((x, i) => shapes.push(<BarDot key={`lb${i}`} x={X(x)} y={y} r={(lb / 2) * sc} />));
+      calls.push({
+        x: X(pts[pts.length - 1]),
+        y,
+        label: `(${p.longitudinal.bottom}) ${p.longitudinal.size} continuous bottom`,
       });
     }
   }
-  if (!p.bars && !p.longitudinal) items.push({ text: "Plain concrete (ACI 318 Ch. 14) — no reinforcement" });
-  else items.push({ text: `${inch(cv)} clear cover, cast against earth` });
-  // callouts next to the section; a pad's go under its plan
-  const cx = pad && p.bars ? 300 : Math.min(300, X(p.width + 8) + 28);
+  const plain = !p.bars && !p.longitudinal;
+  const tx = X(p.width + 12) + 26;
+  const stemW = p.stem?.width ?? p.bearing ?? 0;
 
-  // pad plan: bars each way
+  // reinforced pad: plan beside the section
   let plan: React.ReactNode = null;
   if (pad && p.bars) {
     const L = p.length ?? p.width;
-    const ps = Math.min(100 / p.width, 100 / L);
-    const px = 300;
-    const py = 6;
-    const PX = (v: number) => px + v * ps;
-    const PY = (v: number) => py + v * ps;
+    const ps = Math.min(110 / p.width, 110 / L);
+    const px0 = 330 - (p.width * ps) / 2;
+    const py0 = 14;
     const n = p.bars.count ?? 2;
     plan = (
       <g>
-        <rect x={PX(0)} y={PY(0)} width={p.width * ps} height={L * ps} fill={DC.concreteFill} stroke={DC.concrete} />
+        <rect
+          x={px0}
+          y={py0}
+          width={p.width * ps}
+          height={L * ps}
+          fill="url(#h-conc)"
+          stroke={INK}
+          strokeWidth={LW.object}
+        />
         {spread(n, cv, p.width - cv).map((x, i) => (
-          <line key={`v${i}`} x1={PX(x)} y1={PY(cv)} x2={PX(x)} y2={PY(L - cv)} stroke={DC.rebar} strokeWidth={1.1} />
+          <line
+            key={`v${i}`}
+            x1={px0 + x * ps}
+            y1={py0 + cv * ps}
+            x2={px0 + x * ps}
+            y2={py0 + (L - cv) * ps}
+            stroke={INK}
+            strokeWidth={1.1}
+          />
         ))}
         {spread(n, cv, L - cv).map((y, i) => (
           <line
             key={`h${i}`}
-            x1={PX(cv)}
-            y1={PY(y)}
-            x2={PX(p.width - cv)}
-            y2={PY(y)}
-            stroke={DC.rebar}
+            x1={px0 + cv * ps}
+            y1={py0 + y * ps}
+            x2={px0 + (p.width - cv) * ps}
+            y2={py0 + y * ps}
+            stroke={INK}
             strokeWidth={1.1}
           />
         ))}
         {p.bearing ? (
-          <rect
-            x={PX(p.width / 2 - p.bearing / 2)}
-            y={PY(L / 2 - p.bearing / 2)}
-            width={p.bearing * ps}
-            height={p.bearing * ps}
-            fill="#d7b98e"
-            stroke={DC.member}
-            strokeWidth={0.8}
+          <TimberSection
+            x={px0 + (p.width / 2 - p.bearing / 2) * ps}
+            y={py0 + (L / 2 - p.bearing / 2) * ps}
+            w={p.bearing * ps}
+            h={p.bearing * ps}
           />
         ) : null}
-        <text x={PX(p.width / 2)} y={PY(L) + 10} textAnchor="middle" style={dimTxt}>
-          Plan — {inch(p.width)} × {inch(L)}
-        </text>
+        <Dim a={px0} b={px0 + p.width * ps} at={py0 + L * ps + 10} from={py0 + L * ps} label={inch(p.width)} />
+        <Dim a={py0} b={py0 + L * ps} at={px0 + p.width * ps + 12} from={px0 + p.width * ps} label={inch(L)} vertical />
+        <ViewTitle x={330} y={py0 + L * ps + 30}>
+          Plan
+        </ViewTitle>
       </g>
     );
   }
-
+  const height = Math.max(bot + 40, pad && p.bars ? 180 : 0);
   return (
-    <Row title={p.title ?? "Reinforcement — section"} height={height}>
-      {/* soil and grade */}
-      <rect
-        x={X(-8)}
-        y={grade}
-        width={(p.width + 16) * sc}
-        height={bottom - grade + 4}
-        fill={DC.soil}
-        fillOpacity={0.12}
-      />
-      <line
-        x1={X(-8)}
-        y1={grade}
-        x2={X(p.width + 8)}
-        y2={grade}
-        stroke={DC.soil}
-        strokeWidth={1.1}
-        strokeDasharray="4 2"
-      />
-      <text x={X(-8)} y={grade - 2} style={{ ...dimTxt, fill: DC.soil }}>
-        grade
-      </text>
-      {/* footing */}
+    <Figure title={p.title ?? "Reinforcement"} height={height}>
+      <Grade x1={X(-12)} x2={X(p.width / 2 - stemW / 2)} y={grade} depth={6} />
+      <Grade x1={X(p.width / 2 + stemW / 2)} x2={X(p.width + 12)} y={grade} depth={6} />
       <rect
         x={X(0)}
         y={Y(0)}
         width={p.width * sc}
         height={p.h * sc}
-        fill={DC.concreteFill}
-        stroke={DC.concrete}
-        strokeWidth={1.1}
+        fill="url(#h-conc)"
+        stroke={INK}
+        strokeWidth={LW.object}
       />
       {p.stem ? (
-        <>
-          <rect
-            x={X(p.width / 2 - p.stem.width / 2)}
-            y={Y(-stemShown)}
-            width={p.stem.width * sc}
-            height={stemShown * sc}
-            fill={DC.concreteFill}
-            stroke={DC.concrete}
-            strokeWidth={1.1}
-          />
-          {broken ? (
-            <polyline
-              points={`${X(p.width / 2 - p.stem.width / 2 - 2)},${Y(-stemShown) + 2} ${X(p.width / 2 - 1)},${Y(-stemShown) - 2} ${X(p.width / 2 + 1)},${Y(-stemShown) + 4} ${X(p.width / 2 + p.stem.width / 2 + 2)},${Y(-stemShown)}`}
-              fill="white"
-              stroke={DC.dim}
-              strokeWidth={0.7}
-            />
-          ) : null}
-        </>
-      ) : p.bearing ? (
         <rect
-          x={X(p.width / 2 - p.bearing / 2)}
+          x={X(p.width / 2 - stemW / 2)}
           y={Y(-stemShown)}
-          width={p.bearing * sc}
+          width={stemW * sc}
           height={stemShown * sc}
-          fill="#d7b98e"
-          stroke={DC.member}
-          strokeWidth={0.8}
+          fill="url(#h-conc)"
+          stroke={INK}
+          strokeWidth={LW.object}
         />
+      ) : stemW ? (
+        <TimberSection x={X(p.width / 2 - stemW / 2)} y={Y(-stemShown)} w={stemW * sc} h={stemShown * sc} />
       ) : null}
       {shapes}
-      <HDim x1={X(0)} x2={X(p.width)} y={bottom + 8} label={inch(p.width)} />
-      <VDim x={X(0) - 6} y1={Y(0)} y2={bottom} label={inch(p.h)} />
-      {p.stem ? (
-        <text x={X(p.width / 2 + p.stem.width / 2) + 3} y={Y(-stemShown / 2)} style={dimTxt}>
-          stem {inch(p.stem.width)}
-          {broken ? ` × ${inch(p.stem.height)}` : ""}
+      {calls.map((c, i) => (
+        <Leader key={i} x={c.x} y={c.y} tx={pad && p.bars ? 190 : tx} ty={Y(0) + 4 + i * 12} label={c.label} />
+      ))}
+      {plain ? (
+        <text x={tx} y={Y(0) + 12} style={TS}>
+          Plain concrete — no reinforcement
         </text>
+      ) : (
+        <text x={pad && p.bars ? 190 : tx} y={Y(0) + 4 + calls.length * 12} style={TS}>
+          {inch(cv)} clear cover
+        </text>
+      )}
+      <Dim a={X(0)} b={X(p.width)} at={bot + 12} from={bot} label={inch(p.width)} />
+      <Dim a={Y(0)} b={bot} at={X(0) - 14} from={X(0)} label={inch(p.h)} vertical side={-1} />
+      {p.depth > p.h + 0.5 ? (
+        <Dim a={grade} b={bot} at={X(-12) - 10} from={X(-12)} label={inch(p.depth)} vertical side={-1} />
       ) : null}
+      <ViewTitle x={X(p.width / 2)} y={bot + 32}>
+        Section
+      </ViewTitle>
       {plan}
-      <Callouts x={cx} y0={pad && p.bars ? 132 : Math.max(18, Y(0) - 4)} items={items} />
-    </Row>
+    </Figure>
   );
 }
 
-/** wall section through the vertical bars (plan cut), CMU cells or solid concrete */
+/** wall section through the vertical bars (plan cut) */
 export function WallRebar({
-  title = "Reinforcement — wall section",
+  title = "Reinforcement",
   material,
   t,
   cover,
@@ -339,11 +225,11 @@ export function WallRebar({
 }) {
   const s = vertical.spacing;
   const Ls = Math.min(Math.max(3 * s, 48), 120);
-  const sc = Math.min(230 / Ls, 60 / t);
-  const x0 = 20;
-  const y0 = 16;
+  const sc = Math.min(260 / Ls, 50 / t);
+  const x0 = 40;
+  const y0 = 18;
   const X = (v: number) => x0 + v * sc;
-  const Y = (v: number) => y0 + v * sc; // v from the exterior (tension) face
+  const Y = (v: number) => y0 + v * sc;
   const vb = db(vertical.size);
   const depths =
     vertical.layout === "each-face"
@@ -351,73 +237,71 @@ export function WallRebar({
       : [vertical.layout === "center" ? t / 2 : (vertical.d ?? t / 2)];
   const xs: number[] = [];
   for (let x = s / 2; x < Ls; x += s) xs.push(x);
-  const layoutText =
-    vertical.layout === "center"
-      ? "centred in the wall"
-      : vertical.layout === "each-face"
-        ? `each face, ${inch(cover)} cover`
-        : `d = ${inch(vertical.d ?? t / 2)}`;
-  const items = [
-    {
-      text: `${vertical.size} @ ${inch(s)} o.c. vertical, ${layoutText}`,
-      to: [X(xs[0]), Y(depths[0])] as [number, number],
-    },
-    {
-      text: `(${horizontal.count}) ${horizontal.size} horizontal @ ${inch(horizontal.spacing)} o.c.`,
-      to: [X(Ls * 0.85), Y(t / 2)] as [number, number],
-    },
-    { text: material === "cmu" ? `${inch(t)} CMU, grouted cells at the bars` : `${inch(t)} concrete wall` },
-  ];
-  const height = y0 + t * sc + 30;
+  const bot = Y(t);
   return (
-    <Row title={title} height={height}>
+    <Figure title={title} height={bot + 46}>
       <rect
         x={X(0)}
         y={Y(0)}
         width={Ls * sc}
         height={t * sc}
-        fill={material === "cmu" ? "#ebe5d9" : DC.concreteFill}
-        stroke={DC.concrete}
-        strokeWidth={1.1}
+        fill={material === "cmu" ? "url(#h-cmu)" : "url(#h-conc)"}
+        stroke={INK}
+        strokeWidth={LW.object}
       />
       {material === "cmu"
-        ? // block webs every 8 in (half-block cells); grouted cells at the bars
-          Array.from({ length: Math.floor(Ls / 8) + 1 }, (_, i) => i * 8).map((x) => (
-            <line
-              key={`w${x}`}
-              x1={X(x)}
-              y1={Y(1.25)}
-              x2={X(x)}
-              y2={Y(t - 1.25)}
-              stroke={DC.concrete}
-              strokeWidth={0.5}
-            />
-          ))
+        ? xs.map((x, i) => {
+            const c0 = Math.floor(x / 8) * 8;
+            return (
+              <rect
+                key={`g${i}`}
+                x={X(c0 + 1.25)}
+                y={Y(1.25)}
+                width={(8 - 2.5) * sc}
+                height={(t - 2.5) * sc}
+                fill="url(#h-grout)"
+                stroke={INK}
+                strokeWidth={LW.hatch}
+              />
+            );
+          })
         : null}
-      {material === "cmu"
-        ? xs.map((x, i) => (
-            <rect
-              key={`g${i}`}
-              x={X(Math.floor(x / 8) * 8) + 1}
-              y={Y(1.25)}
-              width={8 * sc - 2}
-              height={(t - 2.5) * sc}
-              fill={DC.concreteFill}
-            />
-          ))
-        : null}
-      <BarLine x1={X(0.5)} y1={Y(t / 2)} x2={X(Ls - 0.5)} y2={Y(t / 2)} w={db(horizontal.size) * sc * 0.7} />
-      {xs.flatMap((x, i) => depths.map((d, k) => <Dot key={`v${i}-${k}`} x={X(x)} y={Y(d)} r={(vb / 2) * sc} />))}
-      <HDim x1={X(xs[0])} x2={X(xs[1] ?? xs[0])} y={Y(t) + 8} label={`${inch(s)} o.c.`} />
-      <text x={X(0)} y={Y(0) - 3} style={dimTxt}>
-        exterior face
-      </text>
-      <Callouts x={270} y0={Y(0) + 4} items={items} />
-    </Row>
+      {/* break lines at the cut ends */}
+      {[X(0), X(Ls)].map((x, i) => (
+        <polyline
+          key={i}
+          points={`${x},${Y(0) - 4} ${x},${Y(t / 2) - 4} ${x - 3},${Y(t / 2)} ${x + 3},${Y(t / 2) + 2} ${x},${Y(t / 2) + 5} ${x},${bot + 4}`}
+          fill="none"
+          stroke={INK}
+          strokeWidth={LW.thin}
+        />
+      ))}
+      <line x1={X(1)} y1={Y(t / 2)} x2={X(Ls - 1)} y2={Y(t / 2)} stroke={INK} strokeWidth={1} strokeDasharray="10 2" />
+      {xs.flatMap((x, i) => depths.map((d, k) => <BarDot key={`v${i}-${k}`} x={X(x)} y={Y(d)} r={(vb / 2) * sc} />))}
+      <Leader
+        x={X(xs[xs.length - 1])}
+        y={Y(depths[0])}
+        tx={X(Ls) + 22}
+        ty={Y(0) + 2}
+        label={`${vertical.size} @ ${inch(s)} o.c. vertical${vertical.layout === "each-face" ? " each face" : vertical.layout === "center" ? " centred" : ""}`}
+      />
+      <Leader
+        x={X(Ls - 3)}
+        y={Y(t / 2)}
+        tx={X(Ls) + 22}
+        ty={Y(0) + 14}
+        label={`(${horizontal.count}) ${horizontal.size} horizontal @ ${inch(horizontal.spacing)} o.c.`}
+      />
+      {xs.length > 1 ? <Dim a={X(xs[0])} b={X(xs[1])} at={bot + 12} from={bot} label={inch(s)} /> : null}
+      <Dim a={Y(0)} b={bot} at={X(0) - 12} from={X(0)} label={inch(t)} vertical side={-1} />
+      <ViewTitle x={X(Ls / 2)} y={bot + 34}>
+        Plan section
+      </ViewTitle>
+    </Figure>
   );
 }
 
-/** dowels drilled and bonded into existing concrete, lapping into the new pour */
+/** dowels drilled and bonded into existing concrete */
 export function DowelRebar({
   size,
   hef,
@@ -436,61 +320,76 @@ export function DowelRebar({
   const d = db(size);
   const exW = hef + 6;
   const newW = Math.max(12, hef);
-  const sc = Math.min(200 / (exW + newW), 90 / ha);
-  const x0 = 56;
-  const y0 = 12;
+  const sc = Math.min(220 / (exW + newW), 90 / ha);
+  const x0 = 70;
+  const y0 = 16;
   const X = (v: number) => x0 + v * sc;
   const Y = (v: number) => y0 + v * sc;
   const yb = Math.min(ca1, ha / 2);
+  const bot = Y(ha);
   return (
-    <Row title="Reinforcement — dowels into existing concrete" height={y0 + ha * sc + 30}>
-      <rect x={X(0)} y={Y(0)} width={exW * sc} height={ha * sc} fill="#cfcfcf" stroke={DC.concrete} strokeWidth={1.1} />
+    <Figure title="Reinforcement" height={bot + 40}>
+      <rect
+        x={X(0)}
+        y={Y(0)}
+        width={exW * sc}
+        height={ha * sc}
+        fill="url(#h-conc)"
+        stroke={INK}
+        strokeWidth={LW.object}
+      />
+      <rect x={X(exW)} y={Y(0)} width={newW * sc} height={ha * sc} fill="#fff" stroke={INK} strokeWidth={LW.object} />
       <rect
         x={X(exW)}
         y={Y(0)}
         width={newW * sc}
         height={ha * sc}
-        fill={DC.concreteFill}
-        stroke={DC.concrete}
-        strokeWidth={1.1}
-        strokeDasharray="4 2"
+        fill="url(#h-conc)"
+        fillOpacity={0.5}
+        stroke="none"
       />
-      <line x1={X(exW)} y1={Y(0)} x2={X(exW)} y2={Y(ha)} stroke={DC.ink} strokeWidth={1.2} />
-      <text x={X(exW / 2)} y={Y(ha) - 4} textAnchor="middle" style={dimTxt}>
-        existing
+      <line x1={X(exW)} y1={Y(0) - 6} x2={X(exW)} y2={bot + 6} stroke={INK} strokeWidth={LW.heavy} />
+      <text x={X(exW / 2)} y={Y(0) - 4} textAnchor="middle" style={TS}>
+        (E) concrete
       </text>
-      <text x={X(exW + newW / 2)} y={Y(ha) - 4} textAnchor="middle" style={dimTxt}>
-        new
+      <text x={X(exW + newW / 2)} y={Y(0) - 4} textAnchor="middle" style={TS}>
+        (N) concrete
       </text>
-      {/* drilled hole + adhesive, then the dowel */}
       <rect
         x={X(exW - hef)}
         y={Y(yb) - (d * sc) / 2 - 1.5}
         width={hef * sc}
         height={d * sc + 3}
-        fill={DC.pressure}
-        fillOpacity={0.3}
+        fill="#fff"
+        stroke={INK}
+        strokeWidth={LW.thin}
       />
-      <BarLine x1={X(exW - hef)} y1={Y(yb)} x2={X(exW + newW - 1.5)} y2={Y(yb)} w={d * sc} />
-      <HDim x1={X(exW - hef)} x2={X(exW)} y={Y(ha) + 8} label={`h_ef = ${inch(hef)}`} />
-      <VDim x={X(0) - 3} y1={Y(0)} y2={Y(yb)} label={`c = ${inch(ca1)}`} />
-      <Callouts
-        x={280}
-        y0={Y(0) + 6}
-        items={[
-          { text: `${size} dowels @ ${inch(spacing)} o.c.`, to: [X(exW + newW * 0.6), Y(yb)] },
-          {
-            text: `drilled and bonded: ${product.length > 30 ? `${product.slice(0, 29)}…` : product}`,
-            to: [X(exW - hef / 2), Y(yb)],
-          },
-          { text: `existing member ${inch(ha)} thick` },
-        ]}
+      <BarRun points={`${X(exW - hef)},${Y(yb)} ${X(exW + newW - 1.5)},${Y(yb)}`} w={d * sc} />
+      <Leader
+        x={X(exW + newW * 0.6)}
+        y={Y(yb)}
+        tx={X(exW + newW) + 20}
+        ty={Y(0) + 6}
+        label={`${size} dowels @ ${inch(spacing)} o.c.`}
       />
-    </Row>
+      <Leader
+        x={X(exW - hef * 0.5)}
+        y={Y(yb) - (d * sc) / 2 - 1.5}
+        tx={X(exW + newW) + 20}
+        ty={Y(0) + 18}
+        label={`adhesive: ${product.length > 28 ? `${product.slice(0, 27)}…` : product}`}
+      />
+      <Dim a={X(exW - hef)} b={X(exW)} at={bot + 12} from={bot} label={`h_ef = ${inch(hef)}`} />
+      <Dim a={Y(0)} b={Y(yb)} at={X(0) - 12} from={X(0)} label={inch(ca1)} vertical side={-1} />
+      <Dim a={Y(0)} b={bot} at={X(0) - 30} from={X(0)} label={inch(ha)} vertical side={-1} />
+      <ViewTitle x={X((exW + newW) / 2)} y={bot + 32}>
+        Section at joint
+      </ViewTitle>
+    </Figure>
   );
 }
 
-/** retaining wall: stem bars with hooked dowels into the footing, footing mats and long. bars */
+/** retaining wall: stem bars hooked into the footing, top and bottom mats, longitudinal bars */
 export function RetainingRebar({
   B,
   hf,
@@ -500,7 +399,6 @@ export function RetainingRebar({
   stem,
   footing,
 }: {
-  /** footing width, ft; thickness, in; toe, ft; stem thickness, in; stem height, ft */
   B: number;
   hf: number;
   toe: number;
@@ -517,14 +415,13 @@ export function RetainingRebar({
 }) {
   const Bi = B * 12;
   const Hi = stemH * 12;
-  const sc = Math.min(250 / Bi, 210 / (Hi + hf));
-  const x0 = 20;
-  const yb = 14 + (Hi + hf) * sc;
-  const X = (v: number) => x0 + v * sc; // in from the toe
-  const Y = (v: number) => yb - v * sc; // in above the bottom
+  const sc = Math.min(220 / Bi, 200 / (Hi + hf));
+  const x0 = 60;
+  const yb = 16 + (Hi + hf) * sc;
+  const X = (v: number) => x0 + v * sc;
+  const Y = (v: number) => yb - v * sc;
   const t0 = toe * 12;
   const vb = db(stem.size);
-  // d from the toe (front) face; the soil face is in tension
   const xs =
     stem.layout === "each-face"
       ? [t0 + stem.cover + vb / 2, t0 + ts - stem.cover - vb / 2]
@@ -536,52 +433,64 @@ export function RetainingRebar({
   const yTopBar = hf - footing.coverTop - tb / 2;
   const hookY = footing.coverBottom + bb + vb / 2;
   const longX = spread(footing.longitudinal.count, footing.coverBottom + lb / 2, Bi - footing.coverBottom - lb / 2);
+  const tx = X(Bi) + 26;
   return (
-    <Row title="Reinforcement — wall section" height={yb + 22}>
+    <Figure title="Reinforcement" height={yb + 40}>
       <polygon
         points={`${X(0)},${Y(0)} ${X(Bi)},${Y(0)} ${X(Bi)},${Y(hf)} ${X(t0 + ts)},${Y(hf)} ${X(t0 + ts)},${Y(hf + Hi)} ${X(t0)},${Y(hf + Hi)} ${X(t0)},${Y(hf)} ${X(0)},${Y(hf)}`}
-        fill={DC.concreteFill}
-        stroke={DC.concrete}
-        strokeWidth={1.1}
+        fill="url(#h-conc)"
+        stroke={INK}
+        strokeWidth={LW.object}
       />
-      {/* footing mats */}
-      <BarLine x1={X(footing.coverBottom)} y1={Y(yBot)} x2={X(Bi - footing.coverBottom)} y2={Y(yBot)} w={bb * sc} />
-      <BarLine x1={X(footing.coverTop)} y1={Y(yTopBar)} x2={X(Bi - footing.coverTop)} y2={Y(yTopBar)} w={tb * sc} />
+      <BarRun
+        points={`${X(footing.coverBottom)},${Y(yBot) - 4} ${X(footing.coverBottom)},${Y(yBot)} ${X(Bi - footing.coverBottom)},${Y(yBot)} ${X(Bi - footing.coverBottom)},${Y(yBot) - 4}`}
+        w={bb * sc}
+      />
+      <BarRun points={`${X(footing.coverTop)},${Y(yTopBar)} ${X(Bi - footing.coverTop)},${Y(yTopBar)}`} w={tb * sc} />
       {longX.map((x, i) => (
-        <Dot key={`l${i}`} x={X(x)} y={Y(yBot + bb / 2 + lb / 2)} r={(lb / 2) * sc} />
+        <BarDot key={`l${i}`} x={X(x)} y={Y(yBot + bb / 2 + lb / 2)} r={(lb / 2) * sc} />
       ))}
-      {/* stem bars with standard hooks into the footing, hooks toward the toe */}
       {xs.map((x, i) => (
-        <polyline
+        <BarRun
           key={`s${i}`}
           points={`${X(x)},${Y(hf + Hi - 2)} ${X(x)},${Y(hookY)} ${X(Math.max(footing.coverBottom, x - 12 * vb))},${Y(hookY)}`}
-          fill="none"
-          stroke={DC.rebar}
-          strokeWidth={Math.max(1.4, vb * sc)}
-          strokeLinejoin="round"
-          strokeLinecap="round"
+          w={vb * sc}
         />
       ))}
-      <Callouts
-        x={300}
-        y0={Y(hf + Hi) + 8}
-        items={[
-          {
-            text: `${stem.size} @ ${inch(stem.spacing)} o.c. vertical${stem.layout === "each-face" ? ", each face" : ""}, hooked into footing`,
-            to: [X(xs[xs.length - 1]), Y(hf + Hi * 0.6)],
-          },
-          { text: `${footing.top.size} @ ${inch(footing.top.spacing)} o.c. top`, to: [X(Bi * 0.8), Y(yTopBar)] },
-          { text: `${footing.bottom.size} @ ${inch(footing.bottom.spacing)} o.c. bottom`, to: [X(Bi * 0.9), Y(yBot)] },
-          {
-            text: `(${footing.longitudinal.count}) ${footing.longitudinal.size} longitudinal`,
-            to: [X(longX[longX.length - 1]), Y(yBot + bb / 2 + lb / 2)],
-          },
-          {
-            text: `cover ${inch(footing.coverBottom)} bottom, ${inch(footing.coverTop)} top; stem ${inch(stem.cover)}`,
-          },
-        ]}
+      <Leader
+        x={X(xs[xs.length - 1])}
+        y={Y(hf + Hi * 0.6)}
+        tx={tx}
+        ty={Y(hf + Hi * 0.6)}
+        label={`${stem.size} @ ${inch(stem.spacing)} o.c. vertical${stem.layout === "each-face" ? " each face" : ""}, std. hook`}
       />
-      <HDim x1={X(0)} x2={X(Bi)} y={yb + 8} label={`B = ${fmt(B, 2)} ft`} />
-    </Row>
+      <Leader
+        x={X(Bi * 0.85)}
+        y={Y(yTopBar)}
+        tx={tx}
+        ty={Y(hf) - 10}
+        label={`${footing.top.size} @ ${inch(footing.top.spacing)} o.c. top`}
+      />
+      <Leader
+        x={X(Bi * 0.92)}
+        y={Y(yBot)}
+        tx={tx}
+        ty={Y(hf) + 2}
+        label={`${footing.bottom.size} @ ${inch(footing.bottom.spacing)} o.c. bottom`}
+      />
+      <Leader
+        x={X(longX[longX.length - 1])}
+        y={Y(yBot + bb / 2 + lb / 2)}
+        tx={tx}
+        ty={Y(hf) + 14}
+        label={`(${footing.longitudinal.count}) ${footing.longitudinal.size} longitudinal`}
+      />
+      <Dim a={X(0)} b={X(Bi)} at={yb + 12} from={yb} label={`${fmt(B, 2)} ft`} />
+      <Dim a={Y(hf)} b={yb} at={X(0) - 12} from={X(0)} label={inch(hf)} vertical side={-1} />
+      <Dim a={Y(hf + Hi)} b={Y(hf)} at={X(0) - 12} from={X(t0)} label={`${fmt(stemH, 2)} ft`} vertical side={-1} />
+      <ViewTitle x={X(Bi / 2)} y={yb + 32}>
+        Section
+      </ViewTitle>
+    </Figure>
   );
 }

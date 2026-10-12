@@ -4,7 +4,7 @@
  */
 
 import { RetainingRebar } from "../report/rebarDiagrams";
-import { DC } from "../report/diagramColors";
+import { Dim, Figure, Grade, INK, LW, TS } from "../report/drafting";
 import type React from "react";
 import type { CfsWallResult } from "@/engine/members/cfsWall";
 import type { GuardPostResult } from "@/engine/members/guardPost";
@@ -28,91 +28,85 @@ interface SheetProps<R> {
 const txt: React.CSSProperties = { fontFamily: "Arial, Helvetica, sans-serif", fontSize: 8, fill: "black" };
 const line = { stroke: "black", fill: "none", strokeWidth: 1 } as const;
 
-/** Section through the wall: stem, footing, grades, earth pressure and the main dimensions. */
+/** Section through the wall: stem, footing, retained soil, grades, earth pressure, dimensions. */
 function RetainingSection({ r }: { r: RetainingWallResult }) {
   const w = r.input;
   const { B: Bw, ts, hf } = r.geo;
-  const Wd = 470;
-  const Hd = 250;
   const totalH = w.stem.height + hf;
-  const sc = Math.min((Wd - 220) / Bw, (Hd - 34) / totalH);
-  const x0 = (Wd - Bw * sc) / 2;
-  const yb = Hd - 12;
+  const sc = Math.min(210 / Bw, 190 / totalH);
+  const x0 = 70;
+  const yb = 14 + totalH * sc;
   const X = (x: number) => x0 + x * sc;
   const Y = (y: number) => yb - y * sc;
   const toe = w.footing.toe;
   const yTop = hf + w.stem.height;
   const yGrade = hf + w.Hr;
   const yToe = hf + w.soil.toeCover;
+  const back = X(Bw) + 30;
+  const pw = 40;
   return (
-    <tr className="avoid-break">
-      <td colSpan={2} className="px-3 pb-2">
-        <svg width="100%" viewBox={`0 0 ${Wd} ${Hd}`} role="img" aria-label="Retaining wall section">
-          {/* footing and stem */}
-          <polygon
-            points={`${X(0)},${Y(0)} ${X(Bw)},${Y(0)} ${X(Bw)},${Y(hf)} ${X(toe + ts)},${Y(hf)} ${X(toe + ts)},${Y(yTop)} ${X(toe)},${Y(yTop)} ${X(toe)},${Y(hf)} ${X(0)},${Y(hf)}`}
-            fill={DC.concreteFill}
-            stroke={DC.concrete}
-            strokeWidth={1.2}
-          />
-          {/* retained soil behind the stem */}
-          <polygon
-            points={`${X(toe + ts)},${Y(hf)} ${X(Bw) + 40},${Y(hf)} ${X(Bw) + 40},${Y(yGrade)} ${X(toe + ts)},${Y(yGrade)}`}
-            fill={DC.soil}
-            fillOpacity={0.14}
-            stroke="none"
-          />
-          {/* retained grade behind, toe grade in front */}
+    <Figure title="Geometry" height={yb + 40}>
+      {/* retained soil behind the stem */}
+      <rect x={X(toe + ts)} y={Y(yGrade)} width={back - X(toe + ts)} height={Y(hf) - Y(yGrade)} fill="url(#h-earth)" />
+      <rect x={X(Bw)} y={Y(hf)} width={back - X(Bw)} height={Y(0) - Y(hf)} fill="url(#h-earth)" />
+      <line x1={X(toe + ts)} y1={Y(yGrade)} x2={back} y2={Y(yGrade)} stroke={INK} strokeWidth={LW.object} />
+      {w.soil.toeCover > 0 ? <Grade x1={X(0) - 30} x2={X(toe)} y={Y(yToe)} depth={6} /> : null}
+      <polygon
+        points={`${X(0)},${Y(0)} ${X(Bw)},${Y(0)} ${X(Bw)},${Y(hf)} ${X(toe + ts)},${Y(hf)} ${X(toe + ts)},${Y(yTop)} ${X(toe)},${Y(yTop)} ${X(toe)},${Y(hf)} ${X(0)},${Y(hf)}`}
+        fill={w.stem.material === "cmu" ? "url(#h-conc)" : "url(#h-conc)"}
+        stroke={INK}
+        strokeWidth={LW.object}
+      />
+      {w.stem.material === "cmu" ? (
+        <rect
+          x={X(toe)}
+          y={Y(yTop)}
+          width={ts * sc}
+          height={(yTop - hf) * sc}
+          fill="url(#h-cmu)"
+          stroke={INK}
+          strokeWidth={LW.object}
+        />
+      ) : null}
+      {/* earth pressure on the vertical plane through the heel */}
+      <polygon
+        points={`${back + 8},${Y(yGrade)} ${back + 8},${Y(0)} ${back + 8 + pw},${Y(0)}`}
+        fill="#fff"
+        stroke={INK}
+        strokeWidth={LW.thin}
+      />
+      {Array.from({ length: 5 }, (_, k) => {
+        const y = Y(yGrade) + ((k + 1) / 6) * (Y(0) - Y(yGrade));
+        const len = (pw * (k + 1)) / 6;
+        return (
           <line
-            x1={X(toe + ts)}
-            y1={Y(yGrade)}
-            x2={X(Bw) + 40}
-            y2={Y(yGrade)}
-            stroke={DC.soil}
-            strokeWidth={1.2}
-            strokeDasharray="4 2"
+            key={k}
+            x1={back + 8 + len}
+            y1={y}
+            x2={back + 9}
+            y2={y}
+            stroke={INK}
+            strokeWidth={LW.hatch}
+            markerEnd="url(#ah)"
           />
-          {w.soil.toeCover > 0 ? (
-            <line
-              x1={X(0) - 30}
-              y1={Y(yToe)}
-              x2={X(toe)}
-              y2={Y(yToe)}
-              stroke={DC.soil}
-              strokeWidth={1.2}
-              strokeDasharray="4 2"
-            />
-          ) : null}
-          {/* earth pressure triangle on the heel plane */}
-          <polygon
-            points={`${X(Bw) + 6},${Y(yGrade)} ${X(Bw) + 6},${Y(0)} ${X(Bw) + 46},${Y(0)}`}
-            fill={DC.pressure}
-            fillOpacity={0.18}
-            stroke={DC.pressure}
-            strokeWidth={0.9}
-          />
-          <text x={X(Bw) + 50} y={Y(0) - 2} style={{ ...txt, fill: DC.pressure, fontWeight: 700 }}>
-            {f0(w.soil.efp)} pcf
-          </text>
-          {/* dimensions */}
-          <text x={X(toe + ts) + 4} y={(Y(hf) + Y(yGrade)) / 2} style={txt}>
-            Hr = {f2(w.Hr)} ft
-          </text>
-          <text x={X(0)} y={yb + 10} style={txt}>
-            B = {f2(Bw)} ft (toe {f2(toe)}, stem {f2(ts)}, heel {f2(w.footing.heel)})
-          </text>
-          <text x={X(0) - 64} y={Y(hf / 2) + 3} style={txt}>
-            hf = {f0(w.footing.h)} in
-          </text>
-          <text x={X(toe) - 4} y={Y(yTop) - 4} style={txt} textAnchor="end">
-            stem {f2(w.stem.height)} ft × {f1(w.stem.t)} in
-          </text>
-          <text x={X(Bw) + 44} y={Y(yGrade) - 4} style={txt}>
-            {w.soil.surcharge ? `q = ${f0(w.soil.surcharge)} psf` : "grade"}
-          </text>
-        </svg>
-      </td>
-    </tr>
+        );
+      })}
+      <text x={back + 10 + pw} y={Y(0) - 2} style={TS}>
+        {f0(w.soil.efp)} pcf
+      </text>
+      {w.soil.surcharge ? (
+        <text x={back + 10} y={Y(yGrade) - 4} style={TS}>
+          q = {f0(w.soil.surcharge)} psf
+        </text>
+      ) : null}
+      <Dim a={X(0)} b={X(toe)} at={yb + 12} from={yb} label={`${f2(toe)} ft`} />
+      <Dim a={X(toe)} b={X(toe + ts)} at={yb + 12} from={yb} label={`${f1(w.stem.t)}"`} />
+      <Dim a={X(toe + ts)} b={X(Bw)} at={yb + 12} from={yb} label={`${f2(w.footing.heel)} ft`} />
+      <Dim a={X(0)} b={X(Bw)} at={yb + 26} from={yb} label={`B = ${f2(Bw)} ft`} />
+      <Dim a={Y(hf)} b={yb} at={X(0) - 12} from={X(0)} label={`${f0(w.footing.h)}"`} vertical side={-1} />
+      <Dim a={Y(yTop)} b={Y(hf)} at={X(0) - 12} from={X(toe)} label={`${f2(w.stem.height)} ft`} vertical side={-1} />
+      <Dim a={Y(yGrade)} b={Y(hf)} at={X(toe + ts) + 12} from={X(toe + ts)} label={`H_r = ${f2(w.Hr)} ft`} vertical />
+    </Figure>
   );
 }
 
