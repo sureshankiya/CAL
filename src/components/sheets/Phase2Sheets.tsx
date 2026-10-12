@@ -4,7 +4,14 @@
  * the Phase 1 member sheets.
  */
 
-import { ColumnElevation, FootingPlan, ShearWallElevation, StudWallElevation } from "../report/geometryDiagrams";
+import type { Project, ShearWallSpec } from "@/engine/project";
+import {
+  ColumnElevation,
+  FootingPlan,
+  ShearWallElevation,
+  StudWallElevation,
+  type WallLineView,
+} from "../report/geometryDiagrams";
 import { FootingRebar } from "../report/rebarDiagrams";
 import type React from "react";
 import { fmt, fmtFtIn, fmtInFraction } from "@/engine/core/fmt";
@@ -862,6 +869,18 @@ export function FootingSheet({ m, r, index, total, received }: SheetProps<Footin
   );
 }
 
+/** the wall line of a shear wall: length, openings and every segment placed on it */
+function wallLineView(p: Project, memberId: string): { x?: number; line?: WallLineView } {
+  const me = p.members.find((k): k is ShearWallSpec => k.kind === "shearWall" && k.id === memberId);
+  const lineId = me?.lineId;
+  const l = p.lateral?.lines.find((x) => x.id === lineId);
+  if (!me || !l) return {};
+  const segments = p.members
+    .filter((k): k is ShearWallSpec => k.kind === "shearWall" && k.lineId === lineId && k.x !== undefined)
+    .map((k) => ({ mark: k.mark, x: k.x!, b: k.b, holdown: !!k.holdownId, opening: k.opening }));
+  return { x: me.x, line: { name: l.name, length: l.length, openings: l.openings ?? [], segments } };
+}
+
 export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResult>) {
   const s = r.input;
   const d = r.demand;
@@ -943,6 +962,8 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         sides={r.sides.map((x) => `${x.row.label}, edge nails @ ${f0(x.spacing)} in.`)}
         opening={s.opening}
         sillSpacing={s.sill.spacing}
+        mark={r.mark}
+        {...wallLineView(m.project, r.id)}
       />
       <SectionHead title="Sheathing — nominal unit shear capacities" />
       {r.sides.map((x, i) => (

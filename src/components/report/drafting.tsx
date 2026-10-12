@@ -46,6 +46,10 @@ export function Hatches() {
         <circle cx="1" cy="1" r="0.35" fill={INK} />
         <circle cx="3" cy="3" r="0.3" fill={INK} />
       </pattern>
+      <pattern id="h-shtg" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="7" height="7" fill="#f6f6f6" />
+        <line x1="0" y1="0" x2="0" y2="7" stroke="#9e9e9e" strokeWidth="0.3" />
+      </pattern>
       <marker
         id="ah"
         viewBox="0 0 10 10"

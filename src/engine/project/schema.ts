@@ -856,6 +856,19 @@ export const weightItemSchema = z.object({
   W: nonneg.optional(),
 });
 
+export const wallLineOpeningSchema = z.object({
+  id: z.string(),
+  label: z.string().default(""),
+  type: z.enum(["door", "window"]),
+  /** start along the line, ft */
+  x: nonneg,
+  /** width and height, ft */
+  w: pos,
+  h: pos,
+  /** sill height above the floor, ft (windows) */
+  sill: nonneg.default(0),
+});
+
 export const lateralSchema = z.object({
   enabled: z.boolean(),
   system: z.enum(["wsp", "other"]),
@@ -880,6 +893,10 @@ export const lateralSchema = z.object({
       dir: z.enum(["X", "Y"]),
       trib: pos,
       pos: nonneg.optional(),
+      /** wall line length, ft (elevation of the line on the shear-wall sheets) */
+      length: pos.optional(),
+      /** door / window openings along the line, ft from the line start */
+      openings: z.array(wallLineOpeningSchema).optional(),
     }),
   ),
   distribution: z.enum(["flexible", "rigid", "envelope"]).default("flexible"),
@@ -1027,6 +1044,7 @@ export type RetainingWallSpec = z.infer<typeof retainingWallSpecSchema>;
 export type GuardPostSpec = z.infer<typeof guardPostSpecSchema>;
 export type CfsWallSpec = z.infer<typeof cfsWallSpecSchema>;
 export type LateralSpec = z.infer<typeof lateralSchema>;
+export type WallLineOpening = z.infer<typeof wallLineOpeningSchema>;
 export type HardwareSpec = z.infer<typeof hardwareItemSchema>;
 export type LinkedLoad = z.infer<typeof linkedLoadSchema>;
 export type ReviewItem = z.infer<typeof reviewItemSchema>;

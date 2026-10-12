@@ -439,7 +439,26 @@ export function StudWallElevation({
   );
 }
 
-/** shear-wall elevation: panel, end posts, hold-downs, sill anchors, opening */
+export interface WallLineView {
+  name: string;
+  length?: number;
+  openings: Array<{ label: string; type: "door" | "window"; x: number; w: number; h: number; sill: number }>;
+  /** shear-wall segments on the line with their start positions */
+  segments: Array<{
+    mark: string;
+    x: number;
+    b: number;
+    holdown: boolean;
+    opening?: { L1: number; Lo: number; L2: number; ha: number; hb: number };
+  }>;
+}
+
+/**
+ * shear-wall elevation: the whole wall line when the line and the segment position are known
+ * (doors and windows with headers and trimmers, every shear-wall segment with its sheathing,
+ * end posts and hold-downs, the segment of this sheet in heavy line), else the segment alone;
+ * FTAO walls show their opening with the head and sill straps
+ */
 export function ShearWallElevation({
   b,
   h,
@@ -447,6 +466,9 @@ export function ShearWallElevation({
   holdown,
   opening,
   sillSpacing,
+  mark,
+  x,
+  line,
 }: {
   b: number;
   h: number;
@@ -455,142 +477,260 @@ export function ShearWallElevation({
   sides: string[];
   opening?: { L1: number; Lo: number; L2: number; ha: number; hb: number };
   sillSpacing?: number;
+  mark?: string;
+  x?: number;
+  line?: WallLineView;
 }) {
-  const sc = Math.min(330 / (b * 12), 140 / (h * 12));
-  const x0 = 60;
-  const yTop = 14;
-  const X = (ft: number) => x0 + ft * 12 * sc;
+  const lineView =
+    !!line && x !== undefined && (line.openings.length > 0 || line.segments.length > 1 || (line.length ?? 0) > b);
+  const x0w = lineView ? x! : 0;
+  const segs = lineView
+    ? line!.segments.map((s) => ({ ...s, current: Math.abs(s.x - x0w) < 1e-6 && Math.abs(s.b - b) < 1e-6 }))
+    : [{ mark: mark ?? "", x: 0, b, holdown: !!holdown, current: true }];
+  if (!segs.some((s) => s.current)) segs.push({ mark: mark ?? "", x: x0w, b, holdown: !!holdown, current: true });
+  const asOpening = (sx: number, o: { L1: number; Lo: number; ha: number; hb: number }, lab: string) => ({
+    label: lab,
+    type: o.hb > 0 ? ("window" as const) : ("door" as const),
+    x: sx + o.L1,
+    w: o.Lo,
+    h: h - o.ha - o.hb,
+    sill: o.hb,
+  });
+  const ops = lineView ? line!.openings : [];
+  const L = Math.max(lineView ? (line!.length ?? 0) : b, ...segs.map((s) => s.x + s.b), ...ops.map((o) => o.x + o.w));
+  const sc = Math.min(390 / (L * 12), 140 / (h * 12));
+  const X0 = 50;
+  const yTop = 22;
+  const X = (ft: number) => X0 + ft * 12 * sc;
   const Y = (ft: number) => yTop + (h - ft) * 12 * sc;
   const yb = Y(0);
   const post = 3.5 * sc;
+  const hdr = 11.25 / 12;
+  const trim = 1.5 / 12;
+
+  // FTAO opening of this segment, as a window (sill above the floor) or a door
+  const ftao = opening ? asOpening(x0w, opening, "O1") : undefined;
+  // FTAO openings of the other segments on the line
+  const otherFtao = segs
+    .filter((s) => !s.current && "opening" in s && s.opening)
+    .map((s, i) =>
+      asOpening(s.x, (s as { opening: NonNullable<WallLineView["segments"][number]["opening"]> }).opening, `O${i + 2}`),
+    );
+  const allOps = [...ops, ...(ftao ? [ftao] : []), ...otherFtao];
+
+  const symbol = (o: (typeof allOps)[number], i: number) => {
+    const a = X(o.x);
+    const c = X(o.x + o.w);
+    const top = Y(o.sill + o.h);
+    const bot = Y(o.sill);
+    const hdrTop = Y(Math.min(h - 0.25, o.sill + o.h + hdr));
+    const inset = 2 * sc;
+    return (
+      <g key={`o${i}`}>
+        {/* header and trimmers */}
+        <TimberSection x={X(o.x - trim)} y={hdrTop} w={(o.w + 2 * trim) * 12 * sc} h={top - hdrTop} />
+        <rect
+          x={X(o.x - trim)}
+          y={top}
+          width={trim * 12 * sc}
+          height={yb - top}
+          fill="#fff"
+          stroke={INK}
+          strokeWidth={LW.thin}
+        />
+        <rect x={c} y={top} width={trim * 12 * sc} height={yb - top} fill="#fff" stroke={INK} strokeWidth={LW.thin} />
+        <rect x={a} y={top} width={c - a} height={bot - top} fill="#fff" stroke={INK} strokeWidth={LW.object} />
+        {o.type === "window" ? (
+          <>
+            <rect
+              x={a + inset}
+              y={top + inset}
+              width={Math.max(0, c - a - 2 * inset)}
+              height={Math.max(0, bot - top - 2 * inset)}
+              fill="none"
+              stroke={INK}
+              strokeWidth={LW.thin}
+            />
+            <line
+              x1={a + inset}
+              y1={(top + bot) / 2}
+              x2={c - inset}
+              y2={(top + bot) / 2}
+              stroke={INK}
+              strokeWidth={LW.thin}
+            />
+            <rect x={a - 2} y={bot} width={c - a + 4} height={2} fill={INK} />
+          </>
+        ) : (
+          <polyline
+            points={`${c - inset},${top + inset} ${a + inset},${(top + bot) / 2} ${c - inset},${bot}`}
+            fill="none"
+            stroke={INK}
+            strokeWidth={LW.thin}
+            strokeDasharray="4 2"
+          />
+        )}
+        <text x={(a + c) / 2} y={top + 9} textAnchor="middle" style={{ ...TS, fontWeight: 700 }}>
+          {o.label}
+        </text>
+        {o.type === "window" && o.sill > 0 && c - a > 18 ? (
+          <Dim a={bot} b={yb} at={c - 6} label={fmtFtIn(o.sill)} vertical />
+        ) : null}
+      </g>
+    );
+  };
+
+  const segment = (s: (typeof segs)[number], i: number) => {
+    const a = X(s.x);
+    const c = X(s.x + s.b);
+    const w = s.b * 12 * sc;
+    return (
+      <g key={`s${i}`}>
+        <rect
+          x={a}
+          y={Y(h)}
+          width={w}
+          height={h * 12 * sc}
+          fill="url(#h-shtg)"
+          stroke={INK}
+          strokeWidth={s.current ? LW.heavy : LW.object}
+        />
+        {/* panel joints and edge nailing */}
+        {Array.from({ length: Math.floor(s.b / 4 - 1e-6) }, (_, k) => (k + 1) * 4).map((v) => (
+          <line
+            key={`j${v}`}
+            x1={X(s.x + v)}
+            y1={Y(h)}
+            x2={X(s.x + v)}
+            y2={yb}
+            stroke={INK}
+            strokeWidth={LW.hatch}
+            strokeDasharray="5 2"
+          />
+        ))}
+        {h > 8 ? (
+          <line x1={a} y1={Y(h - 8)} x2={c} y2={Y(h - 8)} stroke={INK} strokeWidth={LW.hatch} strokeDasharray="5 2" />
+        ) : null}
+        <rect
+          x={a + post + 1.5}
+          y={Y(h) + 3}
+          width={Math.max(0, w - 2 * post - 3)}
+          height={h * 12 * sc - 6}
+          fill="none"
+          stroke={INK}
+          strokeWidth={LW.hatch}
+          strokeDasharray="1.5 1.5"
+        />
+        {[a, c - post].map((px, k) => (
+          <rect
+            key={`p${k}`}
+            x={px}
+            y={Y(h)}
+            width={post}
+            height={h * 12 * sc}
+            fill="#d9d9d9"
+            stroke={INK}
+            strokeWidth={LW.object}
+          />
+        ))}
+        {s.holdown
+          ? [a + post, c - post - 4].map((px, k) => (
+              <rect key={`hd${k}`} x={px} y={yb - 15} width={4} height={13} fill={INK} />
+            ))
+          : null}
+        <text x={(a + c) / 2} y={Y(h) - 4} textAnchor="middle" style={{ ...T, fontWeight: s.current ? 700 : 400 }}>
+          {s.mark}
+        </text>
+      </g>
+    );
+  };
+
+  // dimension chain along the base: segment and opening edges
+  const edges = [0, L, ...segs.flatMap((s) => [s.x, s.x + s.b]), ...allOps.flatMap((o) => [o.x, o.x + o.w])]
+    .filter((v) => v >= -1e-6 && v <= L + 1e-6)
+    .sort((p, q) => p - q)
+    .filter((v, i, arr) => i === 0 || v - arr[i - 1] > 0.05);
+  const cur = segs.find((s) => s.current)!;
   return (
-    <Figure title="Geometry" height={yb + 50}>
+    <Figure
+      title={lineView ? `Geometry — wall line ${line!.name}` : "Geometry"}
+      height={yb + (edges.length > 2 ? 66 : 50) + (allOps.length ? 11 : 0)}
+    >
+      {/* wall, plates */}
       <rect
         x={X(0)}
         y={Y(h)}
-        width={b * 12 * sc}
+        width={L * 12 * sc}
         height={h * 12 * sc}
         fill="#fff"
         stroke={INK}
         strokeWidth={LW.object}
       />
-      {/* panel joints */}
-      {Array.from({ length: Math.floor(b / 4 - 1e-6) }, (_, i) => (i + 1) * 4).map((x) => (
-        <line
-          key={`j${x}`}
-          x1={X(x)}
-          y1={Y(h)}
-          x2={X(x)}
-          y2={yb}
-          stroke={INK}
-          strokeWidth={LW.hatch}
-          strokeDasharray="5 2"
-        />
-      ))}
-      {h > 8 ? (
-        <line
-          x1={X(0)}
-          y1={Y(h - 8)}
-          x2={X(b)}
-          y2={Y(h - 8)}
-          stroke={INK}
-          strokeWidth={LW.hatch}
-          strokeDasharray="5 2"
-        />
-      ) : null}
-      {opening ? (
+      {segs.map(segment)}
+      {allOps.map(symbol)}
+      <line x1={X(0)} y1={Y(h) + 1.5 * sc} x2={X(L)} y2={Y(h) + 1.5 * sc} stroke={INK} strokeWidth={LW.thin} />
+      <line x1={X(0)} y1={Y(h) + 3 * sc} x2={X(L)} y2={Y(h) + 3 * sc} stroke={INK} strokeWidth={LW.thin} />
+      {ftao && opening ? (
         <g>
-          <rect
-            x={X(opening.L1)}
-            y={Y(h - opening.ha)}
-            width={opening.Lo * 12 * sc}
-            height={(h - opening.ha - opening.hb) * 12 * sc}
-            fill="#fff"
-            stroke={INK}
-            strokeWidth={LW.object}
-          />
-          <line
-            x1={X(opening.L1)}
-            y1={Y(h - opening.ha)}
-            x2={X(opening.L1 + opening.Lo)}
-            y2={Y(opening.hb)}
-            stroke={INK}
-            strokeWidth={LW.hatch}
-          />
-          <line
-            x1={X(opening.L1 + opening.Lo)}
-            y1={Y(h - opening.ha)}
-            x2={X(opening.L1)}
-            y2={Y(opening.hb)}
-            stroke={INK}
-            strokeWidth={LW.hatch}
-          />
+          {[ftao.sill + ftao.h, ftao.sill]
+            .filter((v) => v > 0)
+            .map((yy, k) => (
+              <line
+                key={`st${k}`}
+                x1={X(x0w) + post}
+                y1={Y(yy) + (k ? 2 : -2)}
+                x2={X(x0w + b) - post}
+                y2={Y(yy) + (k ? 2 : -2)}
+                stroke={INK}
+                strokeWidth={1.8}
+                strokeDasharray="7 2"
+              />
+            ))}
+          <text x={X(x0w) + post + 3} y={Y(ftao.sill + ftao.h) - 5} style={TS}>
+            strap
+          </text>
         </g>
       ) : null}
-      {[X(0), X(b) - post].map((x, i) => (
-        <rect
-          key={`p${i}`}
-          x={x}
-          y={Y(h)}
-          width={post}
-          height={h * 12 * sc}
-          fill="#e0e0e0"
-          stroke={INK}
-          strokeWidth={LW.object}
-        />
-      ))}
-      {holdown
-        ? [X(0) + post, X(b) - post - 4].map((x, i) => (
-            <rect key={`hd${i}`} x={x} y={yb - 16} width={4} height={14} fill={INK} />
-          ))
-        : null}
       {sillSpacing
         ? Array.from(
-            { length: Math.max(0, Math.floor((b * 12 - 24) / sillSpacing) + 1) },
+            { length: Math.max(0, Math.floor((cur.b * 12 - 24) / sillSpacing) + 1) },
             (_, i) => 12 + i * sillSpacing,
           )
-            .filter((v) => v <= b * 12 - 12)
+            .filter((v) => v <= cur.b * 12 - 12)
             .map((v, i) => (
               <line
                 key={`a${i}`}
-                x1={x0 + v * sc}
+                x1={X(cur.x) + v * sc}
                 y1={yb - 4}
-                x2={x0 + v * sc}
+                x2={X(cur.x) + v * sc}
                 y2={yb + 6}
                 stroke={INK}
                 strokeWidth={1.1}
               />
             ))
         : null}
-      <FixedSupport x={(X(0) + X(b)) / 2} y={yb} len={b * 12 * sc + 16} />
-      <Dim a={X(0)} b={X(b)} at={yb + 16} from={yb} label={fmtFtIn(b)} />
+      <FixedSupport x={(X(0) + X(L)) / 2} y={yb} len={L * 12 * sc + 16} />
+      {edges.slice(0, -1).map((v, i) => (
+        <Dim key={`d${i}`} a={X(v)} b={X(edges[i + 1])} at={yb + 16} from={yb} label={fmtFtIn(edges[i + 1] - v)} />
+      ))}
+      {edges.length > 2 ? <Dim a={X(0)} b={X(L)} at={yb + 32} from={yb} label={fmtFtIn(L)} /> : null}
       <Dim a={Y(h)} b={yb} at={X(0) - 14} from={X(0)} label={fmtFtIn(h)} vertical side={-1} />
-      {opening ? (
-        <>
-          <Dim a={X(0)} b={X(opening.L1)} at={Y(h) - 8} from={Y(h)} label={fmtFtIn(opening.L1)} side={-1} />
-          <Dim
-            a={X(opening.L1)}
-            b={X(opening.L1 + opening.Lo)}
-            at={Y(h) - 8}
-            from={Y(h)}
-            label={fmtFtIn(opening.Lo)}
-            side={-1}
-          />
-          <Dim
-            a={X(opening.L1 + opening.Lo)}
-            b={X(b)}
-            at={Y(h) - 8}
-            from={Y(h)}
-            label={fmtFtIn(opening.L2)}
-            side={-1}
-          />
-        </>
-      ) : null}
-      <text x={X(0)} y={yb + 36} style={TS}>
-        End posts {endPost}
+      <text x={X(0)} y={yb + (edges.length > 2 ? 52 : 36)} style={TS}>
+        {mark ? `${mark}: ` : ""}b = {fmtFtIn(b)}, h / b = {fmt(h / b, 2)}; end posts {endPost}
         {holdown ? `; hold-downs ${holdown}` : ""}
-        {sillSpacing ? `; sill anchors @ ${inch(sillSpacing)} o.c.` : ""}; h / b = {fmt(h / b, 2)}
+        {sillSpacing ? `; sill anchors @ ${inch(sillSpacing)} o.c.` : ""}
       </text>
+      {allOps.length ? (
+        <text x={X(0)} y={yb + (edges.length > 2 ? 63 : 47)} style={TS}>
+          Openings:{" "}
+          {allOps
+            .map(
+              (o) =>
+                `${o.label} ${o.type} ${fmtFtIn(o.w)} × ${fmtFtIn(o.h)}${o.type === "window" && o.sill > 0 ? `, sill ${fmtFtIn(o.sill)}` : ""}${o === ftao ? " (FTAO)" : ""}`,
+            )
+            .join("; ")}
+        </text>
+      ) : null}
     </Figure>
   );
 }

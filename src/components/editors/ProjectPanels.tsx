@@ -7,7 +7,7 @@ import { CE_TABLE } from "@/engine/loads/snow";
 import { SOIL_CLASSES, soilClass } from "@/engine/data/soil";
 import { HARDWARE_KIND_LABEL, defaultHardware, type HardwareKind } from "@/engine/data/hardware";
 import { SEISMIC_SYSTEMS } from "@/engine/loads/seismic";
-import { defaultLateral, generateWeights, type LateralSpec } from "@/engine/project";
+import { defaultLateral, generateWeights, type LateralSpec, type WallLineOpening } from "@/engine/project";
 import {
   NEW_MEMBER_LABEL,
   newId,
@@ -843,6 +843,80 @@ export function HardwarePanel({ p, set }: { p: Project; set: SetProject }) {
   );
 }
 
+/** wall line length and door / window openings (drawn on the shear-wall sheets of the line) */
+function LineOpenings({
+  line,
+  onChange,
+}: {
+  line: LateralSpec["lines"][number];
+  onChange: (patch: Partial<LateralSpec["lines"][number]>) => void;
+}) {
+  const ops = line.openings ?? [];
+  const setOp = (k: number, patch: Partial<WallLineOpening>) =>
+    onChange({ openings: ops.map((o, j) => (j === k ? { ...o, ...patch } : o)) });
+  return (
+    <details className="rounded border border-border px-2 py-1 text-xs">
+      <summary className="cursor-pointer text-muted-foreground">
+        Length and openings ({line.length ? `${line.length} ft` : "length not set"}; {ops.length} opening
+        {ops.length === 1 ? "" : "s"})
+      </summary>
+      <div className="mt-1 space-y-1">
+        <Field label="Wall line length (ft)" hint="Shear wall start positions (x) are measured from the line start">
+          <NumberInput value={line.length} allowEmpty min={1} onChange={(v) => onChange({ length: v })} />
+        </Field>
+        {ops.map((o, k) => (
+          <div key={o.id} className="space-y-1 rounded border border-border p-1">
+            <Grid cols={3}>
+              <TextInput value={o.label} onChange={(v) => setOp(k, { label: v })} />
+              <Select
+                value={o.type}
+                options={[
+                  { value: "window", label: "Window" },
+                  { value: "door", label: "Door" },
+                ]}
+                onChange={(v) => setOp(k, { type: v, sill: v === "door" ? 0 : o.sill || 3 })}
+              />
+              <SmallButton
+                tone="danger"
+                title="Remove opening"
+                onClick={() => onChange({ openings: ops.filter((_, j) => j !== k) })}
+              >
+                ✕
+              </SmallButton>
+            </Grid>
+            <Grid cols={4}>
+              <Field label="x (ft)">
+                <NumberInput value={o.x} min={0} onChange={(v) => setOp(k, { x: v ?? o.x })} />
+              </Field>
+              <Field label="Width (ft)">
+                <NumberInput value={o.w} min={0.5} onChange={(v) => setOp(k, { w: v ?? o.w })} />
+              </Field>
+              <Field label="Height (ft)">
+                <NumberInput value={o.h} min={0.5} onChange={(v) => setOp(k, { h: v ?? o.h })} />
+              </Field>
+              <Field label="Sill (ft)">
+                <NumberInput value={o.sill} min={0} onChange={(v) => setOp(k, { sill: v ?? 0 })} />
+              </Field>
+            </Grid>
+          </div>
+        ))}
+        <AddButton
+          onClick={() =>
+            onChange({
+              openings: [
+                ...ops,
+                { id: newId("op"), label: `W${ops.length + 1}`, type: "window", x: 0, w: 4, h: 4, sill: 3 },
+              ],
+            })
+          }
+        >
+          + Add door / window
+        </AddButton>
+      </div>
+    </details>
+  );
+}
+
 export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
   const lat: LateralSpec = p.lateral ?? defaultLateral(p);
   const upd = (patch: Partial<LateralSpec>) =>
@@ -1011,28 +1085,31 @@ export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
       </Grid>
       <div className="text-xs font-semibold text-muted-foreground">Wall lines</div>
       {lat.lines.map((l, i) => (
-        <Grid key={l.id} cols={4}>
-          <TextInput value={l.name} onChange={(v) => setLine(i, { name: v })} />
-          <div className="flex gap-1">
-            <Select
-              value={l.storyId}
-              options={lat.stories.map((s) => ({ value: s.id, label: s.name }))}
-              onChange={(v) => setLine(i, { storyId: v })}
-            />
-            <Select value={l.dir} options={["X", "Y"] as const} onChange={(v) => setLine(i, { dir: v })} />
-          </div>
-          <NumberInput value={l.pos} allowEmpty min={0} onChange={(v) => setLine(i, { pos: v })} />
-          <div className="flex gap-1">
-            <NumberInput value={l.trib} min={0.5} onChange={(v) => setLine(i, { trib: v ?? l.trib })} />
-            <SmallButton
-              tone="danger"
-              title="Remove"
-              onClick={() => upd({ lines: lat.lines.filter((_, j) => j !== i) })}
-            >
-              ✕
-            </SmallButton>
-          </div>
-        </Grid>
+        <div key={l.id} className="space-y-1">
+          <Grid cols={4}>
+            <TextInput value={l.name} onChange={(v) => setLine(i, { name: v })} />
+            <div className="flex gap-1">
+              <Select
+                value={l.storyId}
+                options={lat.stories.map((s) => ({ value: s.id, label: s.name }))}
+                onChange={(v) => setLine(i, { storyId: v })}
+              />
+              <Select value={l.dir} options={["X", "Y"] as const} onChange={(v) => setLine(i, { dir: v })} />
+            </div>
+            <NumberInput value={l.pos} allowEmpty min={0} onChange={(v) => setLine(i, { pos: v })} />
+            <div className="flex gap-1">
+              <NumberInput value={l.trib} min={0.5} onChange={(v) => setLine(i, { trib: v ?? l.trib })} />
+              <SmallButton
+                tone="danger"
+                title="Remove"
+                onClick={() => upd({ lines: lat.lines.filter((_, j) => j !== i) })}
+              >
+                ✕
+              </SmallButton>
+            </div>
+          </Grid>
+          <LineOpenings line={l} onChange={(patch) => setLine(i, patch)} />
+        </div>
       ))}
       <AddButton
         onClick={() =>
