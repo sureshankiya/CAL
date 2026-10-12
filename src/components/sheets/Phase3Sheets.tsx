@@ -4,6 +4,7 @@
  * wind uplift path and ledgers — in the Tedds-style layout of the other sheets.
  */
 
+import { BasePlatePlan, ColumnElevation, SteelSection } from "../report/geometryDiagrams";
 import type React from "react";
 import { Fragment } from "react";
 import { fmt, fmtInFraction } from "@/engine/core/fmt";
@@ -231,6 +232,7 @@ export function SteelBeamSheet({ m, r, index, total, received, connections }: Sh
       <SectionProps s={r.shape} Fy={r.Fy} Fu={r.Fu} grade={r.gradeLabel} />
       <LoadPath received={received} connections={connections} />
       <LoadLines lines={r.loadLines} title="Unfactored loads" />
+      <SteelSection s={r.shape} grade={b.grade} />
       <SectionHead title="Analysis results per combination" />
       <DataTable
         head={[
@@ -461,6 +463,16 @@ export function SteelColumnSheet({ m, r, index, total, received, connections }: 
       <LoadPath received={received} connections={connections} />
       <LoadLines lines={r.loadLines} title="Unfactored loads" />
       <ClassRows classes={r.comp.classes} />
+      <ColumnElevation
+        height={c.height}
+        braceWeak={c.Ly && c.Ly < c.height ? c.Ly : undefined}
+        leX={c.Kx * c.height * 12}
+        leY={c.Ky * (c.Ly ?? c.height) * 12}
+        base="base plate on concrete"
+        section={{ kind: "steel", s: r.shape }}
+        sectionLabel={`${r.shape.name} ${c.grade}`}
+      />
+      <SteelSection s={r.shape} grade={c.grade} />
       <SectionHead title="Compressive strength — Chapter E" />
       {r.comp.steps.map((st, i) => (
         <TR
@@ -646,6 +658,7 @@ export function BasePlateSheet({ m, r, index, total, received }: SheetProps<Base
           </>
         }
       />
+      <BasePlatePlan N={i.plate.N} B={i.plate.B} tp={i.plate.tp} col={r.col} rod={i.rod} />
       <SectionHead title="Load path" />
       <TR desc="Forces from" expr={<>{received.length ? received.join("; ") : (i.sourceMark ?? "entered forces")}</>} />
       <LoadLines lines={r.loadLines} title="Unfactored base forces" />

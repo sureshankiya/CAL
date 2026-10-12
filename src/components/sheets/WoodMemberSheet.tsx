@@ -6,6 +6,7 @@
  * serviceability, summary, result, final summary, assumptions, notes.
  */
 
+import { RafterGeometry, WoodSection } from "../report/geometryDiagrams";
 import type React from "react";
 import { fmt, fmtInFraction } from "@/engine/core/fmt";
 import type { WoodBeamResult } from "@/engine/design/wood";
@@ -1187,7 +1188,18 @@ export function WoodMemberSheet({
       />
       <DesignBasis m={m} material={<>{materialStd}</>} tables={[d.mat.tableId, "ibc-1604.3"]} />
       <GeometryRows r={r} />
+      {r.kind === "rafter" ? (
+        <RafterGeometry
+          run={r.input.run}
+          rise={r.input.rise}
+          overhang={r.input.overhang}
+          thetaDeg={r.geom.thetaDeg}
+          slopedSpan={r.geom.slopedSpan}
+          ridge={r.input.ridge === "board" ? "ridge board" : "structural ridge"}
+        />
+      ) : null}
       <MaterialRows d={d} />
+      <WoodSection m={d.mat} />
       <FactorTable r={r} />
       <LoadLines lines={r.loadLines} />
       <LoadingDiagram

@@ -3,6 +3,7 @@
  * layout of the other sheets.
  */
 
+import { WallSupportElevation } from "../report/geometryDiagrams";
 import { DowelRebar, FootingRebar, WallRebar } from "../report/rebarDiagrams";
 import { DC } from "../report/diagramColors";
 import type React from "react";
@@ -166,6 +167,7 @@ export function MasonryWallSheet({ m, r, index, total, received, connections }: 
           </>
         }
       />
+      <WallSupportElevation h={w.h} parapet={w.parapet} t={w.t} support={w.support} material={w.material} />
       <SectionHead title={cmu ? "Masonry details" : "Concrete details"} />
       {cmu ? (
         <>

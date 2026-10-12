@@ -4,6 +4,7 @@
  * the Phase 1 member sheets.
  */
 
+import { ColumnElevation, FootingPlan, ShearWallElevation, StudWallElevation } from "../report/geometryDiagrams";
 import { FootingRebar } from "../report/rebarDiagrams";
 import type React from "react";
 import { fmt, fmtFtIn, fmtInFraction } from "@/engine/core/fmt";
@@ -216,6 +217,17 @@ export function WallSheet({ m, r, index, total, received, connections }: SheetPr
         desc="Sheathing"
         expr={<>{w.sheathing === "both" ? "Both faces" : w.sheathing === "one" ? "One face" : "None"}</>}
       />
+      <StudWallElevation
+        length={w.length}
+        plateHeight={w.plateHeight}
+        spacing={w.spacing}
+        stud={`${w.size} ${w.species} ${w.grade}`}
+        topPlates={w.topPlates}
+        bottomPlates={w.bottomPlates}
+        openings={w.openings}
+        packs={w.packs}
+        sheathing={w.sheathing}
+      />
       <SectionHead title="Material" />
       <SectionRows m={r.typical.mat} />
       <TR
@@ -401,6 +413,16 @@ export function PostSheet({ m, r, index, total, received, connections }: SheetPr
       <LoadLines lines={r.loadLines} />
       <LoadPathRows received={received} />
       <ReactionTable reactions={r.reactions} title="Reaction delivered at the base (unfactored, by load type)" />
+      <ColumnElevation
+        height={p.height}
+        braceStrong={p.braceStrong}
+        braceWeak={p.braceWeak}
+        leX={r.le1}
+        leY={r.le2}
+        base={`bears on ${p.bearing.on}`}
+        section={{ kind: "wood", m: r.mat }}
+        sectionLabel={r.mat.label}
+      />
       <SectionHead title="Compression member — NDS 3.6, 3.7" />
       <ColumnComboTable col={col} caption="ASD load combinations (ASCE 7 §2.4)" />
       <AxialRows m={r.mat} col={col} row={col.axialGov} le1={r.le1} le2={r.le2} title="Axial compression" />
@@ -671,6 +693,7 @@ export function FootingSheet({ m, r, index, total, received }: SheetProps<Footin
           </>
         }
       />
+      <FootingPlan type={f.type} B={f.B} L={f.L} c1={f.c1} c2={f.c2} stemWidth={f.stem?.width} />
       <FootingRebar
         kind={strip ? "strip" : "pad"}
         width={f.B * 12}
@@ -911,6 +934,15 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
             {fmtInFraction(s.endPost.holeDia)} in. hole)
           </>
         }
+      />
+      <ShearWallElevation
+        b={s.b}
+        h={s.h}
+        endPost={`${s.endPost.plies > 1 ? `(${s.endPost.plies}) ` : ""}${s.endPost.size}`}
+        holdown={r.holdown ? `${r.holdown.item.manufacturer} ${r.holdown.item.model}` : undefined}
+        sides={r.sides.map((x) => `${x.row.label}, edge nails @ ${f0(x.spacing)} in.`)}
+        opening={s.opening}
+        sillSpacing={s.sill.spacing}
       />
       <SectionHead title="Sheathing — nominal unit shear capacities" />
       {r.sides.map((x, i) => (
