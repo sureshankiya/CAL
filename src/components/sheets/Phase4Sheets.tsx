@@ -6,6 +6,7 @@
 import { WallSupportElevation } from "../report/geometryDiagrams";
 import { DowelRebar, FootingRebar, WallRebar } from "../report/rebarDiagrams";
 import { INK, LW } from "../report/drafting";
+import { DC } from "../report/diagramColors";
 import type React from "react";
 import { fmt } from "@/engine/core/fmt";
 import { BARS } from "@/engine/design/concrete";
@@ -51,10 +52,10 @@ export function WallDiagrams({ d, unitM }: { d: MasonryWallResult["diagram"]; un
   const Wd = 470;
   const Hd = 150;
   const top = 16;
-  const panels: Array<{ title: string; v: number[]; unit: string }> = [
-    { title: "Axial force", v: d.P, unit: "lb/ft" },
-    { title: "Shear force", v: d.V, unit: "lb/ft" },
-    { title: "Moment", v: d.M, unit: unitM },
+  const panels: Array<{ title: string; v: number[]; unit: string; c: string }> = [
+    { title: "Axial force", v: d.P, unit: "lb/ft", c: DC.axial },
+    { title: "Shear force", v: d.V, unit: "lb/ft", c: DC.shear },
+    { title: "Moment", v: d.M, unit: unitM, c: DC.moment },
   ];
   const pw = Wd / 3;
   const H = d.x[d.x.length - 1] || 1;
@@ -78,14 +79,20 @@ export function WallDiagrams({ d, unitM }: { d: MasonryWallResult["diagram"]; un
                 <text x={k * pw + 6} y={10} style={{ ...txt, fontWeight: 700, fontSize: 8.5 }}>
                   {p.title} ({p.unit})
                 </text>
-                <polygon points={`${x0},${y(0)} ${pts} ${x0},${y(H)}`} fill="#dcdcdc" stroke={INK} strokeWidth={1} />
+                <polygon
+                  points={`${x0},${y(0)} ${pts} ${x0},${y(H)}`}
+                  fill={p.c}
+                  fillOpacity={0.16}
+                  stroke={p.c}
+                  strokeWidth={1.1}
+                />
                 <line x1={x0} y1={y(0)} x2={x0} y2={y(H)} stroke={INK} strokeWidth={LW.object} />
                 {marks.map((i) => (
                   <text
                     key={i}
                     x={x0 + p.v[i] * sc + (p.v[i] >= 0 ? 3 : -3)}
                     y={yLab(i)}
-                    style={txt}
+                    style={{ ...txt, fill: p.c, fontWeight: 700 }}
                     textAnchor={p.v[i] >= 0 ? "start" : "end"}
                   >
                     {fmt(p.v[i], 1)}
@@ -972,7 +979,7 @@ function TrussElevation({ r }: { r: WoodTrussResult }) {
             const F = row.mode === "compression" ? -row.Cmax : row.Tmax;
             const mx = (X(a.x) + X(b.x)) / 2;
             const my = (Y(a.y) + Y(b.y)) / 2;
-            const c = INK;
+            const c = row.mode === "compression" ? DC.compression : row.mode === "zero" ? DC.zero : DC.tension;
             return (
               <g key={i}>
                 <line
@@ -1013,7 +1020,8 @@ function TrussElevation({ r }: { r: WoodTrussResult }) {
             />
           ))}
           <text x={pad} y={Hd - 2} style={txt}>
-            Span {fmt(g.span, 2)} ft — maximum ASD member forces, lb (heavy = compression C, dashed = tension T)
+            Span {fmt(g.span, 2)} ft — maximum ASD member forces, lb (red heavy = compression C, blue dashed = tension
+            T)
             {exag > 1.05 ? `; vertical scale × ${fmt(exag, 1)}` : ""}
           </text>
         </svg>

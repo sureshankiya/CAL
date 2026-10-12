@@ -10,11 +10,34 @@ import type { BeamLoad } from "@/engine/analysis/beam";
 import { fmt } from "@/engine/core/fmt";
 import { LOAD_TYPE_LABEL } from "@/engine/core/loads";
 import { Dim, Hatches, INK, LW, PinSupport, T, TS } from "./drafting";
+import { DC, LOAD_COLOR, loadColor } from "./diagramColors";
 
 const W = 470;
 const X0 = 50;
 const X1 = W - 70;
-const FILL = "#dcdcdc";
+/** filled arrowheads in each diagram colour (marker id = "ah-" + colour without #) */
+const MARKER_COLORS = [...Object.values(LOAD_COLOR), DC.shear, DC.moment, DC.defl];
+const mk = (c: string) => `url(#ah-${c.slice(1)})`;
+function ColorMarkers() {
+  return (
+    <defs>
+      {MARKER_COLORS.map((c) => (
+        <marker
+          key={c}
+          id={`ah-${c.slice(1)}`}
+          viewBox="0 0 10 10"
+          refX="10"
+          refY="5"
+          markerWidth="5"
+          markerHeight="5"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill={c} />
+        </marker>
+      ))}
+    </defs>
+  );
+}
 
 function Frame({ title, height, children }: { title: string; height: number; children: React.ReactNode }) {
   const top = 14;
@@ -28,6 +51,7 @@ function Frame({ title, height, children }: { title: string; height: number; chi
         aria-label={title}
       >
         <Hatches />
+        <ColorMarkers />
         <text x={0} y={-4} style={{ ...T, fontSize: 9, fontWeight: 700 }}>
           {title}
         </text>
@@ -87,12 +111,14 @@ export function LoadingDiagram({
             const yb = y + band - 1;
             const n = Math.max(2, Math.min(16, Math.round((b - a) / 22) + 1));
             const value = Math.abs(w1 - w2) < 1e-6 ? fmt(w1, 1) : `${fmt(w1, 1)} – ${fmt(w2, 1)}`;
+            const c = loadColor(l.type);
             return (
               <g key={`d${i}`}>
                 <polygon
                   points={`${a},${yb} ${a},${yb - h1} ${b},${yb - h2} ${b},${yb}`}
-                  fill="#f0f0f0"
-                  stroke={INK}
+                  fill={c}
+                  fillOpacity={0.15}
+                  stroke={c}
                   strokeWidth={LW.thin}
                 />
                 {Array.from({ length: n }, (_, k) => {
@@ -105,16 +131,16 @@ export function LoadingDiagram({
                       y1={up ? yb : yb - hh}
                       x2={x}
                       y2={up ? yb - hh : yb}
-                      stroke={INK}
-                      strokeWidth={LW.hatch}
-                      markerEnd="url(#ah)"
+                      stroke={c}
+                      strokeWidth={LW.thin}
+                      markerEnd={mk(c)}
                     />
                   );
                 })}
-                <text x={X0 - 6} y={yb - 2} textAnchor="end" style={TS}>
+                <text x={X0 - 6} y={yb - 2} textAnchor="end" style={{ ...TS, fill: c, fontWeight: 700 }}>
                   {l.type}
                 </text>
-                <text x={b + 5} y={yb - 2} style={TS}>
+                <text x={b + 5} y={yb - 2} style={{ ...TS, fill: c }}>
                   {value} lb/ft
                 </text>
               </g>
@@ -122,10 +148,11 @@ export function LoadingDiagram({
           })}
           {points.map((l, i) => {
             const x = sx(l.x ?? 0);
+            const c = loadColor(l.type);
             return (
               <g key={`p${i}`}>
-                <line x1={x} y1={4} x2={x} y2={beamY - 2} stroke={INK} strokeWidth={LW.object} markerEnd="url(#ah)" />
-                <text x={x + 3} y={8 + (i % 2) * 8} style={TS}>
+                <line x1={x} y1={4} x2={x} y2={beamY - 2} stroke={c} strokeWidth={1.2} markerEnd={mk(c)} />
+                <text x={x + 3} y={8 + (i % 2) * 8} style={{ ...TS, fill: c, fontWeight: 700 }}>
                   {l.type}: {fmt(l.P ?? 0, 0)} lb
                 </text>
               </g>
@@ -202,11 +229,12 @@ export function ResultDiagrams({
   const sx = (v: number) => X0 + (v / g.total) * (X1 - X0);
   const plot = (xs: number[], ys: number[], axis: number, amp: number, s: number, flip: 1 | -1) =>
     xs.map((xx, i) => `${sx(xx)},${axis + flip * (ys[i] / s) * amp}`).join(" ");
-  const area = (xs: number[], ys: number[], axis: number, amp: number, s: number, flip: 1 | -1) =>
+  const area = (xs: number[], ys: number[], axis: number, amp: number, s: number, flip: 1 | -1, c: string) =>
     xs.length ? (
       <polygon
         points={`${sx(xs[0])},${axis} ${plot(xs, ys, axis, amp, s, flip)} ${sx(xs[xs.length - 1])},${axis}`}
-        fill={FILL}
+        fill={c}
+        fillOpacity={0.16}
         stroke="none"
       />
     ) : null;
@@ -248,8 +276,13 @@ export function ResultDiagrams({
         />
       </g>
     ));
-  const label = (xx: number, y: number, t: string) => (
-    <text x={Math.min(Math.max(sx(xx), X0 + 24), X1 - 24)} y={y} textAnchor="middle" style={TS}>
+  const label = (xx: number, y: number, t: string, c: string) => (
+    <text
+      x={Math.min(Math.max(sx(xx), X0 + 24), X1 - 24)}
+      y={y}
+      textAnchor="middle"
+      style={{ ...TS, fill: c, fontWeight: 700 }}
+    >
       {t}
     </text>
   );
@@ -271,59 +304,59 @@ export function ResultDiagrams({
         `Shear force (lb) — ${comboLabel}${patterned ? ", envelope" : ""}`,
         96,
         <>
-          {area(shearX, Vmax, 46, 34, vS, -1)}
-          {patterned ? area(shearX, Vmin, 46, 34, vS, -1) : null}
+          {area(shearX, Vmax, 46, 34, vS, -1, DC.shear)}
+          {patterned ? area(shearX, Vmin, 46, 34, vS, -1, DC.shear) : null}
           {valueAxis(46, 34, vS, -1, 0)}
           {supportsAt(46, 36)}
           <line x1={X0} y1={46} x2={X1} y2={46} stroke={INK} strokeWidth={LW.object} />
-          <polyline points={plot(shearX, Vmax, 46, 34, vS, -1)} stroke={INK} strokeWidth={LW.object} fill="none" />
+          <polyline points={plot(shearX, Vmax, 46, 34, vS, -1)} stroke={DC.shear} strokeWidth={1.2} fill="none" />
           {patterned ? (
             <polyline
               points={plot(shearX, Vmin, 46, 34, vS, -1)}
-              stroke={INK}
+              stroke={DC.shear}
               strokeWidth={LW.thin}
               strokeDasharray="4 2"
               fill="none"
             />
           ) : null}
-          {vHi.y > tinyV ? label(vHi.x, 46 - 34 - 2, fmt(vHi.y, 0)) : null}
-          {vLo.y < -tinyV ? label(vLo.x, 46 + 34 + 9, fmt(vLo.y, 0)) : null}
+          {vHi.y > tinyV ? label(vHi.x, 46 - 34 - 2, fmt(vHi.y, 0), DC.shear) : null}
+          {vLo.y < -tinyV ? label(vLo.x, 46 + 34 + 9, fmt(vLo.y, 0), DC.shear) : null}
         </>,
       )}
       {row(
         `Bending moment (lb-ft) — ${comboLabel}${patterned ? ", envelope" : ""}`,
         104,
         <>
-          {area(x, Mmax, 48, 36, mS, 1)}
-          {patterned || Mmin.some((v) => v < -tinyM) ? area(x, Mmin, 48, 36, mS, 1) : null}
+          {area(x, Mmax, 48, 36, mS, 1, DC.moment)}
+          {patterned || Mmin.some((v) => v < -tinyM) ? area(x, Mmin, 48, 36, mS, 1, DC.moment) : null}
           {valueAxis(48, 36, mS, 1, 0)}
           {supportsAt(48, 38)}
           <line x1={X0} y1={48} x2={X1} y2={48} stroke={INK} strokeWidth={LW.object} />
-          <polyline points={plot(x, Mmax, 48, 36, mS, 1)} stroke={INK} strokeWidth={LW.object} fill="none" />
+          <polyline points={plot(x, Mmax, 48, 36, mS, 1)} stroke={DC.moment} strokeWidth={1.2} fill="none" />
           {patterned || Mmin.some((v) => v < -tinyM) ? (
             <polyline
               points={plot(x, Mmin, 48, 36, mS, 1)}
-              stroke={INK}
+              stroke={DC.moment}
               strokeWidth={LW.thin}
               strokeDasharray={patterned ? "4 2" : undefined}
               fill="none"
             />
           ) : null}
-          {mHi.y > tinyM ? label(mHi.x, 48 + 36 + 10, fmt(mHi.y, 0)) : null}
-          {mLo.y < -tinyM ? label(mLo.x, 48 - 36 - 3, fmt(mLo.y, 0)) : null}
+          {mHi.y > tinyM ? label(mHi.x, 48 + 36 + 10, fmt(mHi.y, 0), DC.moment) : null}
+          {mLo.y < -tinyM ? label(mLo.x, 48 - 36 - 3, fmt(mLo.y, 0), DC.moment) : null}
         </>,
       )}
       {row(
         `Deflection (in) — ${deflLabel}`,
         84,
         <>
-          {area(x, defl, 36, 26, dS, 1)}
+          {area(x, defl, 36, 26, dS, 1, DC.defl)}
           {valueAxis(36, 26, dS, 1, 3)}
           {supportsAt(36, 28)}
           <line x1={X0} y1={36} x2={X1} y2={36} stroke={INK} strokeWidth={LW.object} />
-          <polyline points={plot(x, defl, 36, 26, dS, 1)} stroke={INK} strokeWidth={LW.object} fill="none" />
-          {dHi.y > tinyD ? label(dHi.x, 36 + 26 + 10, fmt(dHi.y, 3)) : null}
-          {dLo.y < -tinyD ? label(dLo.x, 36 - 26 - 2, `${fmt(-dLo.y, 3)} (up)`) : null}
+          <polyline points={plot(x, defl, 36, 26, dS, 1)} stroke={DC.defl} strokeWidth={1.3} fill="none" />
+          {dHi.y > tinyD ? label(dHi.x, 36 + 26 + 10, fmt(dHi.y, 3), DC.defl) : null}
+          {dLo.y < -tinyD ? label(dLo.x, 36 - 26 - 2, `${fmt(-dLo.y, 3)} (up)`, DC.defl) : null}
         </>,
       )}
       <tr className="avoid-break">
