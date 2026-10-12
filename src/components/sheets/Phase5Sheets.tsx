@@ -3,6 +3,7 @@
  * Tedds-style layout of the other sheets.
  */
 
+import { DC } from "../report/diagramColors";
 import type React from "react";
 import type { CfsWallResult } from "@/engine/members/cfsWall";
 import type { GuardPostResult } from "@/engine/members/guardPost";
@@ -26,7 +27,7 @@ interface SheetProps<R> {
 const txt: React.CSSProperties = { fontFamily: "Arial, Helvetica, sans-serif", fontSize: 8, fill: "black" };
 const line = { stroke: "black", fill: "none", strokeWidth: 1 } as const;
 
-/** Section through the wall: stem, footing, grades and the main dimensions (black and white). */
+/** Section through the wall: stem, footing, grades, earth pressure and the main dimensions. */
 function RetainingSection({ r }: { r: RetainingWallResult }) {
   const w = r.input;
   const { B: Bw, ts, hf } = r.geo;
@@ -49,21 +50,47 @@ function RetainingSection({ r }: { r: RetainingWallResult }) {
           {/* footing and stem */}
           <polygon
             points={`${X(0)},${Y(0)} ${X(Bw)},${Y(0)} ${X(Bw)},${Y(hf)} ${X(toe + ts)},${Y(hf)} ${X(toe + ts)},${Y(yTop)} ${X(toe)},${Y(yTop)} ${X(toe)},${Y(hf)} ${X(0)},${Y(hf)}`}
-            {...line}
+            fill={DC.concreteFill}
+            stroke={DC.concrete}
             strokeWidth={1.2}
           />
+          {/* retained soil behind the stem */}
+          <polygon
+            points={`${X(toe + ts)},${Y(hf)} ${X(Bw) + 40},${Y(hf)} ${X(Bw) + 40},${Y(yGrade)} ${X(toe + ts)},${Y(yGrade)}`}
+            fill={DC.soil}
+            fillOpacity={0.14}
+            stroke="none"
+          />
           {/* retained grade behind, toe grade in front */}
-          <line x1={X(toe + ts)} y1={Y(yGrade)} x2={X(Bw) + 40} y2={Y(yGrade)} {...line} strokeDasharray="4 2" />
+          <line
+            x1={X(toe + ts)}
+            y1={Y(yGrade)}
+            x2={X(Bw) + 40}
+            y2={Y(yGrade)}
+            stroke={DC.soil}
+            strokeWidth={1.2}
+            strokeDasharray="4 2"
+          />
           {w.soil.toeCover > 0 ? (
-            <line x1={X(0) - 30} y1={Y(yToe)} x2={X(toe)} y2={Y(yToe)} {...line} strokeDasharray="4 2" />
+            <line
+              x1={X(0) - 30}
+              y1={Y(yToe)}
+              x2={X(toe)}
+              y2={Y(yToe)}
+              stroke={DC.soil}
+              strokeWidth={1.2}
+              strokeDasharray="4 2"
+            />
           ) : null}
           {/* earth pressure triangle on the heel plane */}
           <polygon
             points={`${X(Bw) + 6},${Y(yGrade)} ${X(Bw) + 6},${Y(0)} ${X(Bw) + 46},${Y(0)}`}
-            {...line}
-            strokeWidth={0.7}
+            fill={DC.pressure}
+            fillOpacity={0.18}
+            stroke={DC.pressure}
+            strokeWidth={0.9}
           />
-          <text x={X(Bw) + 50} y={Y(0) - 2} style={txt}>
+          <text x={X(Bw) + 50} y={Y(0) - 2} style={{ ...txt, fill: DC.pressure, fontWeight: 700 }}>
             {f0(w.soil.efp)} pcf
           </text>
           {/* dimensions */}

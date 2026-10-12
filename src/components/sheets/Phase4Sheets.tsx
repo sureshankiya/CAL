@@ -3,6 +3,7 @@
  * layout of the other sheets.
  */
 
+import { DC } from "../report/diagramColors";
 import type React from "react";
 import { fmt } from "@/engine/core/fmt";
 import { BARS } from "@/engine/design/concrete";
@@ -43,15 +44,15 @@ const SUPPORT_TEXT: Record<string, string> = {
 const txt: React.CSSProperties = { fontFamily: "Arial, Helvetica, sans-serif", fontSize: 8, fill: "black" };
 const line = { stroke: "black", fill: "none", strokeWidth: 1 } as const;
 
-/** Axial, shear and moment along the wall height for the governing combination (black and white). */
+/** Axial, shear and moment along the wall height for the governing combination. */
 export function WallDiagrams({ d, unitM }: { d: MasonryWallResult["diagram"]; unitM: string }) {
   const Wd = 470;
   const Hd = 150;
   const top = 16;
-  const panels: Array<{ title: string; v: number[]; unit: string }> = [
-    { title: "Axial force", v: d.P, unit: "lb/ft" },
-    { title: "Shear force", v: d.V, unit: "lb/ft" },
-    { title: "Moment", v: d.M, unit: unitM },
+  const panels: Array<{ title: string; v: number[]; unit: string; c: string }> = [
+    { title: "Axial force", v: d.P, unit: "lb/ft", c: DC.axial },
+    { title: "Shear force", v: d.V, unit: "lb/ft", c: DC.shear },
+    { title: "Moment", v: d.M, unit: unitM, c: DC.moment },
   ];
   const pw = Wd / 3;
   const H = d.x[d.x.length - 1] || 1;
@@ -75,14 +76,20 @@ export function WallDiagrams({ d, unitM }: { d: MasonryWallResult["diagram"]; un
                 <text x={k * pw + 6} y={10} style={{ ...txt, fontWeight: 700, fontSize: 8.5 }}>
                   {p.title} ({p.unit})
                 </text>
-                <line x1={x0} y1={y(0)} x2={x0} y2={y(H)} {...line} />
-                <polygon points={`${x0},${y(0)} ${pts} ${x0},${y(H)}`} {...line} strokeWidth={0.8} />
+                <polygon
+                  points={`${x0},${y(0)} ${pts} ${x0},${y(H)}`}
+                  fill={p.c}
+                  fillOpacity={DC.tint}
+                  stroke={p.c}
+                  strokeWidth={1}
+                />
+                <line x1={x0} y1={y(0)} x2={x0} y2={y(H)} stroke={DC.member} strokeWidth={1.2} />
                 {marks.map((i) => (
                   <text
                     key={i}
                     x={x0 + p.v[i] * sc + (p.v[i] >= 0 ? 3 : -3)}
                     y={yLab(i)}
-                    style={txt}
+                    style={{ ...txt, fill: p.c, fontWeight: 700 }}
                     textAnchor={p.v[i] >= 0 ? "start" : "end"}
                   >
                     {fmt(p.v[i], 1)}
@@ -899,7 +906,7 @@ export function TieInSheet({ m, r, index, total }: SheetProps<TieInResult>) {
   );
 }
 
-/** Truss elevation with joint names and governing member forces (T / C), black and white. */
+/** Truss elevation with joint names and governing member forces (compression red, tension blue). */
 function TrussElevation({ r }: { r: WoodTrussResult }) {
   const g = r.geometry;
   const Wd = 470;
@@ -943,6 +950,7 @@ function TrussElevation({ r }: { r: WoodTrussResult }) {
             const F = row.mode === "compression" ? -row.Cmax : row.Tmax;
             const mx = (X(a.x) + X(b.x)) / 2;
             const my = (Y(a.y) + Y(b.y)) / 2;
+            const c = row.mode === "compression" ? DC.compression : row.mode === "zero" ? DC.zero : DC.tension;
             return (
               <g key={i}>
                 <line
@@ -950,12 +958,18 @@ function TrussElevation({ r }: { r: WoodTrussResult }) {
                   y1={Y(a.y)}
                   x2={X(b.x)}
                   y2={Y(b.y)}
-                  {...line}
-                  strokeWidth={m.group === "WEB" || m.group === "EV" ? 0.8 : 1.4}
+                  stroke={c}
+                  fill="none"
+                  strokeWidth={m.group === "WEB" || m.group === "EV" ? 1 : 1.8}
                   strokeDasharray={row.mode === "compression" ? undefined : row.mode === "zero" ? "1 2" : "4 2"}
                 />
                 {row.mode !== "zero" ? (
-                  <text x={mx} y={my - 2} style={{ ...txt, fontSize: 6.5 }} textAnchor="middle">
+                  <text
+                    x={mx}
+                    y={my - 2}
+                    style={{ ...txt, fontSize: 6.5, fill: c, fontWeight: 700 }}
+                    textAnchor="middle"
+                  >
                     {fmt(Math.abs(F), 0)}
                     {row.mode === "compression" ? "C" : "T"}
                   </text>
@@ -977,11 +991,12 @@ function TrussElevation({ r }: { r: WoodTrussResult }) {
             <polygon
               key={k}
               points={`${X(g.nodes[id].x)},${Y(g.nodes[id].y)} ${X(g.nodes[id].x) - 6},${Y(g.nodes[id].y) + 10} ${X(g.nodes[id].x) + 6},${Y(g.nodes[id].y) + 10}`}
-              {...line}
+              stroke={DC.support}
+              fill={DC.concreteFill}
             />
           ))}
           <text x={pad} y={Hd - 2} style={txt}>
-            Span {fmt(g.span, 2)} ft — maximum ASD member forces, lb (solid = compression, dashed = tension)
+            Span {fmt(g.span, 2)} ft — maximum ASD member forces, lb (solid red = compression, dashed blue = tension)
             {exag > 1.05 ? `; vertical scale × ${fmt(exag, 1)}` : ""}
           </text>
         </svg>
