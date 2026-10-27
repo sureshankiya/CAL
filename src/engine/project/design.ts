@@ -46,6 +46,7 @@ import { designMasonryWall, type MasonryWallResult } from "../members/masonryWal
 import { designHoldownFooting, type HoldownFootingResult } from "../members/holdownFooting";
 import { designTieIn, type TieInResult } from "../members/tieIn";
 import { designWoodTruss, type WoodTrussResult } from "../members/woodTruss";
+import { designSteelTruss, type SteelTrussResult } from "../members/steelTruss";
 import { designRetainingWall, type RetainingWallResult } from "../members/retainingWall";
 import { designGuardPost, type GuardPostResult } from "../members/guardPost";
 import { designCfsWall, type CfsWallResult } from "../members/cfsWall";
@@ -84,6 +85,7 @@ export type AnyResult =
   | HoldownFootingResult
   | TieInResult
   | WoodTrussResult
+  | SteelTrussResult
   | RetainingWallResult
   | GuardPostResult
   | CfsWallResult;
@@ -437,6 +439,8 @@ function designOne(
     }
     case "woodTruss":
       return designWoodTruss(ctx, m);
+    case "steelTruss":
+      return designSteelTruss(ctx, m);
     case "retainingWall": {
       const sc = p.criteria.soil.class ? soilClass(p.criteria.soil.class) : undefined;
       return designRetainingWall(ctx, {

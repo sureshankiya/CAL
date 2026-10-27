@@ -64,7 +64,7 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
   sections.push({
     title: "Codes and design criteria",
     notes: [
-      `Codes: ${c.building}; ${c.residential}; ${c.asce7}; ANSI/AWC ${c.nds} with ${c.ndsSupplement}; ${c.sdpws}${has("footing", "masonryWall", "holdownFooting", "tieIn", "basePlate", "retainingWall") ? `; ${c.aci318}` : ""}${of("masonryWall").some((r) => r.input.material === "cmu") || of("retainingWall").some((r) => r.input.stem.material === "cmu") ? `; ${c.tms402}` : ""}${has("guardPost") ? `; ${c.aisc360} (bolts)` : ""}${has("steelBeam", "steelColumn", "basePlate") ? `; ${c.aisc360}` : ""}.`,
+      `Codes: ${c.building}; ${c.residential}; ${c.asce7}; ANSI/AWC ${c.nds} with ${c.ndsSupplement}; ${c.sdpws}${has("footing", "masonryWall", "holdownFooting", "tieIn", "basePlate", "retainingWall") ? `; ${c.aci318}` : ""}${of("masonryWall").some((r) => r.input.material === "cmu") || of("retainingWall").some((r) => r.input.stem.material === "cmu") ? `; ${c.tms402}` : ""}${has("guardPost") ? `; ${c.aisc360} (bolts)` : ""}${has("steelBeam", "steelColumn", "basePlate", "steelTruss") ? `; ${c.aisc360}` : ""}.`,
       `Risk Category ${crit.riskCategory}. Roof live load ${fmt(crit.roofLive.L0, 0)} psf${crit.roofLive.reduce ? " (reduced per ASCE 7 §4.8 where permitted)" : ""}; ground snow load p_g = ${fmt(crit.snow.pg, 0)} psf.`,
       `Wind: V = ${fmt(crit.wind.V, 0)} mph (ultimate), Exposure ${crit.wind.exposure}, K_zt = ${fmt(crit.wind.Kzt, 2)}.`,
       `Seismic: S_DS = ${fmt(crit.seismic.SDS, 3)}, S_D1 = ${fmt(crit.seismic.SD1, 3)}, Site Class ${crit.seismic.siteClass}, Seismic Design Category ${crit.seismic.SDC}${d.lateral ? `; ${d.lateral.system.label}, R = ${fmt(d.lateral.system.R, 1)}, Ω0 = ${fmt(d.lateral.system.Omega0, 1)}, C_d = ${fmt(d.lateral.system.Cd, 1)}` : ""}.`,
@@ -201,13 +201,18 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
       ],
     });
 
-  if (has("steelBeam", "steelColumn", "basePlate"))
+  if (has("steelBeam", "steelColumn", "basePlate", "steelTruss"))
     sections.push({
       title: "Structural steel",
       notes: [
         "W and C shapes ASTM A992 (W) / A36 (C); HSS ASTM A500 Grade C (round and rectangular as scheduled); plates and bars ASTM A36; anchor rods ASTM F1554 Grade 36 with heavy hex nuts and hardened washers unless noted.",
         "Welding by AWS D1.1 certified welders with E70XX electrodes; welds as shown on the details.",
         "Base plates on non-shrink, non-metallic grout (5,000 psi minimum) where grouted; steel exposed to weather hot-dip galvanized or shop primed and painted.",
+        ...(has("steelTruss")
+          ? [
+              `Steel trusses (${marks(["steelTruss"])}): member centroids meet at the panel points; gusset plates, welds and bolted splices per the connection details; chord bracing (purlins, bottom-chord bracing) at the spacing on the truss sheets, installed before the roof load is applied.`,
+            ]
+          : []),
       ],
     });
 
@@ -259,12 +264,12 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
       type: "Per ICC-ES report",
       members: marks(["tieIn"]),
     });
-  if (has("steelBeam", "steelColumn", "basePlate"))
+  if (has("steelBeam", "steelColumn", "basePlate", "steelTruss"))
     inspections.push({
       item: "Structural steel: welding, bolting, anchor rods",
       basis: "IBC 1705.2; AISC 360 Ch. N",
       type: "Periodic",
-      members: marks(["steelBeam", "steelColumn", "basePlate"]),
+      members: marks(["steelBeam", "steelColumn", "basePlate", "steelTruss"]),
     });
   const tightNailing = of("shearWall").filter((r) => r.sides.some((s) => s.spacing <= 4));
   if (tightNailing.length && ["C", "D", "E", "F"].includes(crit.seismic.SDC))

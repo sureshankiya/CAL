@@ -28,6 +28,7 @@ export type MemberKind =
   | "holdownFooting"
   | "tieIn"
   | "woodTruss"
+  | "steelTruss"
   | "retainingWall"
   | "guardPost"
   | "cfsWall";

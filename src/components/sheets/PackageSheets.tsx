@@ -13,6 +13,7 @@ import { hardwareLabel } from "@/engine/data/hardware";
 import { steelGrade } from "@/engine/data/steel";
 import { fmtInFraction } from "@/engine/core/fmt";
 import { issuedNoteLine } from "@/engine/project/drawingData";
+import { STEEL_TRUSS_PATTERNS } from "@/engine/members/steelTruss";
 import { generateNotes, hardwareSchedule, type AnyResult, type Project, type ProjectDesign } from "@/engine/project";
 import {
   B,
@@ -61,11 +62,17 @@ export function spansText(r: AnyResult): string {
     case "tieIn":
       return "—";
     case "woodTruss":
+    case "steelTruss":
       return fmtFtIn(r.input.span);
     case "retainingWall":
       return `${fmtFtIn(r.input.Hr)} retained`;
     case "guardPost":
       return `${fmt(r.input.guardHeight, 0)} in. guard`;
+    case "steelTruss":
+      return Object.values(r.mats).map((x): [string, string] => [
+        "Structural steel",
+        `${x!.shape.name}: ${x!.gradeLabel}`,
+      ]);
     case "cfsWall":
       return `${fmtFtIn(r.input.height)} high`;
   }
@@ -672,6 +679,7 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
   const framing = of("joist", "rafter", "ceilingJoist", "ijoist");
   const trusses = of("truss");
   const wts = of("woodTruss");
+  const strs = of("steelTruss");
   const beams = of("beam");
   const walls = of("wall");
   const posts = of("post");
@@ -785,6 +793,41 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
                 ? "nailed gussets"
                 : "bolted gussets",
             r.reactions.map((x) => `${f0(x.maxDown)}${x.minNet < 0 ? ` / ${f0(-x.minNet)} up` : ""}`).join("; "),
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {strs.length ? (
+        <DataTable
+          caption="Steel truss schedule"
+          head={[
+            "Mark",
+            "Pattern",
+            "Span / rise",
+            "Spacing",
+            "Top chord",
+            "Bottom chord",
+            "Webs",
+            "Chord bracing (top / bottom)",
+            "Max down / uplift (lb)",
+            "Gov. D/C",
+            "Result",
+          ]}
+          small
+          rows={strs.map((r) => [
+            r.mark,
+            `${STEEL_TRUSS_PATTERNS[r.input.pattern].label}, ${r.panels} panels`,
+            `${fmtFtIn(r.input.span)} / ${fmtFtIn(r.input.rise)}`,
+            `${f2(r.input.spacing)} ft o.c.`,
+            `${r.input.sections.TC.shape} ${r.input.sections.TC.grade}`,
+            `${r.input.sections.BC.shape} ${r.input.sections.BC.grade}`,
+            (["EV", "V", "D"] as const)
+              .filter((g) => r.input.sections[g])
+              .map((g) => `${g}: ${r.input.sections[g]!.shape}`)
+              .join("; "),
+            `${r.input.topBracing ? fmtFtIn(r.input.topBracing) : "panel pts"} / ${r.input.bottomBracing ? fmtFtIn(r.input.bottomBracing) : "panel pts"}`,
+            r.reactions.map((x) => `${f0(x.maxDown)}${x.minNet < 0 ? ` / ${f0(-x.minNet)} up` : ""}`).join("; "),
+            f3(r.governing.ratio),
             pf(r),
           ])}
         />

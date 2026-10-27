@@ -794,7 +794,16 @@ export const cfsWallSpecSchema = z.object({
 export const woodTrussSpecSchema = z.object({
   kind: z.literal("woodTruss"),
   ...common,
-  type: z.enum(["fink", "howe", "king", "queen", "king-queen", "parallel"]),
+  type: z.enum(["fink", "howe", "king", "queen", "king-queen", "parallel", "custom"]),
+  /** custom: joints (ft, origin at the left bearing) and members; bearings at the outer bottom-chord joints */
+  customLayout: z
+    .object({
+      nodes: z.array(z.object({ x: z.number(), y: z.number(), top: z.boolean(), bottom: z.boolean() })),
+      members: z.array(
+        z.object({ a: z.number().int().min(0), b: z.number().int().min(0), group: z.enum(["TC", "BC", "WEB", "EV"]) }),
+      ),
+    })
+    .optional(),
   span: pos,
   pitch: nonneg,
   depth: pos.optional(),
@@ -822,6 +831,54 @@ export const woodTrussSpecSchema = z.object({
   deflection: deflectionSchema,
 });
 
+const steelTrussSectionSchema = z.object({ shape: z.string(), grade: z.string() });
+
+export const steelTrussSpecSchema = z.object({
+  kind: z.literal("steelTruss"),
+  ...common,
+  pattern: z.enum([
+    "king",
+    "queen",
+    "pratt",
+    "howe",
+    "warren",
+    "fink",
+    "double-fink",
+    "fan",
+    "modified-queen",
+    "scissors",
+    "north-light",
+    "bowstring",
+    "pitched-parallel",
+  ]),
+  span: pos,
+  rise: pos,
+  chordDepth: nonneg,
+  overhang: nonneg,
+  panels: z.number().int().min(4).max(16),
+  spacing: pos,
+  method: steelMethodSchema,
+  sections: z.object({
+    TC: steelTrussSectionSchema,
+    BC: steelTrussSectionSchema,
+    EV: steelTrussSectionSchema.optional(),
+    V: steelTrussSectionSchema.optional(),
+    D: steelTrussSectionSchema.optional(),
+  }),
+  topBracing: nonneg,
+  bottomBracing: nonneg,
+  roofDead: deadRefSchema,
+  ceilingDead: deadRefSchema,
+  roofLive: z.boolean(),
+  snow: z.boolean(),
+  windDown: nonneg,
+  windUplift: nonneg,
+  selfWeight: z.boolean(),
+  netArea: pos.max(1),
+  U: pos.max(1),
+  deflection: deflectionSchema,
+});
+
 export const memberSpecSchema = z.discriminatedUnion("kind", [
   joistSpecSchema,
   rafterSpecSchema,
@@ -845,6 +902,7 @@ export const memberSpecSchema = z.discriminatedUnion("kind", [
   holdownFootingSpecSchema,
   tieInSpecSchema,
   woodTrussSpecSchema,
+  steelTrussSpecSchema,
   retainingWallSpecSchema,
   guardPostSpecSchema,
   cfsWallSpecSchema,
@@ -1076,6 +1134,7 @@ export type MasonryWallSpec = z.infer<typeof masonryWallSpecSchema>;
 export type HoldownFootingSpec = z.infer<typeof holdownFootingSpecSchema>;
 export type TieInSpec = z.infer<typeof tieInSpecSchema>;
 export type WoodTrussSpec = z.infer<typeof woodTrussSpecSchema>;
+export type SteelTrussSpec = z.infer<typeof steelTrussSpecSchema>;
 export type RetainingWallSpec = z.infer<typeof retainingWallSpecSchema>;
 export type GuardPostSpec = z.infer<typeof guardPostSpecSchema>;
 export type CfsWallSpec = z.infer<typeof cfsWallSpecSchema>;

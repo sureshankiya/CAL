@@ -60,6 +60,7 @@ const KIND_ORDER: Record<string, number> = {
   holdownFooting: 10.5,
   tieIn: 10.8,
   woodTruss: 1,
+  steelTruss: 1.2,
   retainingWall: 10.9,
   guardPost: 4.6,
   cfsWall: 6.5,
