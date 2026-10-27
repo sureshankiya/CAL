@@ -125,6 +125,15 @@ export function targetFields(m: MemberSpec): TargetField[] {
         { field: "pitch", label: "Pitch (in/12)", numeric: true },
         { field: "spacing", label: "Spacing (in)", numeric: true },
       ];
+    case "steelTruss":
+      return [
+        ...common,
+        { field: "span", label: "Truss span (ft)", numeric: true },
+        { field: "rise", label: "Rise (ft)", numeric: true },
+        { field: "spacing", label: "Spacing (ft)", numeric: true },
+        { field: "sections.TC.shape", label: "Top chord shape", numeric: false },
+        { field: "sections.BC.shape", label: "Bottom chord shape", numeric: false },
+      ];
     case "holdownFooting":
       return [
         ...common,

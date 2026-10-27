@@ -494,6 +494,7 @@ const TEXT_KINDS: Array<[RegExp, NewMemberKind]> = [
   [/concrete wall|stem wall/i, "concreteWall"],
   [/tie.?in|dowel|adhesive anchor/i, "tieIn"],
   [/wood truss|truss design/i, "woodTruss"],
+  [/steel truss/i, "steelTruss"],
   [/truss/i, "truss"],
   [/ledger/i, "ledger"],
   [/hanger|connector|strap|\btie\b(?!.*rafter)|clip/i, "connector"],
@@ -523,6 +524,7 @@ export function kindFromText(text: string, keys: NewMemberKind[]): NewMemberKind
 }
 
 const MARK_KINDS: Array<[string, NewMemberKind]> = [
+  ["STR", "steelTruss"],
   ["HSS", "steelColumn"],
   ["FJ", "joist"],
   ["DJ", "joist"],
@@ -1287,6 +1289,7 @@ const KIND_UNITS: Record<string, Record<string, Unit>> = {
   wall: { length: "ft" },
   post: { height: "ft" },
   steelColumn: { height: "ft" },
+  steelTruss: { spacing: "ft" },
   footing: { B: "ft", L: "ft", h: "in", depth: "in", c1: "in", c2: "in" },
 };
 const PROJECT_UNITS: Record<string, Unit> = {

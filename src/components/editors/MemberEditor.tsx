@@ -33,11 +33,15 @@ import {
   type HoldownFootingSpec,
   type TieInSpec,
   type WoodTrussSpec,
+  type SteelTrussSpec,
   type RetainingWallSpec,
   type GuardPostSpec,
   type CfsWallSpec,
 } from "@/engine/project";
 import { C_SHAPES, HSS_NAMES, ROUND_NAMES, STEEL_GRADES, W_SHAPES, steelShape } from "@/engine/data/steel";
+import { buildTruss, type CustomLayout, type MemberGroup } from "@/engine/analysis/trussGeometry";
+import { customLayoutError } from "@/engine/members/woodTruss";
+import { STEEL_TRUSS_GROUPS, STEEL_TRUSS_PATTERNS } from "@/engine/members/steelTruss";
 import { DIAPHRAGM_ROWS } from "@/engine/data/diaphragm";
 import { SHEATHING, edgeSpacings, panel1532Shear } from "@/engine/data/sdpws";
 import { ANCHOR_STEELS } from "@/engine/design/anchors";
@@ -911,6 +915,9 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
       break;
     case "woodTruss":
       body = <WoodTrussEditor p={p} m={m} upd={upd as Upd<WoodTrussSpec>} />;
+      break;
+    case "steelTruss":
+      body = <SteelTrussEditor p={p} m={m} upd={upd as Upd<SteelTrussSpec>} />;
       break;
     case "retainingWall":
       body = <RetainingWallEditor p={p} m={m} upd={upd as Upd<RetainingWallSpec>} />;
@@ -3614,6 +3621,259 @@ function TieInEditor({ p, m, upd }: { p: Project; m: TieInSpec; upd: Upd<TieInSp
   );
 }
 
+/** Starting layout for a custom truss: the current preset (pitched types) or a Fink at the current span / pitch. */
+function layoutFrom(m: WoodTrussSpec): CustomLayout {
+  const base = m.type === "parallel" || m.type === "custom" ? "fink" : m.type;
+  const g = buildTruss(base, m.span, m.pitch || 4);
+  return {
+    nodes: g.nodes.map(({ x, y, onTopChord, onBottomChord }) => ({ x, y, top: onTopChord, bottom: onBottomChord })),
+    members: g.members.map(({ a, b, group }) => ({ a, b, group })),
+  };
+}
+
+/** TrussCalc custom truss builder: joint coordinates and member connections, validated before analysis. */
+function CustomLayoutFields({
+  layout,
+  span,
+  onChange,
+}: {
+  layout: CustomLayout;
+  span: number;
+  onChange: (l: CustomLayout) => void;
+}) {
+  const err = customLayoutError(layout, span);
+  const name = (i: number) => "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i] ?? `N${i}`;
+  const setNode = (i: number, patch: Partial<CustomLayout["nodes"][number]>) =>
+    onChange({ ...layout, nodes: layout.nodes.map((n, k) => (k === i ? { ...n, ...patch } : n)) });
+  const setMember = (i: number, patch: Partial<CustomLayout["members"][number]>) =>
+    onChange({ ...layout, members: layout.members.map((x, k) => (k === i ? { ...x, ...patch } : x)) });
+  const removeNode = (i: number) =>
+    onChange({
+      nodes: layout.nodes.filter((_, k) => k !== i),
+      members: layout.members
+        .filter((x) => x.a !== i && x.b !== i)
+        .map((x) => ({ ...x, a: x.a > i ? x.a - 1 : x.a, b: x.b > i ? x.b - 1 : x.b })),
+    });
+  const nodeOpts = layout.nodes.map((_, i) => ({ value: String(i), label: name(i) }));
+  return (
+    <Collapsible title={`Custom layout: ${layout.nodes.length} joints, ${layout.members.length} members`} open>
+      <p className="text-[11px] text-muted-foreground">
+        Origin at the left bearing (0, 0); right bearing at (span, 0). Members = 2 × joints − 3 (statically
+        determinate).
+      </p>
+      {layout.nodes.map((n, i) => (
+        <div key={`n${i}`} className="grid grid-cols-[2rem_1fr_1fr_auto_auto_auto] items-end gap-2">
+          <span className="pb-2 text-xs font-bold">{name(i)}</span>
+          <Field label="x (ft)">
+            <NumberInput value={n.x} onChange={(v) => setNode(i, { x: v ?? 0 })} />
+          </Field>
+          <Field label="y (ft)">
+            <NumberInput value={n.y} onChange={(v) => setNode(i, { y: v ?? 0 })} />
+          </Field>
+          <Check checked={n.top} onChange={(v) => setNode(i, { top: v })} label="Top chord" />
+          <Check checked={n.bottom} onChange={(v) => setNode(i, { bottom: v })} label="Bottom chord" />
+          <SmallButton tone="danger" title="Remove joint" onClick={() => removeNode(i)}>
+            ✕
+          </SmallButton>
+        </div>
+      ))}
+      <AddButton
+        onClick={() =>
+          onChange({ ...layout, nodes: [...layout.nodes, { x: span / 2, y: 1, top: false, bottom: false }] })
+        }
+      >
+        + Joint
+      </AddButton>
+      {layout.members.map((x, i) => (
+        <div key={`m${i}`} className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
+          <Field label={`Member ${i + 1} from`}>
+            <Select value={String(x.a)} options={nodeOpts} onChange={(v) => setMember(i, { a: Number(v) })} />
+          </Field>
+          <Field label="to">
+            <Select value={String(x.b)} options={nodeOpts} onChange={(v) => setMember(i, { b: Number(v) })} />
+          </Field>
+          <Field label="Group">
+            <Select<MemberGroup>
+              value={x.group}
+              options={[
+                { value: "TC", label: "Top chord" },
+                { value: "BC", label: "Bottom chord" },
+                { value: "WEB", label: "Web" },
+                { value: "EV", label: "End vertical" },
+              ]}
+              onChange={(v) => setMember(i, { group: v })}
+            />
+          </Field>
+          <SmallButton
+            tone="danger"
+            title="Remove member"
+            onClick={() => onChange({ ...layout, members: layout.members.filter((_, k) => k !== i) })}
+          >
+            ✕
+          </SmallButton>
+        </div>
+      ))}
+      <AddButton onClick={() => onChange({ ...layout, members: [...layout.members, { a: 0, b: 1, group: "WEB" }] })}>
+        + Member
+      </AddButton>
+      <p className={`text-[11px] font-medium ${err ? "text-destructive" : "text-emerald-700"}`}>
+        {err ?? "Layout valid — stable and statically determinate."}
+      </p>
+    </Collapsible>
+  );
+}
+
+const STEEL_TRUSS_SHAPES = [
+  ...HSS_NAMES,
+  ...ROUND_NAMES,
+  ...W_SHAPES.map((x) => x.name),
+  ...C_SHAPES.map((x) => x.name),
+];
+
+function SteelTrussEditor({ p, m, upd }: { p: Project; m: SteelTrussSpec; upd: Upd<SteelTrussSpec> }) {
+  const req = STEEL_TRUSS_PATTERNS[m.pattern].required;
+  const section = (k: keyof typeof STEEL_TRUSS_GROUPS) => {
+    const s = m.sections[k];
+    const optional = k !== "TC" && k !== "BC";
+    return (
+      <Grid cols={3} key={k}>
+        <Field label={`${STEEL_TRUSS_GROUPS[k]} section`}>
+          <Select
+            value={s?.shape ?? "none"}
+            options={[
+              ...(optional && !req.includes(k) ? [{ value: "none", label: "None — omitted" }] : []),
+              ...STEEL_TRUSS_SHAPES.map((x) => ({ value: x, label: x })),
+            ]}
+            onChange={(v) => {
+              if (v === "none") return upd({ sections: { ...m.sections, [k]: undefined } });
+              const g = gradeOptions(v);
+              upd({
+                sections: {
+                  ...m.sections,
+                  [k]: { shape: v, grade: s && g.some((x) => x.value === s.grade) ? s.grade : g[0]?.value },
+                },
+              });
+            }}
+          />
+        </Field>
+        <Field label="Grade">
+          {s ? (
+            <Select
+              value={s.grade}
+              options={gradeOptions(s.shape)}
+              onChange={(v) => upd({ sections: { ...m.sections, [k]: { ...s, grade: v } } })}
+            />
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </Field>
+        <span />
+      </Grid>
+    );
+  };
+  return (
+    <>
+      <Section title="Steel roof truss (STR)">
+        <CommonFields p={p} m={m} upd={upd as Upd<MemberSpec>} />
+        <Grid cols={4}>
+          <Field label="Pattern">
+            <Select
+              value={m.pattern}
+              options={(Object.keys(STEEL_TRUSS_PATTERNS) as Array<SteelTrussSpec["pattern"]>).map((k) => ({
+                value: k,
+                label: STEEL_TRUSS_PATTERNS[k].label,
+              }))}
+              onChange={(v) => upd({ pattern: v })}
+            />
+          </Field>
+          <Field label="Span (ft)">
+            <NumberInput value={m.span} min={8} onChange={(v) => upd({ span: v ?? m.span })} />
+          </Field>
+          <Field label="Rise (ft)">
+            <NumberInput value={m.rise} min={0.5} onChange={(v) => upd({ rise: v ?? m.rise })} />
+          </Field>
+          <Field label="Panels (even, 4–16)">
+            <NumberInput
+              value={m.panels}
+              min={4}
+              max={16}
+              step="2"
+              onChange={(v) => upd({ panels: Math.max(4, Math.min(16, Math.round((v ?? 8) / 2) * 2)) })}
+            />
+          </Field>
+        </Grid>
+        <Grid cols={4}>
+          <Field label="Spacing (ft o.c.)">
+            <NumberInput value={m.spacing} min={1} onChange={(v) => upd({ spacing: v ?? m.spacing })} />
+          </Field>
+          <Field label="Overhang each side (ft)">
+            <NumberInput value={m.overhang} min={0} onChange={(v) => upd({ overhang: v ?? 0 })} />
+          </Field>
+          {m.pattern === "pitched-parallel" ? (
+            <Field label="Chord spacing (ft)">
+              <NumberInput value={m.chordDepth} min={0.5} onChange={(v) => upd({ chordDepth: v ?? 4 })} />
+            </Field>
+          ) : (
+            <span />
+          )}
+          <Field label="Method">
+            <Select value={m.method} options={METHODS} onChange={(v) => upd({ method: v })} />
+          </Field>
+        </Grid>
+        {(Object.keys(STEEL_TRUSS_GROUPS) as Array<keyof typeof STEEL_TRUSS_GROUPS>).map(section)}
+        <Grid cols={4}>
+          <Field label="Top-chord bracing (ft, 0 = panel pts)" hint="Purlin spacing along the chord">
+            <NumberInput value={m.topBracing} min={0} onChange={(v) => upd({ topBracing: v ?? 0 })} />
+          </Field>
+          <Field label="Bottom-chord bracing (ft, 0 = panel pts)">
+            <NumberInput value={m.bottomBracing} min={0} onChange={(v) => upd({ bottomBracing: v ?? 0 })} />
+          </Field>
+          <Field label="A_n / A_g (tension)">
+            <NumberInput value={m.netArea} min={0.5} max={1} onChange={(v) => upd({ netArea: v ?? 1 })} />
+          </Field>
+          <Field label="Shear lag U (Table D3.1)">
+            <NumberInput value={m.U} min={0.4} max={1} onChange={(v) => upd({ U: v ?? 1 })} />
+          </Field>
+        </Grid>
+      </Section>
+      <Section title="Loads">
+        <DeadField
+          p={p}
+          value={m.roofDead}
+          kinds={["roof"]}
+          roof
+          label="Roof dead load"
+          onChange={(v) => upd({ roofDead: v })}
+        />
+        <DeadField
+          p={p}
+          value={m.ceilingDead}
+          kinds={["ceiling"]}
+          label="Bottom-chord dead load (ceiling / MEP)"
+          onChange={(v) => upd({ ceilingDead: v })}
+        />
+        <Grid cols={3}>
+          <Field label="Wind down (psf, strength)">
+            <NumberInput value={m.windDown} min={0} onChange={(v) => upd({ windDown: v ?? 0 })} />
+          </Field>
+          <Field label="Net wind uplift (psf, strength)">
+            <NumberInput value={m.windUplift} min={0} onChange={(v) => upd({ windUplift: v ?? 0 })} />
+          </Field>
+          <span />
+        </Grid>
+        <Check checked={m.roofLive} onChange={(v) => upd({ roofLive: v })} label="Roof live load (project criteria)" />
+        <Check
+          checked={m.snow}
+          onChange={(v) => upd({ snow: v })}
+          label="Snow, balanced and unbalanced (project criteria)"
+        />
+        <Check checked={m.selfWeight} onChange={(v) => upd({ selfWeight: v })} label="Include truss self weight" />
+        <DeflField value={m.deflection} onChange={(v) => upd({ deflection: v as typeof m.deflection })} />
+      </Section>
+    </>
+  );
+}
+
 function WoodTrussEditor({ p, m, upd }: { p: Project; m: WoodTrussSpec; upd: Upd<WoodTrussSpec> }) {
   const parallel = m.type === "parallel";
   const lumber = (key: "tc" | "bc" | "web", title: string) => (
@@ -3642,6 +3902,7 @@ function WoodTrussEditor({ p, m, upd }: { p: Project; m: WoodTrussSpec; upd: Upd
                 { value: "queen", label: "Queen post" },
                 { value: "king-queen", label: "King + queen post" },
                 { value: "parallel", label: "Parallel chord" },
+                { value: "custom", label: "Custom (edit joints and members)" },
               ]}
               onChange={(v) =>
                 upd({
@@ -3649,6 +3910,7 @@ function WoodTrussEditor({ p, m, upd }: { p: Project; m: WoodTrussSpec; upd: Upd
                   ...(v === "parallel"
                     ? { depth: m.depth ?? 2.5, panels: m.panels ?? 8, pattern: m.pattern ?? "warren" }
                     : {}),
+                  ...(v === "custom" && !m.customLayout ? { customLayout: layoutFrom(m) } : {}),
                 })
               }
             />
@@ -3714,6 +3976,13 @@ function WoodTrussEditor({ p, m, upd }: { p: Project; m: WoodTrussSpec; upd: Upd
             <span />
           )}
         </Grid>
+        {m.type === "custom" ? (
+          <CustomLayoutFields
+            layout={m.customLayout ?? layoutFrom(m)}
+            span={m.span}
+            onChange={(customLayout) => upd({ customLayout })}
+          />
+        ) : null}
         {lumber("tc", "Top chord")}
         {lumber("bc", "Bottom chord")}
         {lumber("web", "Webs")}

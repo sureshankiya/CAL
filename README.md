@@ -68,6 +68,13 @@ AI extraction needs an Anthropic API key set as `ANTHROPIC_API_KEY` in the envir
 | Cold-formed steel | CS-# stud walls (optional): allowables from the manufacturer / SSMA table, demands, AISI S100-16 H1.2 with B₁ amplification, deflection |
 | Sign-off | SIGNOFF.md — release checklist; items for the Engineer of Record are listed there |
 
+## Rev. B — trusses from the Lovable apps
+
+| Area | Included |
+|---|---|
+| Steel roof trusses | STR-# — Truss Report Master (STRUTURA) roof patterns (king, queen, Pratt, Howe, Warren, Fink, double Fink, fan, modified queen, scissors, north-light, bowstring, pitched parallel chord), 4–16 panels; sections and grades from the HouseCalc AISC library per group (top / bottom chord, end verticals, verticals, diagonals); direct-stiffness pin-jointed analysis; LRFD or ASD with wind down / uplift and unbalanced snow; AISC D2 yielding and rupture, E3 / E7 with in-plane and out-of-plane lengths, tail flexure, service deflection; sheet, schedule, notes, load path. Corrections to STRUTURA in PLAN.md §12.2 #9–#14 |
+| Custom wood trusses | T-# "custom" configuration from Roof Truss Planner (TrussCalc): joint coordinates and member connections edited in the member panel, validated by TrussCalc's rules (2j − 3 members, bearings at (0, 0) and (span, 0), chords continuous, stable) before analysis |
+
 ## Use
 
 ```bash

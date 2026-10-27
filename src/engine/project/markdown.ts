@@ -458,6 +458,7 @@ const REPETITIVE = new Set([
   "ijoist",
   "wall",
   "woodTruss",
+  "steelTruss",
   "cfsWall",
   "masonryWall",
   "ledger",

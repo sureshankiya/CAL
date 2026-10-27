@@ -1,7 +1,13 @@
 /** Renders the house report (all sheets in order) or a single sheet from the package list. */
 
 import type { Project, ProjectDesign } from "@/engine/project";
-import { HoldownFootingSheet, MasonryWallSheet, TieInSheet, WoodTrussSheet } from "../sheets/Phase4Sheets";
+import {
+  HoldownFootingSheet,
+  MasonryWallSheet,
+  SteelTrussSheet,
+  TieInSheet,
+  WoodTrussSheet,
+} from "../sheets/Phase4Sheets";
 import { CfsWallSheet, GuardPostSheet, RetainingWallSheet } from "../sheets/Phase5Sheets";
 import { metaFor } from "../sheets/common";
 import { IJoistSheet } from "../sheets/IJoistSheet";
@@ -198,6 +204,8 @@ function SheetSwitch({
           return <TieInSheet {...common} r={r} />;
         case "woodTruss":
           return <WoodTrussSheet {...common} r={r} />;
+        case "steelTruss":
+          return <SteelTrussSheet {...common} r={r} />;
         case "retainingWall":
           return <RetainingWallSheet {...common} r={r} />;
         case "guardPost":
