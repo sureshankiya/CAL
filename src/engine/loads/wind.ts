@@ -3,7 +3,7 @@
  * procedure (MWFRS, low-rise buildings) and Ch. 30 Part 1 wall components and
  * cladding (h ≤ 60 ft).
  *
- *  - Kz = 2.01 (z / zg)^(2/α), z ≥ 15 ft (Table 26.10-1 note); Exposure B, Ch. 28,
+ *  - Kz = 2.01 (z / zg)^(2/α) (7-16) or 2.41 (z / zg)^(2/α) (7-22), z ≥ 15 ft; Exposure B, Ch. 28,
  *    z < 30 ft: Kz = 0.70 (Table 26.10-1 note a)
  *  - ASCE 7-16: qz = 0.00256 Kz Kzt Kd Ke V²     (Eq. 26.10-1)
  *    ASCE 7-22: qz = 0.00256 Kz Kzt Ke V², p uses qh Kd (Eq. 26.10-1, 28.3-1)
@@ -18,19 +18,20 @@ import type { Asce7Edition } from "./snow";
 
 export type Exposure = "B" | "C" | "D";
 
-const EXPOSURE_CONST: Record<Exposure, { alpha: number; zg: number }> = {
-  B: { alpha: 7.0, zg: 1200 },
-  C: { alpha: 9.5, zg: 900 },
-  D: { alpha: 11.5, zg: 700 },
+/** ASCE 7-16 Table 26.11-1 with Kz = 2.01 (z / zg)^(2/α); ASCE 7-22 Table 26.11-1 with Kz = 2.41 (z / zg)^(2/α). */
+const EXPOSURE_CONST: Record<Asce7Edition, { c: number } & Record<Exposure, { alpha: number; zg: number }>> = {
+  "ASCE 7-16": { c: 2.01, B: { alpha: 7.0, zg: 1200 }, C: { alpha: 9.5, zg: 900 }, D: { alpha: 11.5, zg: 700 } },
+  "ASCE 7-22": { c: 2.41, B: { alpha: 7.5, zg: 3280 }, C: { alpha: 9.8, zg: 2460 }, D: { alpha: 11.5, zg: 1935 } },
 };
 
 export const KD_BUILDING = 0.85;
 
-/** Velocity pressure exposure coefficient. */
-export function Kz(z: number, exposure: Exposure, mwfrsCh28 = false): number {
-  const { alpha, zg } = EXPOSURE_CONST[exposure];
+/** Velocity pressure exposure coefficient (Table 26.10-1 note: z < 15 ft taken as 15 ft). */
+export function Kz(z: number, exposure: Exposure, mwfrsCh28 = false, edition: Asce7Edition = "ASCE 7-16"): number {
+  const t = EXPOSURE_CONST[edition];
+  const { alpha, zg } = t[exposure];
   const zz = Math.max(z, 15);
-  const k = 2.01 * Math.pow(zz / zg, 2 / alpha);
+  const k = t.c * Math.pow(zz / zg, 2 / alpha);
   if (mwfrsCh28 && exposure === "B" && z < 30) return Math.max(k, 0.7);
   return k;
 }
@@ -58,7 +59,7 @@ export function velocityPressure(
   Ke: number,
   mwfrsCh28: boolean,
 ): VelocityPressure {
-  const kz = Kz(z, exposure, mwfrsCh28);
+  const kz = Kz(z, exposure, mwfrsCh28, edition);
   const Kd = KD_BUILDING;
   if (edition === "ASCE 7-16") {
     const q = 0.00256 * kz * Kzt * Kd * Ke * V * V;
@@ -84,7 +85,7 @@ export function velocityPressure(
     Ke,
     q,
     qEff: q * Kd,
-    expr: `qh = 0.00256 Kh Kzt Ke V² = 0.00256 × ${kz.toFixed(3)} × ${Kzt.toFixed(2)} × ${Ke.toFixed(2)} × ${V.toFixed(0)}²; pressures use qh Kd (Kd = ${Kd.toFixed(2)})`,
+    expr: `qh = 0.00256 Kh Kzt Ke V² = 0.00256 × ${kz.toFixed(3)} × ${Kzt.toFixed(2)} × ${Ke.toFixed(2)} × ${V.toFixed(0)}²`,
   };
 }
 

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { LOAD_TYPES, type LoadType } from "@/engine/core/loads";
+import type { ExtraLoad } from "@/engine/members/common";
 import { NAILS } from "@/engine/design/dowel";
 import { GLULAM, SCL } from "@/engine/data/engineered";
 import { TJI_SERIES, tjiDepths } from "@/engine/data/ijoist";
@@ -353,18 +354,28 @@ function DeflField({
   );
 }
 
-type Extra = {
-  kind: "line" | "point";
-  type: LoadType;
-  label: string;
-  w?: number;
-  x1?: number;
-  x2?: number;
-  P?: number;
-  x?: number;
+type Extra = Omit<ExtraLoad, "source">;
+
+const DRIFT_DEFAULT: NonNullable<Extra["drift"]> = {
+  case: "step",
+  luUpper: 30,
+  luLower: 20,
+  hr: 4,
+  rise: 0,
+  trib: 1.333,
+  dir: "right",
 };
 
-function ExtraLoadsEditor({ extra, onChange }: { extra: Extra[]; onChange: (e: Extra[]) => void }) {
+function ExtraLoadsEditor({
+  extra,
+  onChange,
+  drift,
+}: {
+  extra: Extra[];
+  onChange: (e: Extra[]) => void;
+  /** offer the snow drift load (members designed with the beam solver) */
+  drift?: boolean;
+}) {
   const set = (i: number, patch: Partial<Extra>) => onChange(extra.map((e, k) => (k === i ? { ...e, ...patch } : e)));
   return (
     <div className="space-y-2">
@@ -384,8 +395,16 @@ function ExtraLoadsEditor({ extra, onChange }: { extra: Extra[]; onChange: (e: E
               options={[
                 { value: "line", label: "Line (plf)" },
                 { value: "point", label: "Point (lb)" },
+                ...(drift || e.kind === "drift"
+                  ? [{ value: "drift" as const, label: "Snow drift (ASCE 7 §7.7 / 7.8)" }]
+                  : []),
               ]}
-              onChange={(v) => set(i, { kind: v })}
+              onChange={(v) =>
+                set(
+                  i,
+                  v === "drift" ? { kind: v, type: "S", drift: e.drift ?? DRIFT_DEFAULT, x: e.x ?? 0 } : { kind: v },
+                )
+              }
             />
             <Select
               value={e.type}
@@ -393,7 +412,9 @@ function ExtraLoadsEditor({ extra, onChange }: { extra: Extra[]; onChange: (e: E
               onChange={(v) => set(i, { type: v })}
             />
           </Grid>
-          {e.kind === "line" ? (
+          {e.kind === "drift" ? (
+            <DriftFields e={e} set={(patch) => set(i, patch)} />
+          ) : e.kind === "line" ? (
             <Grid cols={3}>
               <Field label="w (plf)">
                 <NumberInput value={e.w ?? 0} onChange={(v) => set(i, { w: v ?? 0 })} />
@@ -421,6 +442,57 @@ function ExtraLoadsEditor({ extra, onChange }: { extra: Extra[]; onChange: (e: E
         + Add line / point load
       </AddButton>
     </div>
+  );
+}
+
+function DriftFields({ e, set }: { e: Extra; set: (patch: Partial<Extra>) => void }) {
+  const d = e.drift ?? DRIFT_DEFAULT;
+  const sd = (patch: Partial<typeof d>) => set({ drift: { ...d, ...patch } });
+  return (
+    <>
+      <Grid cols={3}>
+        <Field label="Case">
+          <Select
+            value={d.case}
+            options={[
+              { value: "step", label: "Roof step (§7.7)" },
+              { value: "parapet", label: "Parapet / projection (§7.8)" },
+            ]}
+            onChange={(v) => sd({ case: v })}
+          />
+        </Field>
+        <Field label={d.case === "step" ? "Upper roof length (ft)" : "Roof length upwind (ft)"}>
+          <NumberInput value={d.luUpper} min={0} onChange={(v) => sd({ luUpper: v ?? 0 })} />
+        </Field>
+        {d.case === "step" ? (
+          <Field label="Lower roof length (ft)">
+            <NumberInput value={d.luLower} allowEmpty min={0} onChange={(v) => sd({ luLower: v })} />
+          </Field>
+        ) : null}
+        <Field label="Step / parapet height h_r (ft)">
+          <NumberInput value={d.hr} min={0} onChange={(v) => sd({ hr: v ?? 0 })} />
+        </Field>
+        <Field label="Lower roof rise (in/ft)">
+          <NumberInput value={d.rise} min={0} onChange={(v) => sd({ rise: v ?? 0 })} />
+        </Field>
+        <Field label="Tributary width (ft)">
+          <NumberInput value={d.trib} min={0} onChange={(v) => sd({ trib: v ?? 0 })} />
+        </Field>
+        <Field label="Peak at x (ft)">
+          <NumberInput value={e.x ?? 0} min={0} onChange={(v) => set({ x: v ?? 0 })} />
+        </Field>
+        <Field label="Drift toward">
+          <Select
+            value={d.dir}
+            options={[
+              { value: "right", label: "+x (right)" },
+              { value: "left", label: "−x (left)" },
+            ]}
+            onChange={(v) => sd({ dir: v })}
+          />
+        </Field>
+      </Grid>
+    </>
   );
 }
 
@@ -636,7 +708,7 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
             <DeadField p={p} value={m.dead} kinds={["floor", "deck", "ceiling"]} onChange={(v) => upd({ dead: v })} />
             <LiveField value={m.live} onChange={(v) => upd({ live: v as typeof m.live })} />
             <Collapsible title={`Additional loads (${m.extra.length})`}>
-              <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
+              <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} drift />
             </Collapsible>
             <DeflField value={m.deflection} onChange={(v) => upd({ deflection: v as typeof m.deflection })} />
             <KcrField value={m.Kcr} onChange={(v) => upd({ Kcr: v })} />
@@ -845,7 +917,7 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
             />
             <LiveField value={m.live} onChange={(v) => upd({ live: v as typeof m.live })} roof />
             <Collapsible title={`Additional loads (${m.extra.length})`}>
-              <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
+              <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} drift />
             </Collapsible>
             <DeflField value={m.deflection} onChange={(v) => upd({ deflection: v as typeof m.deflection })} />
             <KcrField value={m.Kcr} onChange={(v) => upd({ Kcr: v })} />
@@ -1082,7 +1154,7 @@ function BeamEditor({ p, m, upd }: { p: Project; m: BeamSpec; upd: Upd<BeamSpec>
       <AreaWallsEditor p={p} area={m.area} walls={m.walls} onChange={(x) => upd(x)} />
       <Section title="Other loads and criteria">
         <Collapsible title={`Line / point loads (${m.extra.length})`} open={m.extra.length > 0}>
-          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
+          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} drift />
         </Collapsible>
         <DeflField value={m.deflection} onChange={(v) => upd({ deflection: v as BeamSpec["deflection"] })} />
         <KcrField value={m.Kcr} onChange={(v) => upd({ Kcr: v })} />
@@ -1332,7 +1404,7 @@ function WallEditor({ p, m, upd }: { p: Project; m: WallSpec; upd: Upd<WallSpec>
       <AreaWallsEditor p={p} area={m.area} walls={m.walls} onChange={(x) => upd(x)} />
       <Section title="Other loads">
         <Collapsible title={`Line / point loads (${m.extra.length})`} open={m.extra.length > 0}>
-          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
+          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} drift />
         </Collapsible>
       </Section>
       <Section title={`Stud packs under point loads (${m.packs.length})`}>
@@ -2321,7 +2393,7 @@ function SteelBeamEditor({ p, m, upd }: { p: Project; m: SteelBeamSpec; upd: Upd
       <AreaWallsEditor p={p} area={m.area} walls={m.walls} onChange={(x) => upd(x)} />
       <Section title="Other loads and criteria">
         <Collapsible title={`Line / point loads (${m.extra.length})`} open={m.extra.length > 0}>
-          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
+          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} drift />
         </Collapsible>
         <DeflField value={m.deflection} onChange={(v) => upd({ deflection: v as SteelBeamSpec["deflection"] })} />
         <Check checked={m.selfWeight} onChange={(v) => upd({ selfWeight: v })} label="Include member self weight" />

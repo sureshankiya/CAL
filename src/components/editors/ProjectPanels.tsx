@@ -169,9 +169,12 @@ export function CriteriaPanel({ p, set }: { p: Project; set: SetProject }) {
           <NumberInput value={c.snow.Ct} min={0.85} onChange={(v) => crit({ snow: { ...c.snow, Ct: v ?? 1 } })} />
         </Field>
       </Grid>
-      <Grid>
+      <Grid cols={3}>
         <Field label="I_s (ASCE 7-16 only)">
           <NumberInput value={c.snow.Is} min={0.8} onChange={(v) => crit({ snow: { ...c.snow, Is: v ?? 1 } })} />
+        </Field>
+        <Field label="W_2 (ASCE 7-22 drifts)">
+          <NumberInput value={c.snow.W2} allowEmpty min={0.1} onChange={(v) => crit({ snow: { ...c.snow, W2: v } })} />
         </Field>
         <div className="pt-6">
           <Check

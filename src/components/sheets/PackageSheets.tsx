@@ -228,30 +228,76 @@ export function SummarySheet({
   );
 }
 
+/** Material entries (category, description) for the criteria sheet. */
+function materialsOf(r: AnyResult, c: { fc: number; fy: number }): [string, string][] {
+  const concrete = (rebar = true): [string, string] => [
+    "Concrete",
+    `f'c = ${c.fc} psi${rebar ? `; reinforcing ASTM A615 Grade ${c.fy / 1000}` : ""}`,
+  ];
+  if ("design" in r) return [["Wood", r.design.mat.speciesLabel]];
+  switch (r.kind) {
+    case "wall":
+      return [["Wood", r.typical.mat.speciesLabel]];
+    case "post":
+      return [["Wood", r.mat.speciesLabel]];
+    case "shearWall":
+      return [
+        ["Wood", r.post.speciesLabel],
+        ["Sheathing", "Wood structural panels per the shear wall schedule"],
+      ];
+    case "diaphragm":
+      return [["Sheathing", "Wood structural panels per the diaphragm schedule"]];
+    case "ledger":
+      return [["Wood", `${r.input.ledger.species} ${r.input.ledger.grade}`]];
+    case "footing":
+      return [concrete(!!r.input.rebar)];
+    case "holdownFooting":
+    case "tieIn":
+      return [concrete()];
+    case "retainingWall":
+      return r.input.stem.material === "cmu"
+        ? [concrete(), ["Masonry", "Concrete masonry units, ASTM C90; grout ASTM C476"]]
+        : [concrete()];
+    case "masonryWall":
+      return r.input.material === "cmu"
+        ? [["Masonry", `Concrete masonry units, ASTM C90; f'm = ${r.mat.fm ?? "—"} psi`]]
+        : [concrete()];
+    case "steelBeam":
+    case "steelColumn":
+      return [["Structural steel", `${r.shape.name}: ${r.gradeLabel}`]];
+    case "basePlate":
+      return [
+        ["Structural steel", `Base plate: ${r.input.plate.grade}, F_y = ${fmt(r.FyPlate / 1000, 0)} ksi`],
+        ["Anchor rods", r.rodSteel.label],
+      ];
+    case "cfsWall":
+      return [["Cold-formed steel", `${r.input.designation}, F_y = ${r.input.Fy} ksi (AISI S100)`]];
+    case "connector":
+      return [["Connectors", `${r.item.manufacturer} connectors`]];
+    case "transfer":
+    case "uplift":
+      return [["Connectors", "Nails / connectors per the shear transfer and uplift schedules"]];
+    case "truss":
+      return [["Wood", "Prefabricated wood trusses (by manufacturer)"]];
+    default:
+      return [["Wood", "Wood members per the member sheets"]];
+  }
+}
+
 export function CriteriaSheet({ m, design }: { m: SheetMeta; design: ProjectDesign }) {
   const p = m.project;
   const cr = p.criteria;
   const ft = footers(m);
-  const used = new Set<string>();
+  const used = new Map<string, [string, string]>();
   for (const o of design.outcomes.values())
-    if (o.result)
-      used.add(
-        "design" in o.result
-          ? o.result.design.mat.speciesLabel
-          : o.result.kind === "wall"
-            ? o.result.typical.mat.speciesLabel
-            : o.result.kind === "post"
-              ? o.result.mat.speciesLabel
-              : o.result.kind === "shearWall"
-                ? o.result.post.speciesLabel
-                : o.result.kind === "footing"
-                  ? `Concrete f'c = ${cr.concrete.fc} psi${o.result.input.rebar ? `, reinforcing f_y = ${cr.concrete.fy} psi` : ""}`
-                  : o.result.kind === "connector"
-                    ? `${o.result.item.manufacturer} connectors`
-                    : "Prefabricated wood trusses (by manufacturer)",
-      );
+    if (o.result) for (const [cat, text] of materialsOf(o.result, cr.concrete)) used.set(`${cat}|${text}`, [cat, text]);
   const presets = new Set(p.members.flatMap((x) => ("deflection" in x ? [x.deflection.preset] : [])));
-  const combos = asdCombinations({ includeWind: true, includeSeismic: true, SDS: cr.seismic.SDS });
+  const combos = asdCombinations({
+    includeWind: true,
+    includeSeismic: true,
+    SDS: cr.seismic.SDS,
+    asce7: m.cycle.asce7,
+  });
   return (
     <Sheet f={titleFields(m)} footerLeft={ft.left} footerCenter={ft.center} first={m.first} id="sheet-criteria">
       <SheetTitle
@@ -385,9 +431,11 @@ export function CriteriaSheet({ m, design }: { m: SheetMeta; design: ProjectDesi
         }
       />
       <SectionHead title="Materials used in this package" />
-      {[...used].map((u) => (
-        <TR key={u} desc="Wood member" expr={<>{u}</>} />
-      ))}
+      {[...used.entries()]
+        .sort((a, b) => a[1][0].localeCompare(b[1][0]))
+        .map(([k, [cat, text]]) => (
+          <TR key={k} desc={cat} expr={<>{text}</>} />
+        ))}
       <SectionHead title="Load combinations — ASCE 7 §2.4.1 and §2.4.5 (ASD)" />
       <DataTable
         head={["Ref.", "Combination", "C_D (NDS Table 2.3.2)"]}

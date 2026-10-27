@@ -406,6 +406,7 @@ export const PROJECT_FIELDS: Field[] = [
   numField("criteria.snow.Ce", "none", ["ce", "snow exposure factor", "exposure factor"]),
   numField("criteria.snow.Ct", "none", ["ct", "thermal factor"]),
   numField("criteria.snow.Is", "none", ["is", "snow importance factor"]),
+  numField("criteria.snow.W2", "none", ["w2", "winter wind parameter"]),
   numField("criteria.Kcr", "none", ["kcr", "creep factor", "long term deflection factor"]),
   numField("criteria.seismic.SDS", "none", ["sds", "s ds", "sds g"]),
   numField("criteria.seismic.SD1", "none", ["sd1", "s d1"]),

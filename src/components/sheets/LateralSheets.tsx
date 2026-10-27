@@ -188,8 +188,16 @@ export function LateralSheet({ m, design }: { m: SheetMeta; design: ProjectDesig
             desc="Pressure multiplier used"
             expr={
               <>
-                q<sub>h</sub>
-                {m.cycle.asce7 === "ASCE 7-22" ? " K_d" : ""}
+                {m.cycle.asce7 === "ASCE 7-22" ? (
+                  <>
+                    q<sub>h</sub> K<sub>d</sub> = {f2(L.vp.q)} × {f2(L.vp.Kd)} (K<sub>d</sub> applied in the pressure
+                    equations, ASCE 7-22 Eq. 28.3-1)
+                  </>
+                ) : (
+                  <>
+                    q<sub>h</sub> (K<sub>d</sub> = {f2(L.vp.Kd)} included in Eq. 26.10-1)
+                  </>
+                )}
                 {eq(`${f2(L.vp.qEff)} psf`)}
               </>
             }

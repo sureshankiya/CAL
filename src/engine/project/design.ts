@@ -289,6 +289,8 @@ function shearWallTop(s: ShearWallSpec, linked: ExtraLoad[]) {
   return top;
 }
 
+const DRIFT_KINDS = new Set<string>(["joist", "ijoist", "beam", "steelBeam", "wall"]);
+
 function designOne(
   p: Project,
   ctx: DesignContext,
@@ -297,6 +299,8 @@ function designOne(
   outcomes: Map<string, DesignOutcome>,
   lateral: LateralResult | undefined,
 ): AnyResult {
+  if ("extra" in m && m.extra.some((e) => e.kind === "drift") && !DRIFT_KINDS.has(m.kind))
+    throw new Error(`${m.mark}: snow drift loads apply to joists, I-joists, beams, steel beams and walls only`);
   switch (m.kind) {
     case "joist":
       return designJoist(ctx, { ...m, extra: [...m.extra, ...linked] });

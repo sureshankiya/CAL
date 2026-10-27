@@ -278,6 +278,15 @@ export function designWoodTruss(ctx: DesignContext, t: WoodTrussInput): WoodTrus
         unit: "plf",
         ref: sn.refs.unbal,
       });
+    if (unbal?.surcharge)
+      lines.push({
+        type: "S",
+        label: "Snow, unbalanced drift surcharge (leeward, from the ridge)",
+        expr: `${fmt(unbal.surcharge.pd, 2)} psf × ${fmt(trib, 3)} ft over ${fmt(unbal.surcharge.length, 2)} ft — ${unbal.note}`,
+        value: unbal.surcharge.pd * trib,
+        unit: "plf",
+        ref: sn.refs.unbal,
+      });
   }
   if (wW)
     lines.push({
@@ -306,7 +315,15 @@ export function designWoodTruss(ctx: DesignContext, t: WoodTrussInput): WoodTrus
   nodal(g, bcIds, () => wL, cases.L);
   nodal(g, tcIds, () => wLr, cases.Lr);
   nodal(g, tcIds, () => wS, cases.S);
-  if (unbal) nodal(g, tcIds, (x) => (x < t.span / 2 ? unbal.windward : unbal.leeward) * trib, cases.Su);
+  const sur = unbal?.surcharge;
+  if (unbal)
+    nodal(
+      g,
+      tcIds,
+      (x) =>
+        (x < t.span / 2 ? unbal.windward : unbal.leeward + (sur && x <= t.span / 2 + sur.length ? sur.pd : 0)) * trib,
+      cases.Su,
+    );
   nodal(g, tcIds, () => wW, cases.W, +1);
   let self = 0;
   for (const m of g.members) {

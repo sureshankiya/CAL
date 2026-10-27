@@ -120,7 +120,7 @@ function build(ctx: DesignContext, j: CeilingJoistInput) {
       verify: live.override,
     });
   }
-  const ex = extraToBeamLoads(j.extra, total);
+  const ex = extraToBeamLoads(j.extra, total, ctx);
   loads.push(...ex.loads);
   lines.push(...ex.lines);
   if (j.tension) {

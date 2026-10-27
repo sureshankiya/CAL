@@ -101,7 +101,7 @@ function buildLoads(ctx: DesignContext, j: JoistInput) {
       verify: live.override,
     });
   }
-  const ex = extraToBeamLoads(j.extra, total);
+  const ex = extraToBeamLoads(j.extra, total, ctx);
   loads.push(...ex.loads);
   lines.push(...ex.lines);
   return { total, trib, dead, live, wDead, wLive, loads, lines };

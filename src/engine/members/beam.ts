@@ -77,7 +77,7 @@ export function materialCallout(m: WoodMaterial): string {
 function build(ctx: DesignContext, b: BeamInput) {
   const total = memberLength({ spans: b.spans, leftCantilever: b.leftCantilever, rightCantilever: b.rightCantilever });
   const { loads, lines } = areaWallLoads(ctx, b.area, b.walls, total);
-  const ex = extraToBeamLoads(b.extra, total);
+  const ex = extraToBeamLoads(b.extra, total, ctx);
   loads.push(...ex.loads);
   lines.push(...ex.lines);
   return { total, loads, lines };

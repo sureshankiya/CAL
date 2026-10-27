@@ -26,6 +26,8 @@ export const ENGINE_HASH: string = defined(() => __ENGINE_HASH__, "dev");
 export const DATA_HASH: string = defined(() => __DATA_HASH__, "dev");
 export const VERSION_LOCKED: boolean = defined(() => __VERSION_LOCKED__, false);
 export const LOCKED_ON: string = defined(() => __LOCKED_ON__, "");
+/** A "-wip" (or any SemVer pre-release) version is locked for traceability but is not a released version. */
+export const PRERELEASE = ENGINE_VERSION.includes("-") || DATA_VERSION.includes("-");
 
 export interface SoftwareStamp {
   engine: string;
@@ -45,7 +47,11 @@ export const softwareStamp = (): SoftwareStamp => ({
 
 /** One-line text for the sheet footer and the cover. */
 export function softwareText(cycleId: string): string {
-  const lock = VERSION_LOCKED ? `locked ${LOCKED_ON}` : "UNLOCKED build — not for issue";
+  const lock = !VERSION_LOCKED
+    ? "UNLOCKED build — not for issue"
+    : PRERELEASE
+      ? `pre-release build (not a released version), locked ${LOCKED_ON}`
+      : `locked ${LOCKED_ON}`;
   return `HouseCalc engine ${ENGINE_VERSION} (${ENGINE_HASH}); data library ${cycleId}-cycle v${DATA_VERSION} (${DATA_HASH}); ${lock}`;
 }
 

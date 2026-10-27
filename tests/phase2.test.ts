@@ -182,7 +182,12 @@ describe("seismic and wind loads", () => {
     const vp = velocityPressure("ASCE 7-16", 110, 15, "C", 1, 1, false);
     expect(vp.q).toBeCloseTo(0.00256 * Kz(15, "C") * 0.85 * 110 * 110, 6);
     const vp22 = velocityPressure("ASCE 7-22", 110, 15, "C", 1, 1, false);
-    expect(vp22.qEff).toBeCloseTo(vp.q, 6);
+    expect(vp22.qEff).toBeCloseTo(0.00256 * Kz(15, "C", false, "ASCE 7-22") * 0.85 * 110 * 110, 6);
+    // ASCE 7-22 Table 26.11-1 constants reproduce the tabulated Kz (Table 26.10-1)
+    expect(Kz(15, "B", false, "ASCE 7-22")).toBeCloseTo(0.57, 2);
+    expect(Kz(30, "B", false, "ASCE 7-22")).toBeCloseTo(0.69, 2);
+    expect(Kz(15, "C", false, "ASCE 7-22")).toBeCloseTo(0.85, 2);
+    expect(Kz(15, "D", false, "ASCE 7-22")).toBeCloseTo(1.035, 3);
     const g = gcpfCaseA(12.5);
     expect(g["1"]).toBeCloseTo((0.4 + 0.53) / 2, 6);
     const w = wallGCp(10, 5, 20);

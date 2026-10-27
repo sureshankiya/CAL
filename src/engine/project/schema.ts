@@ -39,8 +39,22 @@ export const deadRefSchema = z.object({
 });
 export const liveRefSchema = z.object({ use: liveUseSchema.optional(), psf: nonneg.optional() });
 
+/** Snow drift on a lower roof (ASCE 7 §7.7) or at a parapet / projection (§7.8), applied as a triangular load. */
+export const driftLoadSchema = z.object({
+  case: z.enum(["step", "parapet"]),
+  luUpper: pos,
+  luLower: nonneg.optional(),
+  hr: pos,
+  /** lower roof rise, in/ft (for the balanced load p_s) */
+  rise: nonneg.default(0),
+  /** tributary width (joist spacing or beam tributary), ft */
+  trib: pos,
+  /** direction from the peak (at x) toward the drift toe */
+  dir: z.enum(["right", "left"]),
+});
+
 export const extraLoadSchema = z.object({
-  kind: z.enum(["line", "point"]),
+  kind: z.enum(["line", "point", "drift"]),
   type: loadTypeSchema,
   label: z.string(),
   w: num.optional(),
@@ -48,6 +62,7 @@ export const extraLoadSchema = z.object({
   x2: nonneg.optional(),
   P: num.optional(),
   x: nonneg.optional(),
+  drift: driftLoadSchema.optional(),
 });
 
 /** Load carried from another member's support reaction (load-path link). */
@@ -980,7 +995,7 @@ export const projectSchema = z.object({
     riskCategory: z.enum(["I", "II", "III", "IV"]),
     liveBasis: z.enum(["IRC", "IBC"]),
     roofLive: z.object({ L0: pos, reduce: z.boolean() }),
-    snow: z.object({ pg: nonneg, Ce: pos, Ct: pos, Is: pos, slippery: z.boolean() }),
+    snow: z.object({ pg: nonneg, Ce: pos, Ct: pos, Is: pos, slippery: z.boolean(), W2: pos.optional() }),
     Kcr: pos,
     seismic: z.object({ SDS: nonneg, SD1: nonneg, siteClass: z.string(), SDC: z.string() }),
     wind: z.object({ V: pos, exposure: z.enum(["B", "C", "D"]), Kzt: pos }),

@@ -186,10 +186,10 @@ export const TABLES: Record<string, TableMeta> = {
   "asce7-26.10-1": {
     id: "asce7-26.10-1",
     title: "Velocity pressure exposure coefficients Kz",
-    source: "ASCE 7 Table 26.10-1 (formula, 7-16 constants)",
+    source: "ASCE 7 Table 26.10-1 formula with Table 26.11-1 constants (edition-specific)",
     edition: "ASCE 7-16 / 7-22",
     status: "unverified",
-    note: "ASCE 7-22 exposure constants to be confirmed; 7-16 constants used for both editions.",
+    note: "7-16: 2.01 (z/zg)^(2/α), B 7.0 / 1,200 ft, C 9.5 / 900 ft, D 11.5 / 700 ft. 7-22: 2.41 (z/zg)^(2/α), B 7.5 / 3,280 ft, C 9.8 / 2,460 ft, D 11.5 / 1,935 ft. Exposure B Ch. 28 floor 0.70 (z < 30 ft) applied for both editions.",
   },
   "aisc-shapes": {
     id: "aisc-shapes",
