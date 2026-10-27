@@ -1883,6 +1883,7 @@ function ShearWallEditor({ p, m, upd }: { p: Project; m: ShearWallSpec; upd: Upd
           checked={!!m.opening}
           onChange={(v) =>
             upd({
+              perforated: v ? undefined : m.perforated,
               opening: v
                 ? {
                     L1: m.b / 4,
@@ -1949,6 +1950,81 @@ function ShearWallEditor({ p, m, upd }: { p: Project; m: ShearWallSpec; upd: Upd
               </Field>
             </Grid>
             <Hint>Wall length b_s must equal L1 + Lo + L2.</Hint>
+          </>
+        ) : null}
+        <Check
+          checked={!!m.perforated}
+          onChange={(v) =>
+            upd({
+              opening: v ? undefined : m.opening,
+              perforated: v
+                ? { segments: [m.b / 3, m.b / 3], openings: [{ width: m.b / 3, height: Math.min(4, m.h) }] }
+                : undefined,
+            })
+          }
+          label="Perforated shear wall (SDPWS 4.3.3.5)"
+        />
+        {m.perforated ? (
+          <>
+            {m.perforated.segments.map((L, i) => {
+              const pf = m.perforated!;
+              const o = pf.openings[i];
+              const setSeg = (v: number) =>
+                upd({ perforated: { ...pf, segments: pf.segments.map((x, k) => (k === i ? v : x)) } });
+              const setOp = (patch: Partial<{ width: number; height: number }>) =>
+                upd({ perforated: { ...pf, openings: pf.openings.map((x, k) => (k === i ? { ...x, ...patch } : x)) } });
+              return (
+                <Grid key={i} cols={3}>
+                  <Field label={`Segment ${i + 1} L_i (ft)`}>
+                    <NumberInput value={L} min={0.5} onChange={(v) => setSeg(v ?? L)} />
+                  </Field>
+                  {o ? (
+                    <>
+                      <Field label={`Opening ${i + 1} width (ft)`}>
+                        <NumberInput value={o.width} min={0.5} onChange={(v) => setOp({ width: v ?? o.width })} />
+                      </Field>
+                      <Field label={`Opening ${i + 1} height (ft)`}>
+                        <NumberInput value={o.height} min={0.5} onChange={(v) => setOp({ height: v ?? o.height })} />
+                      </Field>
+                    </>
+                  ) : null}
+                </Grid>
+              );
+            })}
+            <div className="flex gap-2">
+              <AddButton
+                onClick={() =>
+                  upd({
+                    perforated: {
+                      segments: [...m.perforated!.segments, 2],
+                      openings: [...m.perforated!.openings, { width: 3, height: 4 }],
+                    },
+                  })
+                }
+              >
+                + Add opening and segment
+              </AddButton>
+              {m.perforated.openings.length > 1 ? (
+                <SmallButton
+                  tone="danger"
+                  title="Remove the last opening and segment"
+                  onClick={() =>
+                    upd({
+                      perforated: {
+                        segments: m.perforated!.segments.slice(0, -1),
+                        openings: m.perforated!.openings.slice(0, -1),
+                      },
+                    })
+                  }
+                >
+                  ✕
+                </SmallButton>
+              ) : null}
+            </div>
+            <Hint>
+              Segments and openings alternate from the left end: segment 1, opening 1, segment 2, … Wall length b_s must
+              equal ΣL_i + Σ opening widths.
+            </Hint>
           </>
         ) : null}
       </Section>

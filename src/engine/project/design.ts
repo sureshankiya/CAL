@@ -475,7 +475,18 @@ const planOf = (p: Project, dir: Dir) => {
 };
 
 /** Effective length of a shear wall for line sharing and collectors (FTAO: the piers). */
-const wallLength = (w: ShearWallSpec) => (w.opening ? w.opening.L1 + w.opening.L2 : w.b);
+const wallLength = (w: ShearWallSpec) =>
+  w.opening ? w.opening.L1 + w.opening.L2 : w.perforated ? w.perforated.segments.reduce((a, L) => a + L, 0) : w.b;
+
+/** Full-height segments of a perforated wall with their start positions along the line. */
+function perforatedSegments(w: ShearWallSpec): Array<{ mark: string; L: number; x?: number }> {
+  let at = w.x;
+  return w.perforated!.segments.map((L, i) => {
+    const seg = { mark: `${w.mark} segment ${i + 1}`, L, x: at };
+    if (at !== undefined) at += L + (w.perforated!.openings[i]?.width ?? 0);
+    return seg;
+  });
+}
 
 function diaphragmDemand(p: Project, d: DiaphragmSpec, lateral: LateralResult | undefined): DiaphragmDemand {
   if (!p.lateral?.enabled || !lateral)
@@ -514,7 +525,9 @@ function diaphragmDemand(p: Project, d: DiaphragmSpec, lateral: LateralResult | 
                   x: w.x === undefined ? undefined : w.x + w.opening.L1 + w.opening.Lo,
                 },
               ]
-            : [{ mark: w.mark, L: wallLength(w), x: w.x }],
+            : w.perforated
+              ? perforatedSegments(w)
+              : [{ mark: w.mark, L: wallLength(w), x: w.x }],
         ),
     })),
     Omega0: lateral.system.Omega0,

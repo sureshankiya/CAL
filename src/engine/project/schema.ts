@@ -415,6 +415,10 @@ export const shearWallSpecSchema = z.object({
   x: nonneg.optional(),
   /** force transfer around one opening (FTAO) */
   opening: z.object({ L1: pos, Lo: pos, L2: pos, ha: pos, hb: nonneg, strapId: z.string().optional() }).optional(),
+  /** perforated shear wall (SDPWS 4.3.3.5): full-height segments with the openings between them */
+  perforated: z
+    .object({ segments: z.array(pos).min(2), openings: z.array(z.object({ width: pos, height: pos })).min(1) })
+    .optional(),
 });
 
 const steelMethodSchema = z.enum(["LRFD", "ASD"]);

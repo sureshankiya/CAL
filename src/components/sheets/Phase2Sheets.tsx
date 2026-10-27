@@ -881,6 +881,97 @@ function wallLineView(p: Project, memberId: string): { x?: number; line?: WallLi
   return { x: me.x, line: { name: l.name, length: l.length, openings: l.openings ?? [], segments } };
 }
 
+function PerforatedBlock({ r }: { r: ShearWallResult }) {
+  const s = r.input;
+  const d = r.demand;
+  const p = r.psw!;
+  return (
+    <>
+      <SectionHead title="Perforated shear wall — SDPWS-2021 4.3.3.5 (ASD)" />
+      <TR
+        desc="Geometry"
+        expr={
+          <>
+            L<sub>tot</sub> = {f2(s.b)} ft; ΣL<sub>i</sub> = {p.segments.map((x) => f2(x.L)).join(" + ")} = {f2(p.sumL)}{" "}
+            ft; A<sub>o</sub> = {p.openings.map((o) => `${f2(o.width)} × ${f2(o.height)}`).join(" + ")} = {f1(p.Ao)} ft²
+          </>
+        }
+      />
+      <DataTable
+        caption="Full-height segments"
+        head={["Segment", "L_i (ft)", "h / L_i", "C_ar", "L_i C_ar (ft)"]}
+        align={["left", "right", "right", "right", "right"]}
+        small
+        rows={p.segments.map((x, i) => [`${i + 1}`, f2(x.L), f3(x.aspect), f3(x.Car), f2(x.L * x.Car)])}
+      />
+      <TR
+        desc="Sheathing area ratio — Eq. 4.3-6"
+        expr={
+          <>
+            r = 1 / (1 + A<sub>o</sub> / (h ΣL<sub>i</sub>)) = 1 / (1 + {f1(p.Ao)} / ({f2(s.h)} × {f2(p.sumL)})) ={" "}
+            {f3(p.r)}
+          </>
+        }
+      />
+      <TR
+        desc="Shear capacity adjustment factor — Eq. 4.3-5"
+        expr={
+          <>
+            C<sub>o</sub> = r / (3 − 2r) × L<sub>tot</sub> / ΣL<sub>i</sub> = {f3(p.r)} / (3 − 2 × {f3(p.r)}) ×{" "}
+            {f2(s.b)} / {f2(p.sumL)} = {f3(p.Co)}
+          </>
+        }
+      />
+      <TR
+        desc="Unit shear, seismic — Eq. 4.3-9"
+        expr={
+          <>
+            v<sub>max</sub> = 0.7 E<sub>h</sub> / (C<sub>o</sub> ΣL<sub>i</sub>C<sub>ar</sub>) = 0.7 × {f0(d.Eh)} / (
+            {f3(p.Co)} × {f2(p.sumLadj)}) = {f1(r.vS)} plf ≤ v<sub>s,ASD</sub> = {f1(r.vAllowS)} plf
+          </>
+        }
+        pass={r.vS <= r.vAllowS}
+      />
+      <TR
+        desc="Unit shear, wind — Eq. 4.3-9"
+        expr={
+          <>
+            v<sub>max</sub> = 0.6 W / (C<sub>o</sub> ΣL<sub>i</sub>C<sub>ar</sub>) = 0.6 × {f0(d.W)} / ({f3(p.Co)} ×{" "}
+            {f2(p.sumLadj)}) = {f1(r.vW)} plf ≤ v<sub>wc</sub> / 2 = {f1(r.vAllowW)} plf
+          </>
+        }
+        pass={r.vW <= r.vAllowW}
+      />
+      <TR
+        desc="Nominal unit shear limit — 4.3.5.3"
+        expr={
+          <>
+            v<sub>sc</sub> = {f0(r.vsc)} plf ≤ {f0(p.limit.s)} plf
+          </>
+        }
+        pass={r.vsc <= p.limit.s}
+      />
+      <TR
+        desc="Chord / hold-down force — Eq. 4.3-8"
+        expr={
+          <>
+            T = C = V h / (C<sub>o</sub> ΣL<sub>i</sub>), less the end-post tributary dead load (chord table below)
+          </>
+        }
+      />
+      <TR
+        desc="Uplift between hold-downs — 4.3.6.4.2.2"
+        expr={
+          <>
+            t = v<sub>max</sub> = {f1(p.t.s)} plf (0.7E); {f1(p.t.w)} plf (0.6W) — bottom plate of each full-height
+            segment anchored for t
+          </>
+        }
+      />
+    </>
+  );
+}
+
 export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResult>) {
   const s = r.input;
   const d = r.demand;
@@ -893,8 +984,12 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
       subtitle={
         <>
           In accordance with {m.cycle.sdpws}, ANSI/AWC {m.cycle.nds} (ASD) and the{" "}
-          {r.ftao ? "force-transfer-around-openings method (SDPWS 4.3.5.2)" : "segmented shear wall method"} — member{" "}
-          {index} of {total}: {r.mark}
+          {r.ftao
+            ? "force-transfer-around-openings method (SDPWS 4.3.5.2)"
+            : r.psw
+              ? "perforated shear wall method (SDPWS 4.3.3.5)"
+              : "segmented shear wall method"}{" "}
+          — member {index} of {total}: {r.mark}
         </>
       }
     >
@@ -994,19 +1089,23 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         expr={
           <>
             {rich(
-              r.ftao
-                ? r.aspect <= 2
-                  ? "pier h_o / L ≤ 2: 1.00"
-                  : `1.25 − 0.125 h_o / L = ${f3(r.Car)}`
-                : r.aspect <= 2
-                  ? "h / b_s ≤ 2: 1.00"
-                  : `1.25 − 0.125 h / b_s = ${f3(r.Car)}`,
+              r.psw
+                ? "applied to each full-height segment (perforated wall table below)"
+                : r.ftao
+                  ? r.aspect <= 2
+                    ? "pier h_o / L ≤ 2: 1.00"
+                    : `1.25 − 0.125 h_o / L = ${f3(r.Car)}`
+                  : r.aspect <= 2
+                    ? "h / b_s ≤ 2: 1.00"
+                    : `1.25 − 0.125 h / b_s = ${f3(r.Car)}`,
             )}
           </>
         }
       />
       <LoadLines lines={r.loadLines} title="Loading on the wall" />
-      {r.ftao ? (
+      {r.psw ? (
+        <PerforatedBlock r={r} />
+      ) : r.ftao ? (
         <>
           <SectionHead title="Force transfer around opening — SDPWS 4.3.5.2 (Diekmann rational analysis, ASD)" />
           <TR
@@ -1278,7 +1377,16 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         desc="Strength-level unit shear (ρ = 1.0, §12.12.1)"
         expr={
           <>
-            v = Q<sub>E</sub> / b<sub>s</sub>
+            {r.psw ? (
+              <>
+                v<sub>max</sub> = Q<sub>E</sub> / (C<sub>o</sub> ΣL<sub>i</sub>), b = ΣL<sub>i</sub> = {f2(r.psw.sumL)}{" "}
+                ft
+              </>
+            ) : (
+              <>
+                v = Q<sub>E</sub> / b<sub>s</sub>
+              </>
+            )}
             {eq(`${f2(r.drift.v)} plf`)}
           </>
         }
@@ -1296,8 +1404,14 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         desc="Shear wall deflection"
         expr={
           <>
-            δ<sub>sw</sub> = 8 v h³/(E A b) + v h/(1000 G<sub>a</sub>) + h Δ<sub>a</sub>/b = {fmt(r.drift.bend, 4)} +{" "}
-            {fmt(r.drift.shear, 4)} + {fmt(r.drift.slip, 4)}
+            δ<sub>sw</sub> = [8 v h³/(E A b) + v h/(1000 G<sub>a</sub>) + h Δ<sub>a</sub>/b]
+            {r.psw ? (
+              <>
+                {" "}
+                / C<sub>o</sub> (SDPWS 4.3.2.2)
+              </>
+            ) : null}{" "}
+            = {fmt(r.drift.bend, 4)} + {fmt(r.drift.shear, 4)} + {fmt(r.drift.slip, 4)}
             {eq(`${fmt(r.drift.dxe, 4)} in`)}
           </>
         }

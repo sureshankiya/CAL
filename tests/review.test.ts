@@ -90,3 +90,33 @@ describe("snow drifts (ASCE 7 §7.6.1, §7.7, §7.8)", () => {
     expect(sumS(after!.result!) - sumS(before)).toBeCloseTo(expected, 0);
   });
 });
+
+import { perforatedCo } from "@/engine/members/shearWall";
+
+describe("perforated shear walls (SDPWS-2021 4.3.3.5)", () => {
+  it("C_o by Eq. 4.3-5 / 4.3-6 (hand: r = 0.75, C_o = 0.8333)", () => {
+    const { r, Co } = perforatedCo(20, 8, 12, 32);
+    expect(r).toBeCloseTo(0.75, 6);
+    expect(Co).toBeCloseTo(0.5 * (20 / 12), 6);
+  });
+
+  it("a perforated wall in the example: v_max on the aspect-adjusted segments, deflection / C_o", () => {
+    const p = exampleProject();
+    const w = p.members.find((m) => m.kind === "shearWall" && m.mark === "1SW-2");
+    if (!w || w.kind !== "shearWall") throw new Error();
+    w.perforated = { segments: [4, 4], openings: [{ width: 6, height: 4 }] };
+    const o = designProject(p).outcomes.get(w.id)!;
+    expect(o.error).toBeUndefined();
+    const r = o.result!;
+    if (r.kind !== "shearWall") throw new Error();
+    const Co = perforatedCo(14, 9, 8, 24).Co;
+    expect(r.psw!.Co).toBeCloseTo(Co, 6);
+    const Car = 1.25 - 0.125 * (9 / 4);
+    expect(r.psw!.sumLadj).toBeCloseTo(8 * Car, 6);
+    expect(r.vS).toBeCloseTo((0.7 * r.demand.Eh) / (Co * 8 * Car), 6);
+    expect(r.title).toMatch(/perforated/);
+    // the bad geometry is rejected
+    w.perforated = { segments: [4, 4], openings: [{ width: 5, height: 4 }] };
+    expect(designProject(p).outcomes.get(w.id)!.error).toMatch(/must equal the wall length/);
+  });
+});
