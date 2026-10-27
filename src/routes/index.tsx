@@ -148,6 +148,17 @@ function Index() {
     );
   }
 
+  async function exportDxf() {
+    if (printBlocked() || exporting) return;
+    const name = reportFileName(deferred, "html").replace(/\.html$/, "-schedules.dxf");
+    try {
+      const text = await (await import("@/lib/dxf")).scheduleDxf(deferred, design, entries);
+      setMessage(saveMessage(name, await saveFile(name, text, "application/dxf")));
+    } catch (e) {
+      setMessage({ tone: "error", text: `Could not export ${name}: ${e instanceof Error ? e.message : String(e)}` });
+    }
+  }
+
   async function exportReport(kind: "pdf" | "docx") {
     if (printBlocked() || exporting) return;
     const name = reportFileName(deferred, kind);
@@ -324,6 +335,14 @@ function Index() {
               onClick={downloadReport}
             >
               Export HTML
+            </button>
+            <button
+              type="button"
+              className={btn}
+              title="Schedules and general notes as an AutoCAD DXF (text and table grid) to place on the drawings"
+              onClick={exportDxf}
+            >
+              Export DXF
             </button>
             <button type="button" onClick={handlePrint} className={primary}>
               Print / Save PDF

@@ -85,6 +85,18 @@ AI extraction needs an Anthropic API key set as `ANTHROPIC_API_KEY` in the envir
 | Lateral | ASCE 7 Ch. 27 Part 1 directional MWFRS option; semi-rigid diaphragm distribution (Timoshenko beam on wall-line springs, diaphragm G_a per story) |
 | Serviceability / fire | Optional floor vibration check on FJ / IJ (f ≥ 15 Hz, Dolan et al. 1999 — guidance); NDS Ch. 16 calculated fire resistance for exposed beams and posts |
 
+## Feature additions (engine 1.0.1-wip.19)
+
+| Area | Included |
+|---|---|
+| Built-up beams | Fastening between plies (nails or through-bolts) for top, one-side and two-side loading, NDS 12.3 yield values with C_D |
+| Notches and holes | FJ / B: NDS 4.4.3 and IRC R502.8.1 limits, net-section bending and shear, end-notch shear (NDS Eq. 3.4-3) |
+| Existing lumber | Full-length sistered joists (load shared by EI, both members checked, sister fastening); "no grade stamp" assumption flagged VERIFY |
+| Portal frames / prefab panels | SSW-#: share of the wall line by capacity, in-plane shear, drift and anchorage against the values entered per product in the hardware list |
+| Continuous rods | Rod tension (AISC 360 J3.6), bearing plate, displacement per story ≤ 0.20 in. (ICC-ES AC316), rod displacement in the shear wall drift |
+| Seismic | ASCE 7 §12.14 simplified alternative (option); USGS S_DS / S_D1 lookup from the site address (confirm before apply) |
+| CAD | Export DXF: schedules and general notes as an AutoCAD R12 DXF (text + table grid, NCS layers S-ANNO-SCHD / -NOTE / -TTLB) |
+
 ## Use
 
 ```bash

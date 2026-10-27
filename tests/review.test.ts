@@ -393,3 +393,20 @@ describe("USGS seismic lookup parser", () => {
     expect(() => parseUsgs({ response: { data: { ss: 1.5 } } }, "u")).toThrow(/S_DS/);
   });
 });
+
+import { dxfDocument, dxfText } from "@/lib/dxf";
+
+describe("DXF export of schedules and notes", () => {
+  it("writes an R12 ENTITIES section with the table text, grid lines and escaped symbols", () => {
+    const d = dxfDocument(
+      [{ title: "Beam schedule", head: ["Mark", "Size"], rows: [["B-1", "(2) 1-3/4 × 11-7/8 LVL"]] }],
+      [{ title: "Wood framing", lines: ["Sawn lumber grade-stamped.", "Fastening per IBC Table 2304.10.2."] }],
+    );
+    expect(d.startsWith("0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1009")).toBe(true);
+    expect(d.trim().endsWith("0\nEOF")).toBe(true);
+    expect(d).toContain("(2) 1-3/4 x 11-7/8 LVL");
+    expect(d).toContain("1. Sawn lumber grade-stamped.");
+    expect(d.split("\nLINE\n").length - 1).toBe(3 + 3); // 3 horizontal (top, head, row) + 3 vertical
+    expect(dxfText("≤ 0.20 in; 12′-0″; 30°; φ; ✓")).toBe("<= 0.20 in; 12'-0\"; 30%%d; phi; \\U+2713");
+  });
+});
