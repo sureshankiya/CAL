@@ -13,6 +13,7 @@ import type {
   Project,
   RafterSpec,
   ShearWallSpec,
+  ShearPanelSpec,
   TrussSpec,
   WallSpec,
   SteelBeamSpec,
@@ -49,6 +50,7 @@ export type NewMemberKind =
   | "pad"
   | "shearWall"
   | "ftaoWall"
+  | "shearPanel"
   | "roofDiaphragm"
   | "floorDiaphragm"
   | "transfer"
@@ -83,6 +85,7 @@ export const NEW_MEMBER_LABEL: Record<NewMemberKind, string> = {
   pad: "Pad footing (PF)",
   shearWall: "Shear wall (SW)",
   ftaoWall: "Shear wall — force transfer around opening (SW)",
+  shearPanel: "Portal frame / prefabricated shear panel (SSW)",
   roofDiaphragm: "Roof diaphragm (RD)",
   floorDiaphragm: "Floor diaphragm (FD)",
   transfer: "Shear transfer connection (ST)",
@@ -325,6 +328,15 @@ export function newMemberSpec(p: Project, kind: NewMemberKind, structureId: stri
             }
           : {}),
       } satisfies ShearWallSpec;
+    case "shearPanel":
+      return {
+        kind: "shearPanel",
+        ...base,
+        lineId: p.lateral?.lines[0]?.id ?? "",
+        panelId: p.hardware.find((h) => h.kind === "panel")?.id ?? "",
+        count: 1,
+        h: 9,
+      } satisfies ShearPanelSpec;
     case "roofDiaphragm":
     case "floorDiaphragm": {
       const st = p.lateral?.stories ?? [];
@@ -694,6 +706,7 @@ export function supportCount(m: MemberSpec): number {
     case "tieIn":
     case "retainingWall":
     case "guardPost":
+    case "shearPanel":
       return 0;
     case "cfsWall":
       return 1;

@@ -21,7 +21,15 @@ import {
   SummarySheet,
 } from "../sheets/PackageSheets";
 import { WoodMemberSheet } from "../sheets/WoodMemberSheet";
-import { ConnectorSheet, FootingSheet, PostSheet, ShearWallSheet, TrussSheet, WallSheet } from "../sheets/Phase2Sheets";
+import {
+  ConnectorSheet,
+  FootingSheet,
+  PostSheet,
+  ShearWallSheet,
+  ShearPanelSheet,
+  TrussSheet,
+  WallSheet,
+} from "../sheets/Phase2Sheets";
 import { LateralSheet, LoadPathSheet } from "../sheets/LateralSheets";
 import {
   BasePlateSheet,
@@ -182,6 +190,8 @@ function SheetSwitch({
           return <FootingSheet {...common} r={r} />;
         case "shearWall":
           return <ShearWallSheet {...common} r={r} />;
+        case "shearPanel":
+          return <ShearPanelSheet {...common} r={r} />;
         case "steelBeam":
           return <SteelBeamSheet {...common} r={r} />;
         case "steelColumn":

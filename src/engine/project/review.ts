@@ -87,6 +87,8 @@ export function targetFields(m: MemberSpec): TargetField[] {
         { field: "b", label: "Segment length (ft)", numeric: true },
         { field: "h", label: "Wall height (ft)", numeric: true },
       ];
+    case "shearPanel":
+      return [...common, { field: "h", label: "Wall height (ft)", numeric: true }];
     case "steelBeam":
       return [...common, ...spans(m.spans.length), { field: "shape", label: "Steel shape", numeric: false }];
     case "steelColumn":

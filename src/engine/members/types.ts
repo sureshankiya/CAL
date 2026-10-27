@@ -29,6 +29,7 @@ export type MemberKind =
   | "tieIn"
   | "woodTruss"
   | "steelTruss"
+  | "shearPanel"
   | "retainingWall"
   | "guardPost"
   | "cfsWall";

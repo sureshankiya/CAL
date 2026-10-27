@@ -38,6 +38,7 @@ import { designConnector, type ConnectorResult } from "../members/connector";
 import { designFooting, type FootingResult } from "../members/footing";
 import { designPost, type PostResult } from "../members/post";
 import { designShearWall, shearWallWeight, type ShearWallDemand, type ShearWallResult } from "../members/shearWall";
+import { designShearPanel, shearPanelWeight, type ShearPanelResult } from "../members/shearPanel";
 import { designTruss, type TrussResult } from "../members/truss";
 import { designWall, type WallResult } from "../members/wall";
 import { designDiaphragm, type DiaphragmDemand, type DiaphragmResult } from "../members/diaphragm";
@@ -60,7 +61,7 @@ import {
 } from "../members/steel";
 import { designTransfer, type TransferDemand, type TransferResult } from "../members/transfer";
 import { designUplift, type UpliftResult } from "../members/uplift";
-import type { DiaphragmSpec, MemberSpec, Project, ShearWallSpec, TransferSpec } from "./schema";
+import type { DiaphragmSpec, MemberSpec, Project, ShearPanelSpec, ShearWallSpec, TransferSpec } from "./schema";
 
 export type AnyResult =
   | JoistResult
@@ -88,7 +89,8 @@ export type AnyResult =
   | SteelTrussResult
   | RetainingWallResult
   | GuardPostResult
-  | CfsWallResult;
+  | CfsWallResult
+  | ShearPanelResult;
 
 export interface DesignOutcome {
   spec: MemberSpec;
@@ -244,7 +246,7 @@ function tensionOf(
 /** Wall-line demand on a shear wall: its share of the line force. */
 function shearWallDemand(
   p: Project,
-  s: ShearWallSpec,
+  s: ShearWallSpec | ShearPanelSpec,
   lateral: LateralResult | undefined,
   outcomes: Map<string, DesignOutcome>,
 ): ShearWallDemand {
@@ -254,13 +256,11 @@ function shearWallDemand(
     );
   const lf = lateral.lines.find((x) => x.line.id === s.lineId);
   if (!lf) throw new Error("Wall line not found — assign the shear wall to a wall line");
-  const inLine = p.members.filter((m): m is ShearWallSpec => m.kind === "shearWall" && m.lineId === s.lineId);
-  const weights = inLine.map((m) => shearWallWeight(m));
-  const total = weights.reduce((a, b) => a + b, 0);
-  const share = total > 0 ? shearWallWeight(s) / total : 0;
+  const total = p.members.reduce((a, m) => a + (isLineMember(m) && m.lineId === s.lineId ? lineWeight(p, m) : 0), 0);
+  const share = total > 0 ? lineWeight(p, s) / total : 0;
   const story = p.lateral.stories.find((x) => x.id === lf.line.storyId)!;
   let stacked: ShearWallDemand["stacked"];
-  if (s.upliftFrom) {
+  if (s.kind === "shearWall" && s.upliftFrom) {
     const up = outcomes.get(s.upliftFrom)?.result;
     if (!up || up.kind !== "shearWall") throw new Error("Stacked wall above has an error or is not a shear wall");
     stacked = { mark: up.mark, Ts: up.Tmax.seismic, Tw: up.Tmax.wind, Tu: up.hdAnchor?.Tu ?? 0 };
@@ -282,6 +282,18 @@ function shearWallDemand(
     stacked,
   };
 }
+
+const isLineMember = (m: MemberSpec): m is ShearWallSpec | ShearPanelSpec =>
+  m.kind === "shearWall" || m.kind === "shearPanel";
+
+/** Capacity weight of a shear wall or panel for sharing its wall line. */
+const lineWeight = (p: Project, m: ShearWallSpec | ShearPanelSpec) =>
+  m.kind === "shearWall"
+    ? shearWallWeight(m)
+    : shearPanelWeight(
+        m,
+        p.hardware.find((h) => h.id === m.panelId),
+      );
 
 /** Gravity on top of a shear wall: entered plus linked loads (line w; point P spread over the wall). */
 function shearWallTop(s: ShearWallSpec, linked: ExtraLoad[]) {
@@ -358,6 +370,8 @@ function designOne(
       });
     case "shearWall":
       return designShearWall(ctx, { ...m, top: shearWallTop(m, linked) }, shearWallDemand(p, m, lateral, outcomes));
+    case "shearPanel":
+      return designShearPanel(ctx, m, shearWallDemand(p, m, lateral, outcomes));
     case "steelBeam":
       return designSteelBeam(ctx, { ...m, extra: [...m.extra, ...linked] });
     case "steelColumn":
@@ -484,6 +498,10 @@ const planOf = (p: Project, dir: Dir) => {
 const wallLength = (w: ShearWallSpec) =>
   w.opening ? w.opening.L1 + w.opening.L2 : w.perforated ? w.perforated.segments.reduce((a, L) => a + L, 0) : w.b;
 
+/** Plan length of a panel mark (panel width × count), ft. */
+const panelLength = (p: Project, w: ShearPanelSpec) =>
+  ((p.hardware.find((h) => h.id === w.panelId)?.panel?.width ?? 0) / 12) * w.count;
+
 /** Full-height segments of a perforated wall with their start positions along the line. */
 function perforatedSegments(w: ShearWallSpec): Array<{ mark: string; L: number; x?: number }> {
   let at = w.x;
@@ -519,21 +537,23 @@ function diaphragmDemand(p: Project, d: DiaphragmSpec, lateral: LateralResult | 
       name: l.name,
       pos: l.pos!,
       walls: p.members
-        .filter((m): m is ShearWallSpec => m.kind === "shearWall" && m.lineId === l.id)
+        .filter((m): m is ShearWallSpec | ShearPanelSpec => isLineMember(m) && m.lineId === l.id)
         .flatMap((w) =>
-          // FTAO wall: its two full-height piers (the opening is spanned by the strap / header)
-          w.opening
-            ? [
-                { mark: `${w.mark} pier 1`, L: w.opening.L1, x: w.x },
-                {
-                  mark: `${w.mark} pier 2`,
-                  L: w.opening.L2,
-                  x: w.x === undefined ? undefined : w.x + w.opening.L1 + w.opening.Lo,
-                },
-              ]
-            : w.perforated
-              ? perforatedSegments(w)
-              : [{ mark: w.mark, L: wallLength(w), x: w.x }],
+          w.kind === "shearPanel"
+            ? [{ mark: w.mark, L: panelLength(p, w), x: w.x }]
+            : // FTAO wall: its two full-height piers (the opening is spanned by the strap / header)
+              w.opening
+              ? [
+                  { mark: `${w.mark} pier 1`, L: w.opening.L1, x: w.x },
+                  {
+                    mark: `${w.mark} pier 2`,
+                    L: w.opening.L2,
+                    x: w.x === undefined ? undefined : w.x + w.opening.L1 + w.opening.Lo,
+                  },
+                ]
+              : w.perforated
+                ? perforatedSegments(w)
+                : [{ mark: w.mark, L: wallLength(w), x: w.x }],
         ),
     })),
     Omega0: lateral.system.Omega0,
@@ -690,8 +710,8 @@ function applyRigid(p: Project, lateral: LateralResult, outcomes: Map<string, De
   const k = new Map<string, number>();
   for (const o of outcomes.values()) {
     const r = o.result;
-    if (r?.kind !== "shearWall" || !(r.drift.dxe > 0)) continue;
-    const id = (o.spec as ShearWallSpec).lineId;
+    if ((r?.kind !== "shearWall" && r?.kind !== "shearPanel") || !(r.drift.dxe > 0)) continue;
+    const id = (o.spec as ShearWallSpec | ShearPanelSpec).lineId;
     k.set(id, (k.get(id) ?? 0) + r.demand.QE / r.drift.dxe);
   }
   const results: Array<RigidStoryResult & { storyId: string; storyName: string; kind: "seismic" | "wind" }> = [];

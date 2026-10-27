@@ -43,6 +43,8 @@ export function spansText(r: AnyResult): string {
       return fmtFtIn(r.input.span);
     case "shearWall":
       return `${fmtFtIn(r.input.b)} × ${fmtFtIn(r.input.h)}`;
+    case "shearPanel":
+      return `${r.input.count} × ${fmtFtIn((r.item.panel?.width ?? 0) / 12)} × ${fmtFtIn(r.input.h)}`;
     case "footing":
       return r.input.type === "strip" ? "continuous" : `${fmtFtIn(r.input.B)} × ${fmtFtIn(r.input.L ?? r.input.B)}`;
     case "connector":
@@ -684,6 +686,7 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
   const walls = of("wall");
   const posts = of("post");
   const sws = of("shearWall");
+  const spn = of("shearPanel");
   const cns = of("connector");
   const ftgs = of("footing");
   const sbs = of("steelBeam");
@@ -702,6 +705,7 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
   const usedHw = new Set<string>([
     ...cns.map((c) => c.item.id),
     ...sws.flatMap((x) => (x.holdown ? [x.holdown.item.id] : [])),
+    ...spn.map((x) => x.item.id),
     ...sws.flatMap((x) => (x.ftao?.strap ? [x.ftao.strap.item.id] : [])),
     ...dias.flatMap((x) =>
       x.input.chord.splice.type === "strap" && x.input.chord.splice.strapId ? [x.input.chord.splice.strapId] : [],
@@ -942,6 +946,25 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
             `${f0(Math.max(r.vS, r.vW))} / ${f0(r.vS >= r.vW ? r.vAllowS : r.vAllowW)}`,
             r.holdown ? r.holdown.item.model : "—",
             `${r.input.sill.type === "cast-in" ? `${fmtInFraction(r.input.sill.d)}" A.B.` : (r.input.sill.label ?? "PIA")} @ ${f0(r.input.sill.spacing)}"`,
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {spn.length ? (
+        <DataTable
+          caption="Portal frame / prefabricated shear panel schedule"
+          head={["Mark", "Line", "Product", "Qty", "Size (W × H)", "V (lb) / allow.", "Drift (in) / allow.", "Result"]}
+          small
+          rows={spn.map((r) => [
+            r.mark,
+            r.demand.lineName,
+            `${r.item.manufacturer} ${r.item.model}`,
+            String(r.input.count),
+            `${fmtFtIn((r.item.panel?.width ?? 0) / 12)} × ${fmtFtIn((r.item.panel?.height ?? 0) / 12)}`,
+            r.Vs / (r.item.panel?.Vs || 1) >= r.Vw / (r.item.panel?.Vw || 1)
+              ? `${f0(r.Vs)} / ${f0(r.item.panel?.Vs ?? 0)} (E)`
+              : `${f0(r.Vw)} / ${f0(r.item.panel?.Vw ?? 0)} (W)`,
+            r.drift.dxe > 0 ? `${f2(r.drift.dx)} / ${f2(r.drift.allow)}` : "—",
             pf(r),
           ])}
         />

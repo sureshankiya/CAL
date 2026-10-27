@@ -299,3 +299,51 @@ describe("existing lumber", () => {
     expect(after.assumptions.some((a) => a.item === "Ungraded existing lumber")).toBe(true);
   });
 });
+
+describe("portal frames / prefabricated shear panels (SSW)", () => {
+  it("shares the line by capacity and checks shear, drift and anchorage against the entered values", () => {
+    const p = exampleProject();
+    p.hardware.push({
+      id: "hw-test-panel",
+      model: "TEST-24x8",
+      kind: "panel",
+      manufacturer: "Test",
+      description: "test panel",
+      fasteners: "",
+      report: "ESR-TEST",
+      checked: false,
+      source: "test values",
+      panel: { type: "prefab", width: 24, height: 108, Vs: 2000, Vw: 2800, drift: 0.5, anchorT: 9000 },
+    });
+    const sw = p.members.find((m) => m.kind === "shearWall" && m.mark === "1SW-2")!;
+    if (sw.kind !== "shearWall") throw new Error();
+    p.members.push({
+      kind: "shearPanel",
+      id: "m-ssw",
+      mark: "1SSW-1",
+      description: "",
+      structureId: sw.structureId,
+      levelId: sw.levelId,
+      status: "new",
+      links: [],
+      lineId: sw.lineId,
+      panelId: "hw-test-panel",
+      count: 1,
+      h: 9,
+    });
+    const d = designProject(p);
+    const o = d.outcomes.get("m-ssw")!;
+    expect(o.error).toBeUndefined();
+    const r = o.result!;
+    if (r.kind !== "shearPanel") throw new Error();
+    const lf = d.lateral!.lines.find((l) => l.line.id === sw.lineId)!;
+    expect(r.Vs).toBeCloseTo(0.7 * lf.Eh * r.demand.share, 6);
+    // drift: 0.5 in at 2000 lb ASD ≙ 2000 / 0.7 lb strength
+    expect(r.drift.dxe).toBeCloseTo((0.5 * r.demand.QE) / (2000 / 0.7), 6);
+    expect(r.Tmax.seismic).toBeCloseTo((r.Vs * 9) / 2, 6);
+    // the wall in the same line now takes a smaller share
+    const swr = d.outcomes.get(sw.id)!.result!;
+    if (swr.kind !== "shearWall") throw new Error();
+    expect(swr.demand.share + r.demand.share).toBeLessThan(1);
+  });
+});

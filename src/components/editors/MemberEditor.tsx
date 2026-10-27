@@ -21,6 +21,7 @@ import {
   type PostSpec,
   type Project,
   type ShearWallSpec,
+  type ShearPanelSpec,
   type TrussSpec,
   type WallSpec,
   type SteelBeamSpec,
@@ -998,6 +999,9 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
       break;
     case "shearWall":
       body = <ShearWallEditor p={p} m={m} upd={upd as Upd<ShearWallSpec>} />;
+      break;
+    case "shearPanel":
+      body = <ShearPanelEditor p={p} m={m} upd={upd as Upd<ShearPanelSpec>} />;
       break;
     case "steelBeam":
       body = <SteelBeamEditor p={p} m={m} upd={upd as Upd<SteelBeamSpec>} />;
@@ -2056,6 +2060,52 @@ function FootingEditor({ p, m, upd }: { p: Project; m: FootingSpec; upd: Upd<Foo
         </Collapsible>
       </Section>
     </>
+  );
+}
+
+function ShearPanelEditor({ p, m, upd }: { p: Project; m: ShearPanelSpec; upd: Upd<ShearPanelSpec> }) {
+  const lines = p.lateral?.lines ?? [];
+  const panels = p.hardware.filter((h) => h.kind === "panel");
+  return (
+    <Section title="Portal frame / prefabricated shear panel">
+      <CommonFields p={p} m={m} upd={upd as Upd<MemberSpec>} />
+      <Field label="Wall line">
+        <Select
+          value={m.lineId}
+          options={[
+            { value: "", label: "— select —" },
+            ...lines.map((l) => ({ value: l.id, label: `${l.name} (${l.dir})` })),
+          ]}
+          onChange={(v) => upd({ lineId: v })}
+        />
+      </Field>
+      <Field label="Product (hardware list)">
+        <Select
+          value={m.panelId}
+          options={[
+            { value: "", label: "— add one in the hardware list —" },
+            ...panels.map((h) => ({ value: h.id, label: `${h.manufacturer} ${h.model}` })),
+          ]}
+          onChange={(v) => upd({ panelId: v })}
+        />
+      </Field>
+      <Grid cols={3}>
+        <Field label="Number of panels">
+          <NumberInput
+            value={m.count}
+            min={1}
+            step="1"
+            onChange={(v) => upd({ count: Math.max(1, Math.round(v ?? 1)) })}
+          />
+        </Field>
+        <Field label="Wall height (ft)">
+          <NumberInput value={m.h} min={2} onChange={(v) => upd({ h: v ?? m.h })} />
+        </Field>
+        <Field label="Start along the line (ft)">
+          <NumberInput value={m.x} allowEmpty min={0} onChange={(v) => upd({ x: v })} />
+        </Field>
+      </Grid>
+    </Section>
   );
 }
 

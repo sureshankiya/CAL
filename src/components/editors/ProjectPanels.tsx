@@ -5,7 +5,7 @@ import { fmt } from "@/engine/core/fmt";
 import { DEAD_COMPONENTS, assemblySum } from "@/engine/loads/dead";
 import { CE_TABLE } from "@/engine/loads/snow";
 import { SOIL_CLASSES, soilClass } from "@/engine/data/soil";
-import { HARDWARE_KIND_LABEL, defaultHardware, type HardwareKind } from "@/engine/data/hardware";
+import { HARDWARE_KIND_LABEL, defaultHardware, type HardwareItem, type HardwareKind } from "@/engine/data/hardware";
 import { SEISMIC_SYSTEMS } from "@/engine/loads/seismic";
 import { defaultLateral, generateWeights, type LateralSpec, type WallLineOpening } from "@/engine/project";
 import {
@@ -733,7 +733,13 @@ export function HardwarePanel({ p, set }: { p: Project; set: SetProject }) {
     set((x) => ({ ...x, hardware: x.hardware.map((h) => (h.id === id ? { ...h, ...patch } : h)) }));
   const used = new Set(
     p.members.flatMap((m) =>
-      m.kind === "connector" ? [m.hardwareId] : m.kind === "shearWall" && m.holdownId ? [m.holdownId] : [],
+      m.kind === "connector"
+        ? [m.hardwareId]
+        : m.kind === "shearWall" && m.holdownId
+          ? [m.holdownId]
+          : m.kind === "shearPanel"
+            ? [m.panelId]
+            : [],
     ),
   );
   return (
@@ -772,7 +778,9 @@ export function HardwarePanel({ p, set }: { p: Project; set: SetProject }) {
               <TextInput value={h.report} onChange={(v) => upd(h.id, { report: v })} />
             </Field>
           </Grid>
-          {h.kind === "holdown" || h.kind === "strap" ? (
+          {h.kind === "panel" ? (
+            <PanelFields h={h} upd={(patch) => upd(h.id, patch)} />
+          ) : h.kind === "holdown" || h.kind === "strap" ? (
             <Grid cols={3}>
               <Field label="Tension (lb, 160)">
                 <NumberInput value={h.tension} allowEmpty min={0} onChange={(v) => upd(h.id, { tension: v })} />
@@ -834,6 +842,30 @@ export function HardwarePanel({ p, set }: { p: Project; set: SetProject }) {
           + Add item
         </AddButton>
         <AddButton
+          onClick={() =>
+            set((x) => ({
+              ...x,
+              hardware: [
+                ...x.hardware,
+                {
+                  id: newId("hw"),
+                  model: "PANEL",
+                  kind: "panel" as HardwareKind,
+                  manufacturer: "",
+                  description: "Prefabricated shear panel / portal frame",
+                  fasteners: "",
+                  report: "",
+                  checked: false,
+                  source: "entered by engineer",
+                  panel: { type: "prefab", width: 24, height: 96, Vs: 0, Vw: 0 },
+                },
+              ],
+            }))
+          }
+        >
+          + Add shear panel / portal frame
+        </AddButton>
+        <AddButton
           onClick={() => {
             const have = new Set(p.hardware.map((h) => h.id));
             set((x) => ({ ...x, hardware: [...x.hardware, ...defaultHardware().filter((h) => !have.has(h.id))] }));
@@ -843,6 +875,55 @@ export function HardwarePanel({ p, set }: { p: Project; set: SetProject }) {
         </AddButton>
       </Grid>
     </Collapsible>
+  );
+}
+
+/** prefabricated shear panel / portal frame: tabulated values entered from the catalogue or APA report */
+function PanelFields({ h, upd }: { h: HardwareItem; upd: (patch: Partial<HardwareItem>) => void }) {
+  const pn = h.panel ?? { type: "prefab" as const, width: 24, height: 96, Vs: 0, Vw: 0 };
+  const sp = (patch: Partial<typeof pn>) => upd({ panel: { ...pn, ...patch } });
+  return (
+    <>
+      <Grid cols={3}>
+        <Field label="Model">
+          <TextInput value={h.model} onChange={(v) => upd({ model: v })} />
+        </Field>
+        <Field label="Manufacturer">
+          <TextInput value={h.manufacturer} onChange={(v) => upd({ manufacturer: v })} />
+        </Field>
+        <Field label="Type">
+          <Select
+            value={pn.type}
+            options={[
+              { value: "prefab", label: "Prefabricated panel / frame" },
+              { value: "portal", label: "Portal frame (APA)" },
+            ]}
+            onChange={(v) => sp({ type: v })}
+          />
+        </Field>
+        <Field label="Width (in)">
+          <NumberInput value={pn.width} min={1} onChange={(v) => sp({ width: v ?? pn.width })} />
+        </Field>
+        <Field label="Height (in)">
+          <NumberInput value={pn.height} min={1} onChange={(v) => sp({ height: v ?? pn.height })} />
+        </Field>
+        <Field label="Drift at V_s (in)">
+          <NumberInput value={pn.drift} allowEmpty min={0} onChange={(v) => sp({ drift: v })} />
+        </Field>
+        <Field label="V_s allowable, seismic (lb)">
+          <NumberInput value={pn.Vs} min={0} onChange={(v) => sp({ Vs: v ?? 0 })} />
+        </Field>
+        <Field label="V_w allowable, wind (lb)">
+          <NumberInput value={pn.Vw} min={0} onChange={(v) => sp({ Vw: v ?? 0 })} />
+        </Field>
+        <Field label="Anchor tension (lb)">
+          <NumberInput value={pn.anchorT} allowEmpty min={0} onChange={(v) => sp({ anchorT: v })} />
+        </Field>
+      </Grid>
+      <Hint>
+        Enter the tabulated allowable (ASD) values for this height from the current catalogue / ESR / APA report.
+      </Hint>
+    </>
   );
 }
 

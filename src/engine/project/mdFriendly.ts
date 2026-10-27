@@ -481,6 +481,7 @@ export const schemaKind = (k: NewMemberKind | string) =>
 
 const TEXT_KINDS: Array<[RegExp, NewMemberKind]> = [
   [/force transfer|ftao/i, "ftaoWall"],
+  [/portal frame|strong-?wall|prefabricated (shear )?panel|shear panel/i, "shearPanel"],
   [/shear\s*wall/i, "shearWall"],
   [/roof diaphragm/i, "roofDiaphragm"],
   [/floor diaphragm/i, "floorDiaphragm"],
@@ -526,6 +527,7 @@ export function kindFromText(text: string, keys: NewMemberKind[]): NewMemberKind
 
 const MARK_KINDS: Array<[string, NewMemberKind]> = [
   ["STR", "steelTruss"],
+  ["SSW", "shearPanel"],
   ["HSS", "steelColumn"],
   ["FJ", "joist"],
   ["DJ", "joist"],

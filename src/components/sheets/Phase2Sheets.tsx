@@ -22,6 +22,7 @@ import type { ShearWallResult } from "@/engine/members/shearWall";
 import type { TrussResult } from "@/engine/members/truss";
 import type { StudCheck, WallResult } from "@/engine/members/wall";
 import { hardwareLabel } from "@/engine/data/hardware";
+import type { ShearPanelResult } from "@/engine/members/shearPanel";
 import {
   B,
   DataTable,
@@ -620,6 +621,110 @@ export function ConnectorSheet({ m, r, index, total }: SheetProps<ConnectorResul
       <LimitationNotes
         notes={[
           "Catalogue values apply only with all specified fasteners installed and the framing sizes listed by the manufacturer.",
+        ]}
+      />
+    </Frame>
+  );
+}
+
+export function ShearPanelSheet({ m, r, index, total }: SheetProps<ShearPanelResult>) {
+  const h = r.item;
+  const pn = h.panel!;
+  const d = r.demand;
+  const n = r.input.count;
+  return (
+    <Frame
+      m={m}
+      r={r}
+      title={
+        pn.type === "portal"
+          ? "Portal frame — tabulated design values"
+          : "Prefabricated shear panel — tabulated design values"
+      }
+      subtitle={
+        <>
+          Demand from the lateral analysis (share of the wall line), checked against the manufacturer / APA allowable
+          values — member {index} of {total}: {r.mark}
+        </>
+      }
+    >
+      <DesignBasis
+        m={m}
+        material={<>Manufacturer catalogue / ICC-ES evaluation report; APA (portal frames)</>}
+        tables={["hardware"]}
+      />
+      <SectionHead title="Panel" />
+      <TR desc="Mark / product" expr={<B>{`${r.mark} — ${r.callout}`}</B>} />
+      {r.input.description ? <TR desc="Description" expr={<>{r.input.description}</>} /> : null}
+      <TR desc="Evaluation report / source" expr={<>{h.report || h.source || <Flag>Not entered</Flag>}</>} />
+      <TR
+        desc="Tabulated allowable values (ASD)"
+        expr={
+          <>
+            V<sub>s</sub> = {f0(pn.Vs)} lb; V<sub>w</sub> = {f0(pn.Vw)} lb
+            {pn.drift ? `; drift ${f3(pn.drift)} in. at V_s` : ""}
+            {pn.anchorT ? `; anchor tension ${f0(pn.anchorT)} lb` : ""}
+            {h.checked ? "" : <Flag> — VERIFY against the current catalogue / report</Flag>}
+          </>
+        }
+      />
+      <TR
+        desc="Wall line"
+        expr={
+          <>
+            {d.lineName} — share of the line force {f1(d.share * 100)} %; {n} panel{n > 1 ? "s" : ""}
+          </>
+        }
+      />
+      <LoadLines lines={r.loadLines} title="Lateral load on the panel(s), strength level" />
+      <SectionHead title="In-plane shear and overturning per panel (ASD)" />
+      <TR
+        desc="Seismic"
+        expr={
+          <>
+            V = 0.7 E<sub>h</sub> / n = 0.7 × {f0(d.Eh)} / {n} = {f0(r.Vs)} lb ≤ V<sub>s,allow</sub> = {f0(pn.Vs)} lb
+          </>
+        }
+        pass={r.Vs <= pn.Vs}
+      />
+      <TR
+        desc="Wind"
+        expr={
+          <>
+            V = 0.6 W / n = 0.6 × {f0(d.W)} / {n} = {f0(r.Vw)} lb ≤ V<sub>w,allow</sub> = {f0(pn.Vw)} lb
+          </>
+        }
+        pass={r.Vw <= pn.Vw}
+      />
+      <TR
+        desc="Overturning at each panel end"
+        expr={
+          <>
+            T = V h / b = {f0(Math.max(r.Tmax.seismic, r.Tmax.wind))} lb (
+            {r.Tmax.seismic >= r.Tmax.wind ? "0.7E" : "0.6W"})
+          </>
+        }
+      />
+      {r.drift.dxe > 0 ? (
+        <TR
+          desc="Seismic drift (Eq. 12.8-15)"
+          expr={
+            <>
+              δ<sub>xe</sub> = δ<sub>tab</sub> Q<sub>E</sub> / (V<sub>s</sub> / 0.7) = {fmt(r.drift.dxe, 4)} in; δ
+              <sub>x</sub> = C<sub>d</sub> δ<sub>xe</sub> / I<sub>e</sub> = {fmt(r.drift.dx, 4)} in ≤ Δ<sub>a</sub> ={" "}
+              {f2(r.drift.allow)} in
+            </>
+          }
+          pass={r.drift.ratio <= 1}
+        />
+      ) : null}
+      <ChecksSummary checks={r.checks} />
+      <MemberResult r={r} />
+      <AssumptionRows items={r.assumptions} />
+      <SpecificNotes flags={r.flags} />
+      <LimitationNotes
+        notes={[
+          "Tabulated values apply only with the manufacturer's / APA anchorage, top connection, framing and foundation details.",
         ]}
       />
     </Frame>

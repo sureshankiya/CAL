@@ -458,6 +458,16 @@ export const shearWallSpecSchema = z.object({
     .optional(),
 });
 
+export const shearPanelSpecSchema = z.object({
+  kind: z.literal("shearPanel"),
+  ...common,
+  lineId: z.string(),
+  x: nonneg.optional(),
+  panelId: z.string(),
+  count: z.number().int().min(1),
+  h: pos,
+});
+
 const steelMethodSchema = z.enum(["LRFD", "ASD"]);
 
 export const steelBeamSpecSchema = z.object({
@@ -920,6 +930,7 @@ export const memberSpecSchema = z.discriminatedUnion("kind", [
   connectorSpecSchema,
   footingSpecSchema,
   shearWallSpecSchema,
+  shearPanelSpecSchema,
   steelBeamSpecSchema,
   steelColumnSpecSchema,
   basePlateSpecSchema,
@@ -940,7 +951,7 @@ export const memberSpecSchema = z.discriminatedUnion("kind", [
 export const hardwareItemSchema = z.object({
   id: z.string(),
   model: z.string(),
-  kind: z.enum(["holdown", "tie", "hanger", "post-cap", "post-base", "strap", "angle"]),
+  kind: z.enum(["holdown", "tie", "hanger", "post-cap", "post-base", "strap", "angle", "panel"]),
   manufacturer: z.string(),
   description: z.string(),
   fasteners: z.string(),
@@ -955,6 +966,17 @@ export const hardwareItemSchema = z.object({
   deflection: nonneg.optional(),
   anchorDia: pos.optional(),
   minPost: pos.optional(),
+  panel: z
+    .object({
+      type: z.enum(["prefab", "portal"]),
+      width: pos,
+      height: pos,
+      Vs: nonneg,
+      Vw: nonneg,
+      drift: nonneg.optional(),
+      anchorT: nonneg.optional(),
+    })
+    .optional(),
   checked: z.boolean(),
   source: z.string(),
 });
@@ -1152,6 +1174,7 @@ export type TrussSpec = z.infer<typeof trussSpecSchema>;
 export type ConnectorSpec = z.infer<typeof connectorSpecSchema>;
 export type FootingSpec = z.infer<typeof footingSpecSchema>;
 export type ShearWallSpec = z.infer<typeof shearWallSpecSchema>;
+export type ShearPanelSpec = z.infer<typeof shearPanelSpecSchema>;
 export type SteelBeamSpec = z.infer<typeof steelBeamSpecSchema>;
 export type SteelColumnSpec = z.infer<typeof steelColumnSpecSchema>;
 export type BasePlateSpec = z.infer<typeof basePlateSpecSchema>;
