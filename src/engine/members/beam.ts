@@ -11,6 +11,8 @@ import { memberLength, type BeamLoad } from "../analysis/beam";
 import { fmt, fmtInFraction } from "../core/fmt";
 import { fromDefault } from "../core/provenance";
 import { fireBeam, type FireInput } from "../design/fire";
+import { openingChecks, type MemberOpening } from "../design/openings";
+import { plyConnection, type PlyConnectionInput } from "../design/plies";
 import {
   designWoodBeam,
   governingCheck,
@@ -70,6 +72,10 @@ export interface BeamInput {
   crOverride?: number;
   /** calculated fire resistance of the exposed beam (NDS Ch. 16) */
   fire?: FireInput;
+  /** built-up members: fastening between the plies */
+  plyConnection?: PlyConnectionInput;
+  /** notches and bored holes */
+  openings?: MemberOpening[];
 }
 
 export interface BeamResult extends MemberResultBase {
@@ -167,8 +173,22 @@ export function designBeam(ctx: DesignContext, b: BeamInput): BeamResult {
         "Fire design of built-up members: plies through-bolted or the residual section taken per ply — VERIFY",
       );
   }
-  if (b.material.kind === "sawn" && b.material.plies > 1)
-    flags.push("Built-up plies fastened per the multi-ply connection schedule (Phase 2 check)");
+  const plies = b.material.kind === "glulam" ? 1 : b.material.plies;
+  if (plies > 1 && b.plyConnection) {
+    const pc = plyConnection(design, design.mat, b.plyConnection);
+    design.checks.push(...pc.checks);
+    design.assumptions.push(fromDefault("Ply connection", `${pc.callout}; ${pc.lines.join("; ")}`, "NDS 12.3"));
+    flags.push(
+      `Plies fastened together with ${pc.callout}; concentrated side loads (hangers, girder trusses): through-bolt or fasten at each load per the manufacturer`,
+    );
+  } else if (plies > 1) flags.push("Built-up plies: fastening between plies not designed — enter the ply connection");
+  if (b.openings?.length) {
+    const op = openingChecks(design, b.openings);
+    design.checks.push(...op.checks);
+    for (const l of op.lines) design.assumptions.push(fromDefault("Notches and holes", l, "NDS 3.1.2, 3.4.3, 4.4.3"));
+  }
+  design.pass = design.checks.every((c) => c.pass);
+  design.governing = governingCheck(design.checks);
   if (b.material.kind === "scl") flags.push("SCL design values per manufacturer ESR — VERIFY");
   if (
     b.area.some(

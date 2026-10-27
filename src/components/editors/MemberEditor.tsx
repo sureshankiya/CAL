@@ -627,7 +627,14 @@ function CommonFields({ p, m, upd }: { p: Project; m: MemberSpec; upd: Upd<Membe
           />
         </Field>
         {m.status !== "new" ? (
-          <Check checked={!!m.fieldVerified} onChange={(v) => upd({ fieldVerified: v })} label="Field verified" />
+          <div>
+            <Check checked={!!m.fieldVerified} onChange={(v) => upd({ fieldVerified: v })} label="Field verified" />
+            <Check
+              checked={!!m.ungraded}
+              onChange={(v) => upd({ ungraded: v || undefined })}
+              label="No grade stamp (grade assumed)"
+            />
+          </div>
         ) : (
           <span />
         )}
@@ -730,6 +737,33 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
               onChange={(v) => upd({ vibration: v })}
               label="Floor vibration check, f ≥ 15 Hz (Dolan et al. 1999)"
             />
+            <Collapsible title={`Notches and holes (${m.openings?.length ?? 0})`} open={!!m.openings?.length}>
+              <OpeningsEditor value={m.openings ?? []} onChange={(v) => upd({ openings: v.length ? v : undefined })} />
+            </Collapsible>
+            {m.status !== "new" ? (
+              <>
+                <Check
+                  checked={!!m.sister}
+                  onChange={(v) => upd({ sister: v ? { species: m.species, grade: "No.2", size: m.size } : undefined })}
+                  label="Sister with a new joist (full length, bearing at both supports)"
+                />
+                {m.sister ? (
+                  <>
+                    <SawnFields
+                      species={m.sister.species}
+                      grade={m.sister.grade}
+                      size={m.sister.size}
+                      sizes={DIMENSION_SIZES}
+                      onChange={(x) => upd({ sister: { ...m.sister!, ...x } })}
+                    />
+                    <PlyConnectionFields
+                      value={m.sister.connection}
+                      onChange={(v) => upd({ sister: { ...m.sister!, connection: v } })}
+                    />
+                  </>
+                ) : null}
+              </>
+            ) : null}
           </Section>
         </>
       );
@@ -1186,7 +1220,121 @@ function BeamEditor({ p, m, upd }: { p: Project; m: BeamSpec; upd: Upd<BeamSpec>
           </Field>
         ) : null}
         <FireFields value={m.fire} beam onChange={(v) => upd({ fire: v })} />
+        {m.material.kind !== "glulam" && m.material.plies > 1 ? (
+          <PlyConnectionFields value={m.plyConnection} onChange={(v) => upd({ plyConnection: v })} />
+        ) : null}
+        <Collapsible title={`Notches and holes (${m.openings?.length ?? 0})`} open={!!m.openings?.length}>
+          <OpeningsEditor value={m.openings ?? []} onChange={(v) => upd({ openings: v.length ? v : undefined })} />
+        </Collapsible>
       </Section>
+    </>
+  );
+}
+
+type OpeningSpec = NonNullable<BeamSpec["openings"]>[number];
+
+function OpeningsEditor({ value, onChange }: { value: OpeningSpec[]; onChange: (v: OpeningSpec[]) => void }) {
+  const set = (i: number, patch: Partial<OpeningSpec>) =>
+    onChange(value.map((o, k) => (k === i ? { ...o, ...patch } : o)));
+  return (
+    <div className="space-y-2">
+      {value.map((o, i) => (
+        <Grid key={i} cols={4}>
+          <Select
+            value={o.type}
+            options={[
+              { value: "hole", label: "Bored hole" },
+              { value: "notch-top", label: "Notch, top" },
+              { value: "notch-bottom", label: "Notch, bottom" },
+            ]}
+            onChange={(v) => set(i, { type: v })}
+          />
+          <Field label="x from left end (ft)">
+            <NumberInput value={o.x} min={0} onChange={(v) => set(i, { x: v ?? 0 })} />
+          </Field>
+          <Field label={o.type === "hole" ? "Diameter (in)" : "Notch depth (in)"}>
+            <NumberInput value={o.size} min={0.125} onChange={(v) => set(i, { size: v ?? o.size })} />
+          </Field>
+          <div className="flex gap-1">
+            <Field label={o.type === "hole" ? "Offset from mid-depth (in, + up)" : "Notch length (in)"}>
+              <NumberInput value={o.offset} allowEmpty onChange={(v) => set(i, { offset: v })} />
+            </Field>
+            <SmallButton tone="danger" title="Remove" onClick={() => onChange(value.filter((_, k) => k !== i))}>
+              ✕
+            </SmallButton>
+          </div>
+        </Grid>
+      ))}
+      <AddButton onClick={() => onChange([...value, { type: "hole", x: 1, size: 1 }])}>+ Add notch / hole</AddButton>
+    </div>
+  );
+}
+
+type PlySpec = NonNullable<BeamSpec["plyConnection"]>;
+
+function PlyConnectionFields({ value, onChange }: { value?: PlySpec; onChange: (v: PlySpec | undefined) => void }) {
+  return (
+    <>
+      <Check
+        checked={!!value}
+        onChange={(v) =>
+          onChange(v ? { fastener: "nail", nail: "16d-common", rows: 2, spacing: 12, load: "one-side" } : undefined)
+        }
+        label="Design the fastening between plies"
+      />
+      {value ? (
+        <Grid cols={3}>
+          <Field label="Load applied">
+            <Select
+              value={value.load}
+              options={[
+                { value: "top", label: "Top (no transfer)" },
+                { value: "one-side", label: "One side face" },
+                { value: "both-sides", label: "Both side faces" },
+              ]}
+              onChange={(v) => onChange({ ...value, load: v })}
+            />
+          </Field>
+          <Field label="Fastener">
+            <Select
+              value={value.fastener}
+              options={[
+                { value: "nail", label: "Nails" },
+                { value: "bolt", label: "Through-bolts" },
+              ]}
+              onChange={(v) => onChange({ ...value, fastener: v })}
+            />
+          </Field>
+          {value.fastener === "nail" ? (
+            <Field label="Nail">
+              <Select
+                value={value.nail ?? "16d-common"}
+                options={NAILS.map((n) => ({ value: n.key, label: n.label }))}
+                onChange={(v) => onChange({ ...value, nail: v })}
+              />
+            </Field>
+          ) : (
+            <Field label="Bolt diameter (in)">
+              <NumberInput
+                value={value.boltDia ?? 0.5}
+                min={0.375}
+                onChange={(v) => onChange({ ...value, boltDia: v ?? 0.5 })}
+              />
+            </Field>
+          )}
+          <Field label="Rows">
+            <NumberInput
+              value={value.rows}
+              min={1}
+              step="1"
+              onChange={(v) => onChange({ ...value, rows: Math.max(1, Math.round(v ?? 2)) })}
+            />
+          </Field>
+          <Field label="Spacing (in. o.c.)">
+            <NumberInput value={value.spacing} min={1} onChange={(v) => onChange({ ...value, spacing: v ?? 12 })} />
+          </Field>
+        </Grid>
+      ) : null}
     </>
   );
 }

@@ -233,3 +233,69 @@ describe("floor vibration (Dolan et al. 1999)", () => {
     expect(r.checks.some((c) => c.name.startsWith("Floor vibration"))).toBe(true);
   });
 });
+
+describe("notches and holes (NDS 3.1.2, 4.4.3; IRC R502.8.1)", () => {
+  it("2 in. hole at mid-span of FJ-1 (2x10 @ 16, 12 ft, 15 + 40 psf): f_b = 748 psi (hand)", () => {
+    const p = exampleProject();
+    const j = p.members.find((m) => m.kind === "joist")!;
+    if (j.kind !== "joist") throw new Error();
+    j.openings = [{ type: "hole", x: 6, size: 2 }];
+    const r = designProject(p).outcomes.get(j.id)!.result!;
+    const bend = r.checks.find((c) => c.name.includes("Hole 1") && c.name.includes("bending"))!;
+    expect(bend.combo).toBe("D + L");
+    // M = 73.33 × 12² / 8 = 1,320 lb-ft; I_n = 98.93 − 1.5 × 2³ / 12 = 97.93 in⁴; c = 4.625 in
+    expect(bend.demand).toBeCloseTo((1320 * 12 * 4.625) / 97.93, -1);
+    expect(r.checks.find((c) => c.name.includes("diameter ≤ d/3"))!.pass).toBe(true);
+  });
+  it("a notch in the middle third fails the location rule", () => {
+    const p = exampleProject();
+    const j = p.members.find((m) => m.kind === "joist")!;
+    if (j.kind !== "joist") throw new Error();
+    j.openings = [{ type: "notch-top", x: 6, size: 1 }];
+    const r = designProject(p).outcomes.get(j.id)!.result!;
+    expect(r.checks.find((c) => c.name.includes("middle third"))!.pass).toBe(false);
+    expect(r.pass).toBe(false);
+  });
+});
+
+describe("multi-ply beam connection", () => {
+  it("(2) 2x12 loaded on one side face: q = w / 2 at the interface", () => {
+    const p = exampleProject();
+    const b = p.members.find((m) => m.kind === "beam")!;
+    if (b.kind !== "beam") throw new Error();
+    b.material = { kind: "sawn", species: "DF-L", grade: "No.2", size: "2x12", plies: 2 };
+    b.plyConnection = { fastener: "nail", nail: "16d-common", rows: 2, spacing: 12, load: "one-side" };
+    const r = designProject(p).outcomes.get(b.id)!.result!;
+    if (r.kind !== "beam") throw new Error();
+    const c = r.checks.find((x) => x.name.startsWith("Ply connection"))!;
+    const combo = r.design.combos.find((x) => x.combo.label === c.combo)!.combo;
+    const a = r.design.analysis;
+    let W = 0;
+    for (const t of Object.keys(a.byType) as Array<keyof typeof a.byType>)
+      W += (combo.factors[t] ?? 0) * a.byType[t].R.reduce((s, v) => s + v, 0);
+    expect(c.demand).toBeCloseTo(W / 2 / a.totalLength, 6);
+  });
+});
+
+describe("existing lumber", () => {
+  it("sister of equal EI: each member takes half, reactions unchanged", () => {
+    const p = exampleProject();
+    const j = p.members.find((m) => m.kind === "joist")!;
+    if (j.kind !== "joist") throw new Error();
+    const before = designProject(p).outcomes.get(j.id)!.result!;
+    j.status = "existing";
+    j.ungraded = true;
+    j.sister = { species: j.species, grade: j.grade, size: j.size };
+    const after = designProject(p).outcomes.get(j.id)!.result!;
+    if (before.kind !== "joist" || after.kind !== "joist") throw new Error();
+    expect(after.reactions[0].byType.L).toBeCloseTo(before.reactions[0].byType.L, 6);
+    const fb = (r: typeof after, who: string) =>
+      r.checks.find((c) => c.name.startsWith(who) && c.name.includes("Bending"))!;
+    expect(fb(after, "Existing joist").demand).toBeCloseTo(
+      before.checks.find((c) => c.name.includes("Bending"))!.demand / 2,
+      3,
+    );
+    expect(fb(after, "Sister").ratio).toBeCloseTo(fb(after, "Existing joist").ratio, 6);
+    expect(after.assumptions.some((a) => a.item === "Ungraded existing lumber")).toBe(true);
+  });
+});

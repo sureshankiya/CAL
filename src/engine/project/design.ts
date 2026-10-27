@@ -589,6 +589,15 @@ function markExisting(m: MemberSpec, r: AnyResult) {
       !m.fieldVerified,
     ),
   );
+  if (m.ungraded)
+    r.assumptions.unshift(
+      fromDefault(
+        "Ungraded existing lumber",
+        `No legible grade stamp: design values of the species and grade in ${r.callout} assumed — confirm by a grade stamp or grading by an approved agency`,
+        "engineer's assumption",
+        true,
+      ),
+    );
   r.flags.unshift(
     `${what.toUpperCase()} — re-checked for the new loads. ${m.fieldVerified ? "Properties verified in the field." : "Field verify size, grade, condition and bearing; notify the engineer of any difference."}`,
   );

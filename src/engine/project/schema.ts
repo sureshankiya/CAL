@@ -53,6 +53,22 @@ export const driftLoadSchema = z.object({
   dir: z.enum(["right", "left"]),
 });
 
+export const openingSchema = z.object({
+  type: z.enum(["hole", "notch-top", "notch-bottom"]),
+  x: nonneg,
+  size: pos,
+  offset: num.optional(),
+});
+
+export const plyConnectionSchema = z.object({
+  fastener: z.enum(["nail", "bolt"]),
+  nail: z.string().optional(),
+  boltDia: pos.optional(),
+  rows: z.number().int().min(1),
+  spacing: pos,
+  load: z.enum(["top", "one-side", "both-sides"]),
+});
+
 export const fireSchema = z.object({ hours: pos, sides: z.union([z.literal(3), z.literal(4)]) });
 
 export const extraLoadSchema = z.object({
@@ -99,6 +115,8 @@ const common = {
   status: z.enum(["new", "existing", "modified"]).default("new"),
   /** existing members: properties confirmed in the field */
   fieldVerified: z.boolean().optional(),
+  /** existing lumber without a legible grade stamp: grade assumed */
+  ungraded: z.boolean().optional(),
   existingNote: z.string().optional(),
   /** inputs still to be entered (e.g. from a drawing-data conversion); each prints VERIFY */
   pendingInputs: z.array(z.string()).optional(),
@@ -127,6 +145,15 @@ export const joistSpecSchema = z.object({
   incised: z.boolean().optional(),
   addSelfWeight: z.boolean().optional(),
   vibration: z.boolean().optional(),
+  openings: z.array(openingSchema).optional(),
+  sister: z
+    .object({
+      species: speciesSchema,
+      grade: gradeSchema,
+      size: z.string(),
+      connection: plyConnectionSchema.optional(),
+    })
+    .optional(),
 });
 
 export const rafterSpecSchema = z.object({
@@ -256,6 +283,8 @@ export const beamSpecSchema = z.object({
   crOverride: pos.optional(),
   /** calculated fire resistance, NDS Ch. 16 */
   fire: fireSchema.optional(),
+  plyConnection: plyConnectionSchema.optional(),
+  openings: z.array(openingSchema).optional(),
 });
 
 export const studPackSchema = z.object({
