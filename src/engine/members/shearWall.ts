@@ -82,6 +82,40 @@ export interface HoldownAnchor {
   omega: boolean;
 }
 
+export interface ContinuousRod {
+  /** rod diameter, in */
+  d: number;
+  /** rod steel (ANCHOR_STEELS label) */
+  steel: string;
+  /** bearing plate on the top plates, in (width across the wall, length along it) */
+  plate: { w: number; l: number };
+  /** take-up / shrinkage-compensating device deflection at its rated load, in (manufacturer) */
+  takeUp: number;
+  /** wood shrinkage between bearing plates in this story, in */
+  shrinkage: number;
+}
+
+/** UNC threads per inch by diameter (ASME B1.1), for the tensile stress area. */
+const UNC_TPI: Record<string, number> = {
+  "0.5": 13,
+  "0.625": 11,
+  "0.75": 10,
+  "0.875": 9,
+  "1": 8,
+  "1.125": 7,
+  "1.25": 7,
+};
+
+/** Tensile stress area A_t = 0.7854 (d − 0.9743 / n)², in². */
+export function rodTensileArea(d: number): number {
+  const n = UNC_TPI[String(d)];
+  if (!n) throw new Error(`Rod diameter ${d} in.: use 1/2 to 1-1/4 in.`);
+  return 0.7854 * (d - 0.9743 / n) ** 2;
+}
+
+/** ICC-ES AC316 displacement limit for continuous rod systems, in per story (rod + device + shrinkage) */
+export const ROD_STORY_LIMIT = 0.2;
+
 export interface ShearWallInput {
   id: string;
   mark: string;
@@ -103,6 +137,8 @@ export interface ShearWallInput {
   sill: SillAnchor;
   sillSize: string;
   holdownAnchor?: HoldownAnchor;
+  /** continuous rod tie-down at each end in place of a hold-down device (multi-story) */
+  rod?: ContinuousRod;
   /** vertical anchor stiffness k_a, lb/in, when no hold-down device is selected */
   ka?: number;
   windService: { factor: number; limitN: number };
@@ -209,6 +245,17 @@ export interface ShearWallResult extends MemberResultBase {
   compression: { C: number; col: ColumnResult; combo: string };
   holdown?: { item: HardwareItem; T: number; ratio: number };
   hdAnchor?: { Tu: number; basis: string; t: ConcreteTension; ratio: number };
+  rod?: {
+    At: number;
+    Ab: number;
+    Ta: number;
+    T: number;
+    dT: number;
+    Abrg: number;
+    fcperp: number;
+    Fcperp: number;
+    delta: { rod: number; device: number; shrink: number; total: number };
+  };
   sill: {
     perBolt: number;
     Z?: number;
@@ -648,7 +695,71 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   // hold-down
   let holdown: ShearWallResult["holdown"];
   const Tmax = Math.max(Ts, Tw);
-  if (s.holdownId) {
+  let rod: ShearWallResult["rod"];
+  if (s.rod) {
+    if (s.holdownId) throw new Error("Choose a hold-down device or a continuous rod, not both");
+    const rd = s.rod;
+    const steel = ANCHOR_STEELS.find((x) => x.label === rd.steel) ?? ANCHOR_STEELS[0];
+    const Ab = (Math.PI * rd.d * rd.d) / 4;
+    const At = rodTensileArea(rd.d);
+    // AISC 360 J3.6: R_n = F_nt A_b, F_nt = 0.75 F_u, Ω = 2.00
+    const Ta = (0.75 * steel.futa * Ab) / 2;
+    const dT = Math.max(Ts - (dem.stacked?.Ts ?? 0), Tw - (dem.stacked?.Tw ?? 0), 0);
+    const plateWood = resolveWood(
+      { kind: "sawn", species: s.stud.species, grade: s.stud.grade, size: s.stud.size, plies: 1 },
+      nds,
+    );
+    const Abrg = rd.plate.w * rd.plate.l - (Math.PI * (rd.d + 1 / 8) ** 2) / 4;
+    const fcperp = dT / Abrg;
+    const L = dem.hsx * 12;
+    const dRod = (Tmax * L) / (At * 29_000_000);
+    const delta = { rod: dRod, device: rd.takeUp, shrink: rd.shrinkage, total: dRod + rd.takeUp + rd.shrinkage };
+    rod = { At, Ab, Ta, T: Tmax, dT, Abrg, fcperp, Fcperp: plateWood.Fcperp, delta };
+    checks.push(
+      {
+        name: `Continuous rod ${fmt(rd.d, 3)} in. ${steel.label} — tension (AISC 360 J3.6, Ω = 2.00)`,
+        demand: Tmax,
+        capacity: Ta,
+        ratio: Tmax / Ta,
+        pass: Tmax <= Ta,
+        combo: Ts >= Tw ? "seismic" : "wind",
+        CD: 1,
+        unit: "lb",
+      },
+      {
+        name: `Rod bearing plate ${fmt(rd.plate.w, 2)} × ${fmt(rd.plate.l, 2)} in. on the top plates — this story's increment (NDS 3.10.2)`,
+        demand: fcperp,
+        capacity: plateWood.Fcperp,
+        ratio: fcperp / plateWood.Fcperp,
+        pass: fcperp <= plateWood.Fcperp,
+        combo: Ts >= Tw ? "seismic" : "wind",
+        CD: 1,
+        unit: "psi",
+      },
+      {
+        name: `Rod system displacement per story ≤ ${ROD_STORY_LIMIT} in. (rod + take-up device + shrinkage; ICC-ES AC316)`,
+        category: "serviceability",
+        demand: delta.total,
+        capacity: ROD_STORY_LIMIT,
+        ratio: delta.total / ROD_STORY_LIMIT,
+        pass: delta.total <= ROD_STORY_LIMIT,
+        combo: Ts >= Tw ? "seismic" : "wind",
+        CD: 1,
+        unit: "in",
+      },
+    );
+    assumptions.push(
+      fromDefault(
+        "Continuous rod",
+        `A_b = ${fmt(Ab, 3)} in², A_t = ${fmt(At, 3)} in² (UNC); T_a = 0.75 F_u A_b / 2.00 = ${fmt(Ta, 0)} lb; elongation T L / (A_t E) = ${fmt(Tmax, 0)} × ${fmt(L, 1)} / (${fmt(At, 3)} × 29,000,000) = ${fmt(dRod, 4)} in; take-up device ${fmt(rd.takeUp, 3)} in, shrinkage ${fmt(rd.shrinkage, 3)} in (entered); plate bearing ΔT = ${fmt(dT, 0)} lb (this story) on ${fmt(Abrg, 2)} in²`,
+        "AISC 360 J3.6; ICC-ES AC316 (0.20 in. per story) — confirm the system's evaluation report",
+        true,
+      ),
+    );
+    flags.push(
+      `Continuous rod tie-down at each end of ${s.mark}: ${fmt(rd.d, 3)} in. ${steel.label} rod with coupler at each floor, ${fmt(rd.plate.w, 2)} × ${fmt(rd.plate.l, 2)} in. bearing plate and take-up device at this level; install per the system's evaluation report`,
+    );
+  } else if (s.holdownId) {
     const item = ctx.hardware?.find((x) => x.id === s.holdownId);
     if (!item) throw new Error(`Hold-down ${s.holdownId} not in the project hardware list`);
     if (item.tension === undefined)
@@ -842,7 +953,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   const A = post.A;
   const hdItem = holdown?.item;
   const ka = hdItem?.tension && hdItem.deflection ? hdItem.tension / hdItem.deflection : (s.ka ?? 30000);
-  if (!hdItem?.deflection)
+  if (!hdItem?.deflection && !rod)
     assumptions.push(
       fromDefault("Anchor stiffness", `k_a = ${fmt(ka, 0)} lb/in`, s.ka ? "entered" : "default (Tedds default)", !s.ka),
     );
@@ -856,7 +967,8 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     : s.overturning === "full"
       ? Math.max(0, (dem.QE * s.h - (wDd * s.b * s.b) / 2) / arm)
       : Math.max(0, vd * s.h - wDd * tribEnd);
-  const da = Td / ka;
+  // rod: elongation at T_δ plus the device and shrinkage (SDPWS Δ_a)
+  const da = rod ? (Td * dem.hsx * 12) / (rod.At * 29_000_000) + rod.delta.device + rod.delta.shrink : Td / ka;
   const bend = (8 * vd * s.h ** 3) / (E * A * bD) / coD;
   const vdShear = ftao ? Math.max(dem.QE / (ftao.L1 + ftao.L2), (dem.QE * s.h) / s.b / (ftao.ha + ftao.hb)) : vd;
   const shear = (vdShear * s.h) / (1000 * Gac) / coD;
@@ -964,6 +1076,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     compression: { C: cRow.C, col, combo: cRow.combo },
     holdown,
     hdAnchor,
+    rod,
     sill,
     drift: { v: vd, Td, da, ka, bend, shear, slip, dxe, dx, allow, ratio: dx / allow },
     windDefl: { v: vwd, d: dw, allow: allowW, ratio: dw / allowW },

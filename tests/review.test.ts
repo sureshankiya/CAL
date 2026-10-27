@@ -347,3 +347,21 @@ describe("portal frames / prefabricated shear panels (SSW)", () => {
     expect(swr.demand.share + r.demand.share).toBeLessThan(1);
   });
 });
+
+import { rodTensileArea } from "@/engine/members/shearWall";
+
+describe("continuous rod tie-down", () => {
+  it("A_t (5/8 in. UNC) = 0.226 in²; T_a = 0.75 F_u A_b / 2 = 6,673 lb for F1554 Gr. 36", () => {
+    expect(rodTensileArea(0.625)).toBeCloseTo(0.226, 3);
+    const p = exampleProject();
+    const w = p.members.find((m) => m.kind === "shearWall" && m.mark === "1SW-4")!;
+    if (w.kind !== "shearWall") throw new Error();
+    w.holdownId = undefined;
+    w.rod = { d: 0.625, steel: "ASTM F1554 Grade 36", plate: { w: 3, l: 5.5 }, takeUp: 0.04, shrinkage: 0.05 };
+    const r = designProject(p).outcomes.get(w.id)!.result!;
+    if (r.kind !== "shearWall") throw new Error();
+    expect(r.rod!.Ta).toBeCloseTo((0.75 * 58000 * Math.PI * 0.625 ** 2) / 4 / 2, 3);
+    expect(r.rod!.delta.total).toBeCloseTo(r.rod!.delta.rod + 0.09, 6);
+    expect(r.checks.some((c) => c.name.startsWith("Hold-down"))).toBe(false);
+  });
+});

@@ -2434,6 +2434,60 @@ function ShearWallEditor({ p, m, upd }: { p: Project; m: ShearWallSpec; upd: Upd
             />
           </Field>
         </Grid>
+        <Check
+          checked={!!m.rod}
+          onChange={(v) =>
+            upd({
+              holdownId: v ? undefined : m.holdownId,
+              rod: v
+                ? { d: 0.625, steel: ANCHOR_STEELS[0].label, plate: { w: 3, l: 5.5 }, takeUp: 0.04, shrinkage: 0.05 }
+                : undefined,
+            })
+          }
+          label="Continuous rod tie-down (in place of a hold-down device)"
+        />
+        {m.rod ? (
+          <Grid cols={3}>
+            <Field label="Rod diameter (in)">
+              <Select
+                value={String(m.rod.d)}
+                options={["0.5", "0.625", "0.75", "0.875", "1", "1.125", "1.25"]}
+                onChange={(v) => upd({ rod: { ...m.rod!, d: Number(v) } })}
+              />
+            </Field>
+            <Field label="Rod steel">
+              <Select
+                value={m.rod.steel}
+                options={ANCHOR_STEELS.map((x) => x.label)}
+                onChange={(v) => upd({ rod: { ...m.rod!, steel: v } })}
+              />
+            </Field>
+            <Field label="Plate W × L (in)">
+              <div className="flex gap-1">
+                <NumberInput
+                  value={m.rod.plate.w}
+                  min={1}
+                  onChange={(v) => upd({ rod: { ...m.rod!, plate: { ...m.rod!.plate, w: v ?? 3 } } })}
+                />
+                <NumberInput
+                  value={m.rod.plate.l}
+                  min={1}
+                  onChange={(v) => upd({ rod: { ...m.rod!, plate: { ...m.rod!.plate, l: v ?? 5.5 } } })}
+                />
+              </div>
+            </Field>
+            <Field label="Take-up device deflection (in)">
+              <NumberInput value={m.rod.takeUp} min={0} onChange={(v) => upd({ rod: { ...m.rod!, takeUp: v ?? 0 } })} />
+            </Field>
+            <Field label="Shrinkage this story (in)">
+              <NumberInput
+                value={m.rod.shrinkage}
+                min={0}
+                onChange={(v) => upd({ rod: { ...m.rod!, shrinkage: v ?? 0 } })}
+              />
+            </Field>
+          </Grid>
+        ) : null}
         <Grid cols={3}>
           <Field label="Sill anchor">
             <Select

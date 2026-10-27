@@ -1372,6 +1372,51 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
           ) : null}
         </>
       ) : null}
+      {r.rod && s.rod ? (
+        <>
+          <SectionHead title="Continuous rod tie-down (this story)" />
+          <TR
+            desc={`Rod ${fmtInFraction(s.rod.d)} in. ${s.rod.steel}`}
+            expr={
+              <>
+                T = {f0(r.rod.T)} lb ≤ T<sub>a</sub> = 0.75 F<sub>u</sub> A<sub>b</sub> / 2.00 = {f0(r.rod.Ta)} lb (AISC
+                360 J3.6)
+              </>
+            }
+            pass={r.rod.T <= r.rod.Ta}
+          />
+          <TR
+            desc="Bearing plate on the top plates"
+            expr={
+              <>
+                ΔT = {f0(r.rod.dT)} lb (this story); f<sub>c⊥</sub> = ΔT / A = {f0(r.rod.dT)} / {f2(r.rod.Abrg)} ={" "}
+                {f0(r.rod.fcperp)} psi ≤ F<sub>c⊥</sub> = {f0(r.rod.Fcperp)} psi
+              </>
+            }
+            pass={r.rod.fcperp <= r.rod.Fcperp}
+          />
+          <TR
+            desc="Displacement per story"
+            expr={
+              <>
+                T h / (A<sub>t</sub> E) + device + shrinkage = {fmt(r.rod.delta.rod, 4)} + {fmt(r.rod.delta.device, 3)}{" "}
+                + {fmt(r.rod.delta.shrink, 3)} = {fmt(r.rod.delta.total, 3)} in ≤ 0.20 in (ICC-ES AC316)
+              </>
+            }
+            pass={r.rod.delta.total <= 0.2}
+          />
+          {d.stacked ? (
+            <TR
+              desc="Tension from the stories above"
+              expr={
+                <>
+                  {d.stacked.mark}: seismic {f0(d.stacked.Ts)} lb, wind {f0(d.stacked.Tw)} lb (included in T)
+                </>
+              }
+            />
+          ) : null}
+        </>
+      ) : null}
       {r.hdAnchor ? (
         <>
           <SectionHead title="Hold-down anchor — ACI 318-19 Ch. 17 (strength level)" />
@@ -1552,7 +1597,14 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
             "Sheathing / nailing",
             r.sides.map((x) => `${x.row.label}; ${x.row.nail} @ ${x.spacing} in. edges, 12 in. field`).join(" + "),
           ],
-          ["Hold-down", r.holdown ? `${r.holdown.item.model} each end, T = ${f0(r.holdown.T)} lb` : "None required"],
+          [
+            "Hold-down",
+            r.rod && s.rod
+              ? `${fmtInFraction(s.rod.d)} in. continuous rod each end, T = ${f0(r.rod.T)} lb`
+              : r.holdown
+                ? `${r.holdown.item.model} each end, T = ${f0(r.holdown.T)} lb`
+                : "None required",
+          ],
           [
             "Sill anchors",
             `${s.sill.type === "cast-in" ? `${fmtInFraction(s.sill.d)} in. dia. anchor bolts, ${f0(s.sill.embed)} in. embedment` : (s.sill.label ?? "post-installed")} @ ${f0(s.sill.spacing)} in. o.c.`,

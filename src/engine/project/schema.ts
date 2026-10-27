@@ -447,6 +447,16 @@ export const shearWallSpecSchema = z.object({
     })
     .optional(),
   ka: pos.optional(),
+  /** continuous rod tie-down in place of a hold-down device */
+  rod: z
+    .object({
+      d: pos,
+      steel: z.string(),
+      plate: z.object({ w: pos, l: pos }),
+      takeUp: nonneg,
+      shrinkage: nonneg,
+    })
+    .optional(),
   windService: z.object({ factor: pos, limitN: pos }),
   /** start position along the wall line, ft (for the collector force profile) */
   x: nonneg.optional(),
