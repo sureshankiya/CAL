@@ -68,11 +68,6 @@ export function spansText(r: AnyResult): string {
       return `${fmtFtIn(r.input.Hr)} retained`;
     case "guardPost":
       return `${fmt(r.input.guardHeight, 0)} in. guard`;
-    case "steelTruss":
-      return Object.values(r.mats).map((x): [string, string] => [
-        "Structural steel",
-        `${x!.shape.name}: ${x!.gradeLabel}`,
-      ]);
     case "cfsWall":
       return `${fmtFtIn(r.input.height)} high`;
   }
@@ -278,6 +273,11 @@ function materialsOf(r: AnyResult, c: { fc: number; fy: number }): [string, stri
         ["Structural steel", `Base plate: ${steelGrade(r.input.plate.grade).label}, F_y = ${fmt(r.FyPlate, 0)} ksi`],
         ["Anchor rods", r.rodSteel.label],
       ];
+    case "steelTruss":
+      return Object.values(r.mats).map((x): [string, string] => [
+        "Structural steel",
+        `${x!.shape.name}: ${x!.gradeLabel}`,
+      ]);
     case "cfsWall":
       return [["Cold-formed steel", `${r.input.designation}, F_y = ${r.input.Fy} ksi (AISI S100)`]];
     case "connector":
