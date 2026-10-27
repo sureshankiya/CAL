@@ -1056,6 +1056,8 @@ export const lateralSchema = z.object({
   com: z.object({ x: nonneg, y: nonneg }).optional(),
   /** MWFRS procedure: Ch. 28 Part 1 envelope or Ch. 27 Part 1 directional */
   windMethod: z.enum(["envelope", "directional"]).optional(),
+  /** seismic procedure: §12.8 ELF or §12.14 simplified alternative */
+  seismicMethod: z.enum(["elf", "simplified"]).optional(),
 });
 
 export const assemblySchema = z.object({

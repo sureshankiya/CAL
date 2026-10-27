@@ -654,6 +654,7 @@ export function designProject(p: Project): ProjectDesign {
           V: p.criteria.wind.V,
           exposure: p.criteria.wind.exposure,
           Kzt: p.criteria.wind.Kzt,
+          siteClass: p.criteria.seismic.siteClass,
         },
         p.assemblies,
       );

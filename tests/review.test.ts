@@ -365,3 +365,21 @@ describe("continuous rod tie-down", () => {
     expect(r.checks.some((c) => c.name.startsWith("Hold-down"))).toBe(false);
   });
 });
+
+describe("ASCE 7 §12.14 simplified alternative", () => {
+  it("one story: V = 1.0 × S_DS × W / R, ρ = 1.0", () => {
+    const p = exampleProject();
+    p.lateral!.seismicMethod = "simplified";
+    const L = designProject(p).lateral!;
+    expect(L.seismicMethod).toBe("simplified");
+    expect(L.rho).toBe(1);
+    expect(L.dist.V).toBeCloseTo((1.0 * p.criteria.seismic.SDS * L.dist.W) / 6.5, 3);
+    expect(L.lines[0].flex.Eh).toBeCloseTo(L.stories[0].VE * (L.lines[0].trib / L.lines[0].sumTrib), 6);
+  });
+  it("is refused for Risk Category III", () => {
+    const p = exampleProject();
+    p.lateral!.seismicMethod = "simplified";
+    p.criteria.riskCategory = "III";
+    expect(designProject(p).lateralError).toMatch(/Risk Category/);
+  });
+});

@@ -1148,6 +1148,16 @@ export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
         )}
       </Grid>
       <Grid>
+        <Field label="Seismic procedure">
+          <Select
+            value={lat.seismicMethod ?? "elf"}
+            options={[
+              { value: "elf", label: "§12.8 Equivalent lateral force" },
+              { value: "simplified", label: "§12.14 Simplified alternative" },
+            ]}
+            onChange={(v) => upd({ seismicMethod: v })}
+          />
+        </Field>
         <Field label="Wind MWFRS procedure">
           <Select
             value={lat.windMethod ?? "envelope"}

@@ -162,49 +162,76 @@ export function LateralSheet({ m, design }: { m: SheetMeta; design: ProjectDesig
               </>
             }
           />
-          <TR
-            desc="Approximate period — Eq. 12.8-7 (C_t = 0.02, x = 0.75)"
-            expr={
-              <>
-                T<sub>a</sub> = 0.02 h<sub>n</sub>
-                <sup>0.75</sup>
-                {eq(`${f3(L.cs.Ta)} s`)}
-              </>
-            }
-          />
-          <TR
-            desc="Eq. 12.8-2"
-            expr={
-              <>
-                C<sub>s</sub> = S<sub>DS</sub> / (R / I<sub>e</sub>){eq(fmt(L.cs.CsEq2, 4))}
-              </>
-            }
-          />
-          <TR
-            desc="Upper limit — Eq. 12.8-3"
-            expr={
-              <>
-                C<sub>s,max</sub> = S<sub>D1</sub> / (T (R / I<sub>e</sub>)){eq(fmt(L.cs.CsMax ?? Infinity, 4))}
-              </>
-            }
-          />
-          <TR
-            desc="Lower limit — Eq. 12.8-5"
-            expr={
-              <>
-                C<sub>s,min</sub> = 0.044 S<sub>DS</sub> I<sub>e</sub> ≥ 0.01{eq(fmt(L.cs.CsMin, 4))}
-              </>
-            }
-          />
-          <TR
-            desc={`Seismic response coefficient (Eq. ${L.cs.governs} governs)`}
-            expr={
-              <>
-                C<sub>s</sub>
-                {eq(fmt(L.cs.Cs, 4))}
-              </>
-            }
-          />
+          {L.seismicMethod === "simplified" ? (
+            <>
+              <TR
+                desc="Simplified alternative — ASCE 7 §12.14 (Eq. 12.14-11)"
+                expr={
+                  <>
+                    V = F S<sub>DS</sub> W / R; F = {f2(L.F12_14 ?? 1)} ({L.stories.length}-story); C<sub>s</sub> = F S
+                    <sub>DS</sub> / R{eq(fmt(L.cs.Cs, 4))}
+                  </>
+                }
+              />
+              <TR
+                desc="§12.14 conditions"
+                expr={
+                  <>
+                    Risk Category I / II, Site Class not E / F and ≤ 3 stories checked; bearing-wall or building-frame
+                    system of Table 12.14-1, no irregularities beyond §12.14.1.1 limits and the remaining §12.14.1.1
+                    items to be confirmed by the engineer. ρ = 1.0 (E<sub>h</sub> = Q<sub>E</sub>, §12.14.3.1.1); drift
+                    need not be calculated (§12.14.8.5) — the shear-wall drift checks are for information.
+                  </>
+                }
+              />
+            </>
+          ) : (
+            <>
+              <TR
+                desc="Approximate period — Eq. 12.8-7 (C_t = 0.02, x = 0.75)"
+                expr={
+                  <>
+                    T<sub>a</sub> = 0.02 h<sub>n</sub>
+                    <sup>0.75</sup>
+                    {eq(`${f3(L.cs.Ta)} s`)}
+                  </>
+                }
+              />
+              <TR
+                desc="Eq. 12.8-2"
+                expr={
+                  <>
+                    C<sub>s</sub> = S<sub>DS</sub> / (R / I<sub>e</sub>){eq(fmt(L.cs.CsEq2, 4))}
+                  </>
+                }
+              />
+              <TR
+                desc="Upper limit — Eq. 12.8-3"
+                expr={
+                  <>
+                    C<sub>s,max</sub> = S<sub>D1</sub> / (T (R / I<sub>e</sub>)){eq(fmt(L.cs.CsMax ?? Infinity, 4))}
+                  </>
+                }
+              />
+              <TR
+                desc="Lower limit — Eq. 12.8-5"
+                expr={
+                  <>
+                    C<sub>s,min</sub> = 0.044 S<sub>DS</sub> I<sub>e</sub> ≥ 0.01{eq(fmt(L.cs.CsMin, 4))}
+                  </>
+                }
+              />
+              <TR
+                desc={`Seismic response coefficient (Eq. ${L.cs.governs} governs)`}
+                expr={
+                  <>
+                    C<sub>s</sub>
+                    {eq(fmt(L.cs.Cs, 4))}
+                  </>
+                }
+              />
+            </>
+          )}
           <TR
             desc="Effective seismic weight / base shear (strength)"
             expr={
@@ -227,7 +254,13 @@ export function LateralSheet({ m, design }: { m: SheetMeta; design: ProjectDesig
               ]}
             />
           ))}
-          <SectionHead title="Vertical distribution — §12.8.3" />
+          <SectionHead
+            title={
+              L.seismicMethod === "simplified"
+                ? "Vertical distribution — §12.14.8.2 (F_x = w_x / W × V)"
+                : "Vertical distribution — §12.8.3"
+            }
+          />
           <DataTable
             caption={`k = ${f2(L.dist.k)}`}
             head={["Level", "h_x (ft)", "w_x (lb)", "w_x h_x^k", "C_vx", "F_x (lb)", "V_x (lb)"]}
