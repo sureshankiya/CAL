@@ -902,7 +902,14 @@ export const lateralSchema = z.object({
   roofRise: nonneg,
   Ke: pos,
   stories: z.array(
-    z.object({ id: z.string(), name: z.string(), height: pos, items: z.array(weightItemSchema).default([]) }),
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      height: pos,
+      items: z.array(weightItemSchema).default([]),
+      /** apparent shear stiffness of the diaphragm above, kips/in (SDPWS Table 4.2A), semi-rigid analysis */
+      diaphragmGa: pos.optional(),
+    }),
   ),
   lines: z.array(
     z.object({
@@ -918,8 +925,10 @@ export const lateralSchema = z.object({
       openings: z.array(wallLineOpeningSchema).optional(),
     }),
   ),
-  distribution: z.enum(["flexible", "rigid", "envelope"]).default("flexible"),
+  distribution: z.enum(["flexible", "rigid", "envelope", "semirigid"]).default("flexible"),
   com: z.object({ x: nonneg, y: nonneg }).optional(),
+  /** MWFRS procedure: Ch. 28 Part 1 envelope or Ch. 27 Part 1 directional */
+  windMethod: z.enum(["envelope", "directional"]).optional(),
 });
 
 export const assemblySchema = z.object({

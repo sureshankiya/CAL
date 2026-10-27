@@ -176,6 +176,13 @@ export const TABLES: Record<string, TableMeta> = {
     edition: "ASCE 7-16 / 7-22",
     status: "unverified",
   },
+  "asce7-27.3-1": {
+    id: "asce7-27.3-1",
+    title: "External pressure coefficients Cp — MWFRS walls and roofs (directional procedure)",
+    source: "ASCE 7 Figure 27.3-1",
+    edition: "ASCE 7-16 / 7-22",
+    status: "unverified",
+  },
   "asce7-30.3-1": {
     id: "asce7-30.3-1",
     title: "External pressure coefficients GCp — walls, components and cladding",

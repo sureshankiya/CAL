@@ -16,6 +16,8 @@ import { fromDefault } from "../core/provenance";
 import { soilClass } from "../data/soil";
 import { analyseLateral, type Dir, type LateralResult } from "../lateral/analysis";
 import { rigidDistribution, type RigidStoryResult } from "../lateral/rigid";
+import { semiRigidDistribution } from "../lateral/semiRigid";
+import { resolveWood } from "../design/wood";
 import { driftLimitFactor } from "../loads/seismic";
 import { velocityPressure } from "../loads/wind";
 import {
@@ -680,6 +682,7 @@ function applyRigid(p: Project, lateral: LateralResult, outcomes: Map<string, De
     k.set(id, (k.get(id) ?? 0) + r.demand.QE / r.drift.dxe);
   }
   const results: Array<RigidStoryResult & { storyId: string; storyName: string; kind: "seismic" | "wind" }> = [];
+  const semi: NonNullable<LateralResult["semiRigid"]> = [];
   let applied = false;
   for (const sf of lateral.stories) {
     const ls = lat.lines.filter((l) => l.storyId === sf.storyId);
@@ -695,6 +698,16 @@ function applyRigid(p: Project, lateral: LateralResult, outcomes: Map<string, De
     const per = new Map<string, { E: number; W: number; dE: number; tE: number; dW: number; tW: number }>();
     for (const dir of ["X", "Y"] as Dir[]) {
       if (!rl.some((l) => l.dir === dir)) continue;
+      if (lat.distribution === "semirigid") {
+        const sr = semiRigidStory(p, lat, sf, dir, rl, cm);
+        if (typeof sr === "string") {
+          if (!lateral.warnings.includes(sr)) lateral.warnings.push(sr);
+          continue;
+        }
+        semi.push(...sr.results);
+        for (const [id, v] of sr.per) per.set(id, v);
+        continue;
+      }
       const rs = rigidDistribution(rl, sf.VE, dir, cm, plan, true);
       const rw = rigidDistribution(rl, sf.VW[dir], dir, { x: lat.Lx / 2, y: lat.Ly / 2 }, plan, false);
       results.push({ ...rs, storyId: sf.storyId, storyName: sf.name, kind: "seismic" });
@@ -728,7 +741,59 @@ function applyRigid(p: Project, lateral: LateralResult, outcomes: Map<string, De
     }
   }
   lateral.rigid = results;
+  lateral.semiRigid = semi;
   return applied;
+}
+
+/**
+ * Semi-rigid line forces of one story and direction: diaphragm EI from the designed RD / FD chord,
+ * GA from the story's G_a. Returns a warning when the data are missing.
+ */
+function semiRigidStory(
+  p: Project,
+  lat: NonNullable<Project["lateral"]>,
+  sf: LateralResult["stories"][number],
+  dir: Dir,
+  rl: Array<{ id: string; dir: Dir; pos: number; k: number }>,
+  cm: { x: number; y: number },
+):
+  | string
+  | {
+      results: NonNullable<LateralResult["semiRigid"]>;
+      per: Map<string, { E: number; W: number; dE: number; tE: number; dW: number; tW: number }>;
+    } {
+  const story = lat.stories.find((x) => x.id === sf.storyId);
+  const d = p.members.find(
+    (m): m is DiaphragmSpec => m.kind === "diaphragm" && m.storyId === sf.storyId && m.dir === dir,
+  );
+  if (!story?.diaphragmGa || !d)
+    return `${sf.name}, ${dir}: semi-rigid analysis needs the diaphragm G_a on the story and an RD / FD diaphragm member — flexible distribution used`;
+  const chord = resolveWood(
+    { kind: "sawn", species: d.chord.species, grade: d.chord.grade, size: d.chord.size, plies: 1 },
+    getCycle(p.cycleId).nds,
+  );
+  const span = dir === "X" ? lat.Ly : lat.Lx;
+  const W = (dir === "X" ? lat.Lx : lat.Ly) * 12;
+  const A = chord.bPly * chord.d;
+  const EI = (chord.E * A * W * W) / 2;
+  const GA = 1000 * story.diaphragmGa * W;
+  const lines = rl.filter((l) => l.dir === dir).map((l) => ({ id: l.id, pos: l.pos, k: l.k }));
+  const e = (dir === "X" ? cm.y : cm.x) - span / 2;
+  const rs = semiRigidDistribution(lines, sf.VE, span, EI, GA, e, 0.05 * span);
+  const rw = semiRigidDistribution(lines, sf.VW[dir], span, EI, GA, 0, 0);
+  const per = new Map<string, { E: number; W: number; dE: number; tE: number; dW: number; tW: number }>();
+  for (const l of rs.lines) {
+    const w = rw.lines.find((x) => x.id === l.id)!;
+    per.set(l.id, { E: l.total, dE: l.direct, tE: l.total - l.direct, W: w.total, dW: w.total, tW: 0 });
+  }
+  const base = { storyId: sf.storyId, storyName: sf.name, dir, chordE: chord.E, chordA: A, Ga: story.diaphragmGa };
+  return {
+    results: [
+      { ...rs, ...base, kind: "seismic" },
+      { ...rw, ...base, kind: "wind" },
+    ],
+    per,
+  };
 }
 
 /** Members that take load from the given member (for the load-path view). */

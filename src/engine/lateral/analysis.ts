@@ -30,6 +30,7 @@ import {
   type VerticalDistribution,
 } from "../loads/seismic";
 import {
+  directionalBandForce,
   endZoneA,
   mwfrsBandForce,
   velocityPressure,
@@ -60,6 +61,8 @@ export interface Story {
   name: string;
   /** story height, floor to the diaphragm above, ft */
   height: number;
+  /** apparent shear stiffness of the diaphragm above, kips/in (SDPWS Table 4.2A) — semi-rigid analysis */
+  diaphragmGa?: number;
   /** diaphragm weight items at the top of this story */
   items: WeightItem[];
 }
@@ -75,7 +78,7 @@ export interface WallLine {
   pos?: number;
 }
 
-export type Distribution = "flexible" | "rigid" | "envelope";
+export type Distribution = "flexible" | "rigid" | "envelope" | "semirigid";
 
 export interface LateralInput {
   enabled: boolean;
@@ -100,6 +103,8 @@ export interface LateralInput {
   distribution?: Distribution;
   /** centre of mass, ft (default: plan centre) */
   com?: { x: number; y: number };
+  /** MWFRS procedure: Ch. 28 Part 1 envelope (default) or Ch. 27 Part 1 directional */
+  windMethod?: "envelope" | "directional";
 }
 
 export interface Site {
@@ -174,6 +179,19 @@ export interface LateralResult {
   /** rigid-diaphragm distribution per story and direction, when applied */
   rigid?: Array<import("./rigid").RigidStoryResult & { storyId: string; storyName: string; kind: "seismic" | "wind" }>;
   distribution: Distribution;
+  windMethod: "envelope" | "directional";
+  /** semi-rigid diaphragm distribution per story and direction, when applied */
+  semiRigid?: Array<
+    import("./semiRigid").SemiRigidResult & {
+      storyId: string;
+      storyName: string;
+      dir: Dir;
+      kind: "seismic" | "wind";
+      chordE: number;
+      chordA: number;
+      Ga: number;
+    }
+  >;
 }
 
 /**
@@ -250,7 +268,15 @@ export function analyseLateral(inp: LateralInput, site: Site, assemblies: DeadAs
   );
 
   // wind
-  const vp = velocityPressure(cycle.asce7, site.V, h, site.exposure, site.Kzt, inp.Ke, true);
+  const vp = velocityPressure(
+    cycle.asce7,
+    site.V,
+    h,
+    site.exposure,
+    site.Kzt,
+    inp.Ke,
+    inp.windMethod !== "directional",
+  );
   const a = endZoneA(Math.min(inp.Lx, inp.Ly), h);
   const n = inp.stories.length;
   const windAt = (i: number, dir: Dir) => {
@@ -260,7 +286,14 @@ export function analyseLateral(inp: LateralInput, site: Site, assemblies: DeadAs
     const above = i < n - 1 ? inp.stories[i + 1].height / 2 : 0;
     const wallHeight = upper + above;
     const roofHeight = i === n - 1 ? (transverse ? inp.roofRise : inp.roofRise / 2) : 0;
-    const f = mwfrsBandForce(vp.qEff, { width, wallHeight, roofHeight }, thetaDeg, transverse, a);
+    const band = { width, wallHeight, roofHeight };
+    let f: WindForce;
+    if (inp.windMethod === "directional") {
+      // windward wall pressure at the top of the band (conservative within the band), z ≤ h
+      const z = i === n - 1 ? h : Math.min(hx[i] + above, h);
+      const qz = velocityPressure(cycle.asce7, site.V, z, site.exposure, site.Kzt, inp.Ke, false).qEff;
+      f = directionalBandForce(qz, vp.qEff, z, band, thetaDeg, transverse, dir === "X" ? inp.Lx : inp.Ly, h);
+    } else f = mwfrsBandForce(vp.qEff, band, thetaDeg, transverse, a);
     return { ...f, F: Math.max(f.F, f.Fmin), wallHeight, roofHeight, width };
   };
 
@@ -352,5 +385,6 @@ export function analyseLateral(inp: LateralInput, site: Site, assemblies: DeadAs
     warnings,
     rho: inp.rho,
     distribution: inp.distribution ?? "flexible",
+    windMethod: inp.windMethod ?? "envelope",
   };
 }

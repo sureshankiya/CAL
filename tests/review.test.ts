@@ -120,3 +120,78 @@ describe("perforated shear walls (SDPWS-2021 4.3.3.5)", () => {
     expect(designProject(p).outcomes.get(w.id)!.error).toMatch(/must equal the wall length/);
   });
 });
+
+import { semiRigidDistribution } from "@/engine/lateral/semiRigid";
+import { directionalBandForce, leewardWallCp, roofCp27 } from "@/engine/loads/wind";
+
+describe("semi-rigid diaphragm (beam on wall-line springs)", () => {
+  const lines = [
+    { id: "a", pos: 0, k: 20000 },
+    { id: "b", pos: 20, k: 20000 },
+    { id: "c", pos: 40, k: 20000 },
+  ];
+  const F = (EI: number, GA: number) =>
+    semiRigidDistribution(lines, 10000, 40, EI, GA, 0, 0).lines.map((l) => l.total / 10000);
+  it("a very flexible diaphragm tends to the tributary split, a very stiff one to the rigid split", () => {
+    // tributary of a continuous flexible beam on rigid supports: 0.25 / 0.5 / 0.25 is the simple-span split;
+    // with springs and a flexible diaphragm the centre line takes the most
+    const flex = F(1e6, 1e3);
+    expect(flex[1]).toBeGreaterThan(0.45);
+    const rigid = F(1e16, 1e14);
+    for (const x of rigid) expect(x).toBeCloseTo(1 / 3, 3);
+    expect(flex.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 6);
+  });
+  it("two end lines share a centred load equally; accidental torsion raises one side", () => {
+    const two = [lines[0], lines[2]];
+    const r = semiRigidDistribution(two, 1000, 40, 1e12, 1e9, 0, 0);
+    expect(r.lines[0].total).toBeCloseTo(500, 3);
+    const t = semiRigidDistribution(two, 1000, 40, 1e16, 1e14, 0, 2);
+    // rigid limit: V/2 + V e / L = 500 + 1000 × 2 / 40 = 550
+    expect(t.lines[0].total).toBeCloseTo(550, 0);
+  });
+});
+
+describe("ASCE 7 Ch. 27 directional procedure", () => {
+  it("Fig. 27.3-1 coefficients", () => {
+    expect(leewardWallCp(1)).toBe(-0.5);
+    expect(leewardWallCp(2)).toBeCloseTo(-0.3, 6);
+    expect(leewardWallCp(3)).toBeCloseTo(-0.25, 6);
+    expect(leewardWallCp(5)).toBe(-0.2);
+    expect(roofCp27(20, 0.25)).toEqual({ ww: 0.2, lw: -0.6 });
+    expect(roofCp27(12.5, 0.25).ww).toBeCloseTo((-0.18 + 0) / 2, 6);
+  });
+  it("band force: G (qz 0.8 − qh Cp_lw) × wall area + G qh (Cp_ww − Cp_lw) × roof projection", () => {
+    const f = directionalBandForce(14, 13, 15, { width: 40, wallHeight: 4.5, roofHeight: 4 }, 18.4, true, 24, 11);
+    const lw = leewardWallCp(24 / 40);
+    const roof = roofCp27(18.4, 11 / 24);
+    const F = 0.85 * (14 * 0.8 - 13 * lw) * 4.5 * 40 + 0.85 * 13 * (roof.ww - roof.lw) * 4 * 40;
+    expect(f.F).toBeCloseTo(Math.max(F, 0), 6);
+    expect(f.Fmin).toBeCloseTo(16 * 4.5 * 40 + 8 * 4 * 40, 6);
+  });
+});
+
+describe("lateral options in the example project", () => {
+  it("Ch. 27 directional wind runs through the package", () => {
+    const p = exampleProject();
+    p.lateral!.windMethod = "directional";
+    const d = designProject(p);
+    expect(d.lateralError).toBeUndefined();
+    expect(d.lateral!.windMethod).toBe("directional");
+    expect(d.lateral!.stories[0].windBands.Y.directional).toBeDefined();
+    expect(d.lateral!.stories[0].VW.Y).toBeGreaterThan(0);
+  });
+
+  it("semi-rigid distribution: line forces sum to ρ V per direction", () => {
+    const p = exampleProject();
+    p.lateral!.distribution = "semirigid";
+    for (const s of p.lateral!.stories) s.diaphragmGa = 9.5;
+    const d = designProject(p);
+    const L = d.lateral!;
+    expect(L.semiRigid?.length).toBeGreaterThan(0);
+    const sr = L.semiRigid!.find((x) => x.kind === "seismic")!;
+    const sum = sr.lines.reduce((a, l) => a + l.direct, 0);
+    expect(sum).toBeCloseTo(sr.V, 3);
+    expect(L.lines.some((l) => l.method === "semirigid")).toBe(true);
+    for (const o of d.outcomes.values()) expect(o.error).toBeUndefined();
+  });
+});

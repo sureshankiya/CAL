@@ -2,8 +2,87 @@
 
 import { fmt } from "@/engine/core/fmt";
 import type { ProjectDesign } from "@/engine/project";
+import type { LateralResult } from "@/engine/lateral/analysis";
 import { B, DataTable, Flag, SectionHead, Sheet, SheetTitle, TextRow, TR, eq } from "../report/primitives";
 import { DesignBasis, f0, f1, f2, f3, footers, titleFields, type SheetMeta } from "./common";
+
+function DirectionalWind({ L }: { L: LateralResult }) {
+  return (
+    <>
+      <TR
+        desc="Gust-effect factor (§26.11.1)"
+        expr={
+          <>
+            Rigid building: G = 0.85; internal pressure cancels in the net horizontal force (GC<sub>pi</sub>)
+          </>
+        }
+      />
+      {(["X", "Y"] as const).map((dir) => (
+        <DataTable
+          key={dir}
+          caption={`Wind force in the ${dir} direction (strength level) — ${L.stories[0].windBands[dir].case === "A" ? "wind normal to ridge" : "wind parallel to ridge"}; Fig. 27.3-1`}
+          head={[
+            "Level",
+            "B (ft)",
+            "Wall band (ft)",
+            "Roof proj. (ft)",
+            "z (ft) / q_z (psf)",
+            "L/B; Cp ww / lw",
+            "h/L; roof Cp ww / lw",
+            "p wall / roof (psf)",
+            "F (lb)",
+            "F min §27.1.5 (lb)",
+            "F used (lb)",
+            "Story shear (lb)",
+          ]}
+          align={[
+            "left",
+            "right",
+            "right",
+            "right",
+            "right",
+            "right",
+            "right",
+            "right",
+            "right",
+            "right",
+            "right",
+            "right",
+          ]}
+          small
+          rows={L.stories.map((s) => {
+            const b = s.windBands[dir];
+            const d = b.directional!;
+            const Fd =
+              d.pWall * (b.case === "A" ? b.wallHeight : b.wallHeight + b.roofHeight) * b.width +
+              (b.case === "A" ? d.pRoof * b.roofHeight * b.width : 0);
+            return [
+              s.name,
+              f1(b.width),
+              f2(b.wallHeight),
+              f2(b.roofHeight),
+              `${f1(d.z)} / ${f2(d.qz)}`,
+              `${f2(d.LB)}; 0.80 / ${f2(d.CpWall.lw)}`,
+              d.CpRoof ? `${f2(d.hL)}; ${f2(d.CpRoof.ww)} / ${f2(d.CpRoof.lw)}` : "—",
+              `${f2(d.pWall)} / ${f2(d.pRoof)}`,
+              f0(Fd),
+              f0(b.Fmin),
+              f0(b.F),
+              f0(s.VW[dir]),
+            ];
+          })}
+        />
+      ))}
+      <TextRow italic>
+        p = q G C<sub>p</sub> (Eq. 27.3-1) with q<sub>z</sub> at the top of the band on the windward wall and q
+        <sub>h</sub> on the leeward wall and roof; wall p = G (0.8 q<sub>z</sub> − C<sub>p,lw</sub> q<sub>h</sub>), roof
+        p = G q<sub>h</sub> (C<sub>p,ww</sub> − C<sub>p,lw</sub>) on the vertical projection (the larger windward roof
+        value). The larger of this force and the §27.1.5 minimum (16 psf walls, 8 psf roof projection) is used.
+        Torsional load cases of Fig. 27.3-8 are not computed — confirm the Appendix D exception applies.
+      </TextRow>
+    </>
+  );
+}
 
 export function LateralSheet({ m, design }: { m: SheetMeta; design: ProjectDesign }) {
   const ft = footers(m);
@@ -16,11 +95,22 @@ export function LateralSheet({ m, design }: { m: SheetMeta; design: ProjectDesig
         title="Lateral analysis — seismic and wind"
         subtitle={
           <>
-            {m.cycle.asce7} §12.8 Equivalent Lateral Force procedure; Ch. 28 Part 1 envelope procedure (low-rise MWFRS)
+            {m.cycle.asce7} §12.8 Equivalent Lateral Force procedure;{" "}
+            {L?.windMethod === "directional"
+              ? "Ch. 27 Part 1 directional procedure (MWFRS)"
+              : "Ch. 28 Part 1 envelope procedure (low-rise MWFRS)"}
           </>
         }
       />
-      <DesignBasis m={m} tables={["asce7-12.2-1", "asce7-26.10-1", "asce7-28.3-1", "asce7-C3.1"]} />
+      <DesignBasis
+        m={m}
+        tables={[
+          "asce7-12.2-1",
+          "asce7-26.10-1",
+          L?.windMethod === "directional" ? "asce7-27.3-1" : "asce7-28.3-1",
+          "asce7-C3.1",
+        ]}
+      />
       {!L ? (
         <TextRow>
           <Flag>{design.lateralError ?? "Lateral analysis not available"}</Flag>
@@ -148,7 +238,13 @@ export function LateralSheet({ m, design }: { m: SheetMeta; design: ProjectDesig
               return [s.name, f2(s.hx), f0(r.w), f0(r.whk), f3(r.Cvx), f0(r.Fx), f0(r.Vx)];
             })}
           />
-          <SectionHead title="Wind — MWFRS, Ch. 28 Part 1" />
+          <SectionHead
+            title={
+              L.windMethod === "directional"
+                ? "Wind — MWFRS, Ch. 27 Part 1 (directional procedure)"
+                : "Wind — MWFRS, Ch. 28 Part 1"
+            }
+          />
           <TR
             desc="Basic wind speed / exposure"
             expr={
@@ -202,64 +298,69 @@ export function LateralSheet({ m, design }: { m: SheetMeta; design: ProjectDesig
               </>
             }
           />
-          <TR
-            desc="End-zone dimension (Fig. 28.3-1 note)"
-            expr={
-              <>
-                a{eq(`${f2(L.a)} ft`)}; end zone width 2a = {f2(2 * L.a)} ft
-              </>
-            }
-          />
-          {(["X", "Y"] as const).map((dir) => (
-            <DataTable
-              key={dir}
-              caption={`Wind force in the ${dir} direction (strength level) — Load Case ${L.stories[0].windBands[dir].case} ${L.stories[0].windBands[dir].case === "A" ? "(wind normal to ridge)" : "(wind parallel to ridge)"}`}
-              head={[
-                "Level",
-                "Face width (ft)",
-                "Wall band (ft)",
-                "Roof proj. (ft)",
-                "Net GCpf wall int / end",
-                "Net GCpf roof int / end",
-                "F env. (lb)",
-                "F min §28.3.4 (lb)",
-                "F used (lb)",
-                "Story shear (lb)",
-              ]}
-              align={["left", "right", "right", "right", "right", "right", "right", "right", "right", "right"]}
-              small
-              rows={L.stories.map((s) => {
-                const b = s.windBands[dir];
-                const env =
-                  L.vp.qEff *
-                  ((b.case === "A" ? b.wallHeight : b.wallHeight + b.roofHeight) *
-                    (b.wallEnd * Math.min(2 * L.a, b.width) + b.wallInt * Math.max(0, b.width - 2 * L.a)) +
-                    (b.case === "A"
-                      ? b.roofHeight *
-                        (b.roofEnd * Math.min(2 * L.a, b.width) + b.roofInt * Math.max(0, b.width - 2 * L.a))
-                      : 0));
-                return [
-                  s.name,
-                  f1(b.width),
-                  f2(b.wallHeight),
-                  f2(b.roofHeight),
-                  `${f2(b.wallInt)} / ${f2(b.wallEnd)}`,
-                  b.case === "A" ? `${f2(b.roofInt)} / ${f2(b.roofEnd)}` : "—",
-                  f0(env),
-                  f0(b.Fmin),
-                  f0(b.F),
-                  f0(s.VW[dir]),
-                ];
-              })}
-            />
-          ))}
-          <TextRow italic>
-            Horizontal force = windward minus leeward surfaces (internal pressure cancels); one end zone of width 2a at
-            the reference corner. The larger of the envelope force and the §28.3.4 minimum (16 psf walls, 8 psf roof
-            projection) is used.
-          </TextRow>
+          {L.windMethod === "directional" ? <DirectionalWind L={L} /> : null}
+          {L.windMethod === "directional" ? null : (
+            <>
+              <TR
+                desc="End-zone dimension (Fig. 28.3-1 note)"
+                expr={
+                  <>
+                    a{eq(`${f2(L.a)} ft`)}; end zone width 2a = {f2(2 * L.a)} ft
+                  </>
+                }
+              />
+              {(["X", "Y"] as const).map((dir) => (
+                <DataTable
+                  key={dir}
+                  caption={`Wind force in the ${dir} direction (strength level) — Load Case ${L.stories[0].windBands[dir].case} ${L.stories[0].windBands[dir].case === "A" ? "(wind normal to ridge)" : "(wind parallel to ridge)"}`}
+                  head={[
+                    "Level",
+                    "Face width (ft)",
+                    "Wall band (ft)",
+                    "Roof proj. (ft)",
+                    "Net GCpf wall int / end",
+                    "Net GCpf roof int / end",
+                    "F env. (lb)",
+                    "F min §28.3.4 (lb)",
+                    "F used (lb)",
+                    "Story shear (lb)",
+                  ]}
+                  align={["left", "right", "right", "right", "right", "right", "right", "right", "right", "right"]}
+                  small
+                  rows={L.stories.map((s) => {
+                    const b = s.windBands[dir];
+                    const env =
+                      L.vp.qEff *
+                      ((b.case === "A" ? b.wallHeight : b.wallHeight + b.roofHeight) *
+                        (b.wallEnd * Math.min(2 * L.a, b.width) + b.wallInt * Math.max(0, b.width - 2 * L.a)) +
+                        (b.case === "A"
+                          ? b.roofHeight *
+                            (b.roofEnd * Math.min(2 * L.a, b.width) + b.roofInt * Math.max(0, b.width - 2 * L.a))
+                          : 0));
+                    return [
+                      s.name,
+                      f1(b.width),
+                      f2(b.wallHeight),
+                      f2(b.roofHeight),
+                      `${f2(b.wallInt)} / ${f2(b.wallEnd)}`,
+                      b.case === "A" ? `${f2(b.roofInt)} / ${f2(b.roofEnd)}` : "—",
+                      f0(env),
+                      f0(b.Fmin),
+                      f0(b.F),
+                      f0(s.VW[dir]),
+                    ];
+                  })}
+                />
+              ))}
+              <TextRow italic>
+                Horizontal force = windward minus leeward surfaces (internal pressure cancels); one end zone of width 2a
+                at the reference corner. The larger of the envelope force and the §28.3.4 minimum (16 psf walls, 8 psf
+                roof projection) is used.
+              </TextRow>
+            </>
+          )}
           <SectionHead
-            title={`Distribution to wall lines — ${L.distribution === "flexible" ? "flexible diaphragm, tributary width" : L.distribution === "rigid" ? "rigid diaphragm with torsion" : "envelope of flexible and rigid diaphragm"}`}
+            title={`Distribution to wall lines — ${L.distribution === "flexible" ? "flexible diaphragm, tributary width" : L.distribution === "rigid" ? "rigid diaphragm with torsion" : L.distribution === "semirigid" ? "semi-rigid diaphragm (beam on wall-line springs)" : "envelope of flexible and rigid diaphragm"}`}
           />
           <DataTable
             head={[
@@ -269,7 +370,9 @@ export function LateralSheet({ m, design }: { m: SheetMeta; design: ProjectDesig
               "Pos. (ft)",
               "Trib. (ft)",
               "Flex. E_h / W (lb)",
-              ...(L.distribution !== "flexible" ? ["Rigid E_h / W (lb)"] : []),
+              ...(L.distribution !== "flexible"
+                ? [L.distribution === "semirigid" ? "Semi-rigid E_h / W (lb)" : "Rigid E_h / W (lb)"]
+                : []),
               "E_h used (lb)",
               "W used (lb)",
               "0.7E_h (lb)",
@@ -343,6 +446,66 @@ export function LateralSheet({ m, design }: { m: SheetMeta; design: ProjectDesig
                   f2(r.ea),
                   f0(r.J),
                   r.kind === "seismic" ? f3(r.torsionRatio) : "—",
+                ])}
+              />
+            </>
+          ) : null}
+          {L.semiRigid?.length ? (
+            <>
+              <SectionHead title="Semi-rigid diaphragm — beam on wall-line springs (ASCE 7 §12.3.1)" />
+              <TR
+                desc="Model"
+                expr={
+                  <>
+                    Diaphragm as a Timoshenko beam across the wall lines; EI = E A W² / 2 (chords at ±W/2), GA = 1000 G
+                    <sub>a</sub> W (SDPWS Eq. 4.2-1 bending and shear terms; chord splice slip not included); line
+                    springs k = Σ Q<sub>E,wall</sub> / δ<sub>xe,wall</sub>; story force uniform along the span, inherent
+                    and accidental torsion (±0.05 × span) as a linear load
+                  </>
+                }
+              />
+              <DataTable
+                head={[
+                  "Story",
+                  "Load",
+                  "Dir.",
+                  "V (lb)",
+                  "Span (ft)",
+                  "G_a (k/in)",
+                  "Chord E A (lb)",
+                  "EI (lb·in²)",
+                  "GA (lb)",
+                  "e / e_a (ft)",
+                  "Line forces (lb)",
+                ]}
+                align={[
+                  "left",
+                  "left",
+                  "center",
+                  "right",
+                  "right",
+                  "right",
+                  "right",
+                  "right",
+                  "right",
+                  "right",
+                  "left",
+                ]}
+                small
+                rows={L.semiRigid.map((r) => [
+                  r.storyName,
+                  r.kind,
+                  r.dir,
+                  f0(r.V),
+                  f1(r.span),
+                  f1(r.Ga),
+                  fmt(r.chordE * r.chordA, 0),
+                  r.EI.toExponential(3),
+                  r.GA.toExponential(3),
+                  `${f2(r.e)} / ${f2(r.ea)}`,
+                  r.lines
+                    .map((x) => `${p.lateral!.lines.find((l) => l.id === x.id)?.name ?? x.id}: ${f0(x.total)}`)
+                    .join("; "),
                 ])}
               />
             </>

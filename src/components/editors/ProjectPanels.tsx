@@ -991,6 +991,16 @@ export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
             <Field label="Height (ft)">
               <NumberInput value={st.height} min={1} onChange={(v) => setStory(i, { height: v ?? st.height })} />
             </Field>
+            {lat.distribution === "semirigid" ? (
+              <Field label="Diaphragm G_a (kips/in)" hint="SDPWS Table 4.2A, diaphragm above this story">
+                <NumberInput
+                  value={st.diaphragmGa}
+                  allowEmpty
+                  min={0.1}
+                  onChange={(v) => setStory(i, { diaphragmGa: v })}
+                />
+              </Field>
+            ) : null}
             <SmallButton
               title="Regenerate weights from the geometry"
               onClick={() => setStory(i, { items: generateWeights(p, lat, i) })}
@@ -1056,6 +1066,18 @@ export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
           <span />
         )}
       </Grid>
+      <Grid>
+        <Field label="Wind MWFRS procedure">
+          <Select
+            value={lat.windMethod ?? "envelope"}
+            options={[
+              { value: "envelope", label: "Ch. 28 Part 1 envelope (low-rise)" },
+              { value: "directional", label: "Ch. 27 Part 1 directional" },
+            ]}
+            onChange={(v) => upd({ windMethod: v })}
+          />
+        </Field>
+      </Grid>
       <div className="text-xs font-semibold text-muted-foreground">Diaphragm distribution</div>
       <Grid cols={3}>
         <Field label="Distribution to wall lines">
@@ -1065,6 +1087,7 @@ export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
               { value: "flexible", label: "Flexible (tributary)" },
               { value: "rigid", label: "Rigid with torsion" },
               { value: "envelope", label: "Envelope of both" },
+              { value: "semirigid", label: "Semi-rigid (diaphragm G_a per story)" },
             ]}
             onChange={(v) => upd({ distribution: v })}
           />
