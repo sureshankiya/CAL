@@ -11,6 +11,7 @@
 import { analyseBeam, memberLength, type BeamAnalysis, type BeamLoad, type CaseResult } from "../analysis/beam";
 import { asdCombinations, loadDurationFactor, relevantCombinations, type Combination } from "../core/combos";
 import { fmt } from "../core/fmt";
+import { vibrationCheck } from "../loads/vibration";
 import { LOAD_TYPES, loadVector, type LoadType } from "../core/loads";
 import { fromDefault, type AssumptionEntry } from "../core/provenance";
 import { governingCheck, type Check } from "../design/wood";
@@ -51,6 +52,8 @@ export interface IJoistInput {
   Kcr?: number;
   addSelfWeight?: boolean;
   cdOverride?: number;
+  /** floor vibration check (serviceability guidance, f ≥ 15 Hz) */
+  vibration?: boolean;
 }
 
 export interface IJoistComboRow {
@@ -470,6 +473,15 @@ export function designIJoist(ctx: DesignContext, j: IJoistInput): IJoistResult {
         ]
       : []),
   ];
+  if (j.vibration) {
+    const v = vibrationCheck(p.EI, dead.psf * (j.spacing / 12), Math.max(...j.spans));
+    if (v) {
+      checks.push(v.check);
+      assumptions.push(
+        fromDefault("Floor vibration", v.expr, "Dolan et al. (1999) — guidance; not an IBC / NDS requirement"),
+      );
+    }
+  }
   const governing = governingCheck(checks);
   return {
     id: j.id,

@@ -721,6 +721,11 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
               onChange={(v) => upd({ addSelfWeight: v })}
               label="Add member self weight (not in assembly)"
             />
+            <Check
+              checked={!!m.vibration}
+              onChange={(v) => upd({ vibration: v })}
+              label="Floor vibration check, f ≥ 15 Hz (Dolan et al. 1999)"
+            />
           </Section>
         </>
       );
@@ -925,6 +930,11 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
               checked={!!m.addSelfWeight}
               onChange={(v) => upd({ addSelfWeight: v })}
               label="Add manufacturer self weight"
+            />
+            <Check
+              checked={!!m.vibration}
+              onChange={(v) => upd({ vibration: v })}
+              label="Floor vibration check, f ≥ 15 Hz (Dolan et al. 1999)"
             />
           </Section>
         </>
@@ -1168,7 +1178,55 @@ function BeamEditor({ p, m, upd }: { p: Project; m: BeamSpec; upd: Upd<BeamSpec>
             <NumberInput value={m.crOverride} allowEmpty min={1} max={1.15} onChange={(v) => upd({ crOverride: v })} />
           </Field>
         ) : null}
+        <FireFields value={m.fire} beam onChange={(v) => upd({ fire: v })} />
       </Section>
+    </>
+  );
+}
+
+type FireSpec = NonNullable<BeamSpec["fire"]>;
+
+function FireFields({
+  value,
+  onChange,
+  beam,
+}: {
+  value?: FireSpec;
+  onChange: (v: FireSpec | undefined) => void;
+  /** beams choose 3 or 4 exposed sides; posts are exposed on 4 */
+  beam?: boolean;
+}) {
+  return (
+    <>
+      <Check
+        checked={!!value}
+        onChange={(v) => onChange(v ? { hours: 1, sides: beam ? 3 : 4 } : undefined)}
+        label="Calculated fire resistance (NDS Ch. 16, exposed member)"
+      />
+      {value ? (
+        <Grid>
+          <Field label="Fire resistance (hours)">
+            <NumberInput
+              value={value.hours}
+              min={0.25}
+              max={2}
+              onChange={(v) => onChange({ ...value, hours: v ?? 1 })}
+            />
+          </Field>
+          {beam ? (
+            <Field label="Exposed faces">
+              <Select
+                value={String(value.sides) as "3" | "4"}
+                options={[
+                  { value: "3", label: "3 sides (sides and bottom)" },
+                  { value: "4", label: "4 sides" },
+                ]}
+                onChange={(v) => onChange({ ...value, sides: v === "4" ? 4 : 3 })}
+              />
+            </Field>
+          ) : null}
+        </Grid>
+      ) : null}
     </>
   );
 }
@@ -1567,6 +1625,7 @@ function PostEditor({ p, m, upd }: { p: Project; m: PostSpec; upd: Upd<PostSpec>
           )}
         </Grid>
         <Check checked={m.selfWeight} onChange={(v) => upd({ selfWeight: v })} label="Include post self weight" />
+        <FireFields value={m.fire} onChange={(v) => upd({ fire: v })} />
       </Section>
       <Section title="Other loads">
         <Collapsible title={`Point loads (${m.extra.length})`} open={m.extra.length > 0}>

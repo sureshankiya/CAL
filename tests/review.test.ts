@@ -195,3 +195,41 @@ describe("lateral options in the example project", () => {
     for (const o of d.outcomes.values()) expect(o.error).toBeUndefined();
   });
 });
+
+import { charDepth, fireBeam, fireColumn } from "@/engine/design/fire";
+import { floorFrequency } from "@/engine/loads/vibration";
+import { resolveWood } from "@/engine/design/wood";
+
+describe("NDS Ch. 16 fire design", () => {
+  it("effective char depths match NDS Table 16.2.1A (1.8 / 2.5 / 3.2 in.)", () => {
+    expect(charDepth(1).aEff).toBeCloseTo(1.8, 2);
+    expect(charDepth(1.5).aEff).toBeCloseTo(2.5, 1);
+    expect(charDepth(2).aEff).toBeCloseTo(3.2, 1);
+  });
+  it("6x12 beam, 1 hr, 3 sides, braced: residual 1.9 × 9.7 in.", () => {
+    const mat = resolveWood({ kind: "sawn", species: "DF-L", grade: "No.1", size: "6x12", plies: 1 }, "NDS-2024");
+    const r = fireBeam(mat, { hours: 1, sides: 3 }, 2000, 0);
+    const S = (1.9 * 9.7 * 9.7) / 6;
+    expect(r.check.demand).toBeCloseTo((2000 * 12) / S, 3);
+    expect(r.check.capacity).toBeCloseTo(2.85 * mat.Fb * mat.CF, 6);
+  });
+  it("a 4x4 post is fully charred at 1 hr", () => {
+    const mat = resolveWood({ kind: "sawn", species: "DF-L", grade: "No.1", size: "4x4", plies: 1 }, "NDS-2024");
+    expect(fireColumn(mat, { hours: 1, sides: 4 }, 1000, 96, 96).check.pass).toBe(false);
+  });
+});
+
+describe("floor vibration (Dolan et al. 1999)", () => {
+  it("f = (π/2) √(g EI / (w L⁴)): 2x10 DF No.2 @ 16 in., 12 ft, 20 plf dead → 14.5 Hz", () => {
+    // EI = 1.6e6 × 98.93 = 1.5829e8 lb·in²; w = 20 / 12 lb/in; L = 144 in (hand value 14.51 Hz)
+    expect(floorFrequency(1.6e6 * 98.93, 20, 12)).toBeCloseTo(14.51, 1);
+  });
+  it("opt-in check appears on the joist sheet checks", () => {
+    const p = exampleProject();
+    const j = p.members.find((m) => m.kind === "joist")!;
+    if (j.kind !== "joist") throw new Error();
+    j.vibration = true;
+    const r = designProject(p).outcomes.get(j.id)!.result!;
+    expect(r.checks.some((c) => c.name.startsWith("Floor vibration"))).toBe(true);
+  });
+});

@@ -10,6 +10,7 @@ import { DEFLECTION_PRESETS } from "@/engine/loads/deflection";
 import { LIVE_LOADS, liveLoad } from "@/engine/loads/live";
 import { snowLoads } from "@/engine/loads/snow";
 import { hardwareLabel } from "@/engine/data/hardware";
+import { steelGrade } from "@/engine/data/steel";
 import { fmtInFraction } from "@/engine/core/fmt";
 import { issuedNoteLine } from "@/engine/project/drawingData";
 import { generateNotes, hardwareSchedule, type AnyResult, type Project, type ProjectDesign } from "@/engine/project";
@@ -267,7 +268,7 @@ function materialsOf(r: AnyResult, c: { fc: number; fy: number }): [string, stri
       return [["Structural steel", `${r.shape.name}: ${r.gradeLabel}`]];
     case "basePlate":
       return [
-        ["Structural steel", `Base plate: ${r.input.plate.grade}, F_y = ${fmt(r.FyPlate / 1000, 0)} ksi`],
+        ["Structural steel", `Base plate: ${steelGrade(r.input.plate.grade).label}, F_y = ${fmt(r.FyPlate, 0)} ksi`],
         ["Anchor rods", r.rodSteel.label],
       ];
     case "cfsWall":

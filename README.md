@@ -68,6 +68,16 @@ AI extraction needs an Anthropic API key set as `ANTHROPIC_API_KEY` in the envir
 | Cold-formed steel | CS-# stud walls (optional): allowables from the manufacturer / SSMA table, demands, AISI S100-16 H1.2 with B₁ amplification, deflection |
 | Sign-off | SIGNOFF.md — release checklist; items for the Engineer of Record are listed there |
 
+## Review additions (engine 1.0.1-wip.17)
+
+| Area | Included |
+|---|---|
+| Report fixes | Criteria-sheet ASD combinations follow the cycle's ASCE 7 edition (0.7S under 7-22); S_DS no longer garbled in relabelled combinations; pre-release (wip) builds print "pre-release build"; materials table by category (wood, concrete, steel, anchor rods, masonry, CFS); q_h / q_h K_d wording; ASCE 7-22 Table 26.11-1 exposure constants for K_z |
+| Snow | Unbalanced gable surcharge for W > 20 ft (rafters, trusses); snow drift loads at roof steps (§7.7) and parapets / projections (§7.8) on joists, I-joists, beams, steel beams and walls; ASCE 7-22 W_2 input |
+| Shear walls | Perforated shear walls (SDPWS-2021 4.3.3.5): C_o, v_max, chord / hold-down forces, uplift between hold-downs, nominal shear limit, deflection / C_o |
+| Lateral | ASCE 7 Ch. 27 Part 1 directional MWFRS option; semi-rigid diaphragm distribution (Timoshenko beam on wall-line springs, diaphragm G_a per story) |
+| Serviceability / fire | Optional floor vibration check on FJ / IJ (f ≥ 15 Hz, Dolan et al. 1999 — guidance); NDS Ch. 16 calculated fire resistance for exposed beams and posts |
+
 ## Use
 
 ```bash

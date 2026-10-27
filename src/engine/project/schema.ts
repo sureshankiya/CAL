@@ -53,6 +53,8 @@ export const driftLoadSchema = z.object({
   dir: z.enum(["right", "left"]),
 });
 
+export const fireSchema = z.object({ hours: pos, sides: z.union([z.literal(3), z.literal(4)]) });
+
 export const extraLoadSchema = z.object({
   kind: z.enum(["line", "point", "drift"]),
   type: loadTypeSchema,
@@ -124,6 +126,7 @@ export const joistSpecSchema = z.object({
   wetService: z.boolean().optional(),
   incised: z.boolean().optional(),
   addSelfWeight: z.boolean().optional(),
+  vibration: z.boolean().optional(),
 });
 
 export const rafterSpecSchema = z.object({
@@ -189,6 +192,7 @@ export const ijoistSpecSchema = z.object({
   deflection: deflectionSchema,
   Kcr: pos.optional(),
   addSelfWeight: z.boolean().optional(),
+  vibration: z.boolean().optional(),
   cdOverride: pos.optional(),
 });
 
@@ -250,6 +254,8 @@ export const beamSpecSchema = z.object({
   wetService: z.boolean().optional(),
   incised: z.boolean().optional(),
   crOverride: pos.optional(),
+  /** calculated fire resistance, NDS Ch. 16 */
+  fire: fireSchema.optional(),
 });
 
 export const studPackSchema = z.object({
@@ -316,6 +322,8 @@ export const postSpecSchema = z.object({
   selfWeight: z.boolean(),
   wetService: z.boolean().optional(),
   incised: z.boolean().optional(),
+  /** calculated fire resistance, NDS Ch. 16 */
+  fire: fireSchema.optional(),
 });
 
 export const trussSpecSchema = z.object({

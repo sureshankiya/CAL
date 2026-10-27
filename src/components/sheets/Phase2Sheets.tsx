@@ -1208,11 +1208,12 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         expr={
           <>
             {rich(
-              s.overturning === "full"
-                ? `T = (V h − w_D b² / 2) / a, a = b − end-post thickness = ${f3(r.arm)} ft`
-                : `T = V h / b − w_D s / 2 (end-post tributary dead load), b = ${f3(r.arm)} ft`,
+              r.psw
+                ? `T = V h / (C_o ΣL_i) − w_D s / 2 (SDPWS Eq. 4.3-8, end-post tributary dead load), C_o ΣL_i = ${f3(r.psw.Co * r.psw.sumL)} ft; C = V h / (C_o ΣL_i) + w s / 2`
+                : s.overturning === "full"
+                  ? `T = (V h − w_D b² / 2) / a, a = b − end-post thickness = ${f3(r.arm)} ft; C = V h / a + w s / 2`
+                  : `T = V h / b − w_D s / 2 (end-post tributary dead load), b = ${f3(r.arm)} ft; C = V h / a + w s / 2`,
             )}
-            ; C = V h / a + w s / 2
           </>
         }
       />

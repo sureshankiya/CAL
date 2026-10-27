@@ -8,9 +8,10 @@
 import { memberLength, type BeamLoad } from "../analysis/beam";
 import { fmt } from "../core/fmt";
 import { loadVector, LOAD_TYPES, type LoadVector } from "../core/loads";
-import { designWoodBeam, type WoodBeamInput, type WoodBeamResult } from "../design/wood";
+import { designWoodBeam, governingCheck, type WoodBeamInput, type WoodBeamResult } from "../design/wood";
 import { firstPassing, maxPassing, maxPassingSpacing } from "../design/sizing";
 import type { Grade, Species } from "../data/sawn";
+import { vibrationCheck } from "../loads/vibration";
 import {
   extraToBeamLoads,
   loadAssumptions,
@@ -55,6 +56,8 @@ export interface JoistInput {
   incised?: boolean;
   /** member self weight added to the loads (default: carried by the assembly framing allowance) */
   addSelfWeight?: boolean;
+  /** floor vibration check (serviceability guidance, f ≥ 15 Hz) */
+  vibration?: boolean;
 }
 
 export interface JoistResult extends MemberResultBase {
@@ -160,6 +163,18 @@ export function designJoist(ctx: DesignContext, j: JoistInput): JoistResult {
       provenance: { kind: "default", source: "loads sheet" },
     });
 
+  if (j.vibration) {
+    const v = vibrationCheck(design.mat.E * design.mat.I, b.wDead, Math.max(...j.spans));
+    if (v) {
+      design.checks.push(v.check);
+      assumptions.push({
+        item: "Floor vibration",
+        value: v.expr,
+        provenance: { kind: "default", source: "Dolan et al. (1999) — guidance; not an IBC / NDS requirement" },
+      });
+    }
+  }
+
   let alternatives: JoistResult["alternatives"];
   if (!design.pass) {
     const runSize = (size: string) => designWoodBeam(toWoodInput(ctx, j, b.loads, size));
@@ -187,8 +202,8 @@ export function designJoist(ctx: DesignContext, j: JoistInput): JoistResult {
     kind: "joist",
     title: "Floor joist",
     callout: `${j.size} ${j.species} ${j.grade} @ ${fmt(j.spacing, j.spacing % 1 ? 1 : 0)} in. o.c.`,
-    pass: design.pass,
-    governing: design.governing,
+    pass: design.checks.every((c) => c.pass),
+    governing: j.vibration ? governingCheck(design.checks) : design.governing,
     checks: design.checks,
     reactions: reactionsFrom(design, j.spacing),
     loadLines: b.lines,
