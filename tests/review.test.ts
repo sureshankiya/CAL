@@ -383,3 +383,13 @@ describe("ASCE 7 §12.14 simplified alternative", () => {
     expect(designProject(p).lateralError).toMatch(/Risk Category/);
   });
 });
+
+import { parseUsgs } from "@/lib/usgs";
+
+describe("USGS seismic lookup parser", () => {
+  it("reads S_s, S_1, S_DS, S_D1 and SDC from response.data", () => {
+    const r = parseUsgs({ response: { data: { ss: 1.5, s1: 0.6, sds: 1.0, sd1: 0.6, sdc: "D" } } }, "u");
+    expect(r).toMatchObject({ ss: 1.5, s1: 0.6, sds: 1, sd1: 0.6, sdc: "D" });
+    expect(() => parseUsgs({ response: { data: { ss: 1.5 } } }, "u")).toThrow(/S_DS/);
+  });
+});

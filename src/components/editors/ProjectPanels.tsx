@@ -1,6 +1,7 @@
 /** Sidebar panels: project, criteria, dead-load assemblies, levels, and the member navigator. */
 
-import { CYCLE_LIST } from "@/engine/core/codes";
+import { CYCLE_LIST, getCycle } from "@/engine/core/codes";
+import { geocodeAddress, usgsSeismic, type SeismicLookup } from "@/lib/usgs";
 import { fmt } from "@/engine/core/fmt";
 import { DEAD_COMPONENTS, assemblySum } from "@/engine/loads/dead";
 import { CE_TABLE } from "@/engine/loads/snow";
@@ -116,6 +117,100 @@ export function ProjectInfoPanel({ p, set }: { p: Project; set: SetProject }) {
   );
 }
 
+/** S_DS / S_D1 from the USGS web service for the site, applied only when the engineer confirms. */
+function SeismicLookupFields({
+  p,
+  onApply,
+}: {
+  p: Project;
+  onApply: (s: { SDS: number; SD1: number; SDC?: string }) => void;
+}) {
+  const [address, setAddress] = useState(p.info.address ?? "");
+  const [lat, setLat] = useState<number | undefined>();
+  const [lon, setLon] = useState<number | undefined>();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [found, setFound] = useState<SeismicLookup | undefined>();
+  const run = async (f: () => Promise<void>) => {
+    setBusy(true);
+    setMsg("");
+    try {
+      await f();
+    } catch (e) {
+      setMsg(
+        `${e instanceof Error ? e.message : String(e)} (the service may be unreachable from this page — use the USGS web tool)`,
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Collapsible title="Look up S_DS / S_D1 (USGS)">
+      <Field label="Site address">
+        <TextInput value={address} onChange={setAddress} />
+      </Field>
+      <Grid cols={3}>
+        <Field label="Latitude">
+          <NumberInput value={lat} allowEmpty onChange={setLat} />
+        </Field>
+        <Field label="Longitude">
+          <NumberInput value={lon} allowEmpty onChange={setLon} />
+        </Field>
+        <div className="flex items-end gap-1">
+          <SmallButton
+            onClick={() =>
+              !busy &&
+              address.trim() &&
+              run(async () => {
+                const g = await geocodeAddress(address);
+                setLat(g.lat);
+                setLon(g.lon);
+                setMsg(`Matched: ${g.matched}`);
+              })
+            }
+          >
+            Find coordinates
+          </SmallButton>
+          <SmallButton
+            onClick={() =>
+              !busy &&
+              lat !== undefined &&
+              lon !== undefined &&
+              run(async () =>
+                setFound(
+                  await usgsSeismic(
+                    getCycle(p.cycleId).asce7,
+                    lat!,
+                    lon!,
+                    p.criteria.riskCategory,
+                    p.criteria.seismic.siteClass,
+                  ),
+                ),
+              )
+            }
+          >
+            Look up
+          </SmallButton>
+        </div>
+      </Grid>
+      {msg ? <Hint>{msg}</Hint> : null}
+      {found ? (
+        <div className="space-y-1 text-xs">
+          <div>
+            S<sub>s</sub> = {fmt(found.ss, 3)}, S<sub>1</sub> = {fmt(found.s1, 3)}, S<sub>DS</sub> = {fmt(found.sds, 3)}
+            , S<sub>D1</sub> = {fmt(found.sd1, 3)}
+            {found.sdc ? `, SDC ${found.sdc}` : ""} — {getCycle(p.cycleId).asce7}, Risk Category{" "}
+            {p.criteria.riskCategory}, Site Class {p.criteria.seismic.siteClass}
+          </div>
+          <SmallButton onClick={() => onApply({ SDS: found.sds, SD1: found.sd1, SDC: found.sdc })}>
+            Apply to the criteria
+          </SmallButton>
+        </div>
+      ) : null}
+    </Collapsible>
+  );
+}
+
 export function CriteriaPanel({ p, set }: { p: Project; set: SetProject }) {
   const c = p.criteria;
   const crit = (patch: Partial<Project["criteria"]>) => set((x) => ({ ...x, criteria: { ...x.criteria, ...patch } }));
@@ -228,6 +323,7 @@ export function CriteriaPanel({ p, set }: { p: Project; set: SetProject }) {
           <TextInput value={c.seismic.SDC} onChange={(v) => crit({ seismic: { ...c.seismic, SDC: v } })} />
         </Field>
       </Grid>
+      <SeismicLookupFields p={p} onApply={(s) => crit({ seismic: { ...c.seismic, ...s } })} />
       <Grid>
         <Field label="Soil bearing (psf)">
           <NumberInput
