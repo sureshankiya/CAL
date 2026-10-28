@@ -411,28 +411,47 @@ describe("DXF export of schedules and notes", () => {
   });
 });
 
-import { generalNotesSheet } from "@/engine/project";
+import { generalNotesSheet, lapSpliceTable, type S0Panel } from "@/engine/project";
 import { generalNotesDxf } from "@/lib/dxf";
 
-describe("S0.0 general notes sheet", () => {
-  it("assembles index, codes, criteria, notes, merged nailing, hardware and inspections from the project", () => {
+describe("S0 general notes sheet", () => {
+  it("lap splice schedule follows ACI 318-19 25.4.2.3 / 25.5.2 (matches the issued S0 table at 2500 psi)", () => {
+    expect(lapSpliceTable(2500, 60000)).toEqual([
+      ["A", "TOP", "24", "32", "39", "47", "69", "78"],
+      ["A", "BOTTOM", "18", "24", "30", "36", "53", "60"],
+      ["B", "TOP", "31", "41", "51", "61", "89", "102"],
+      ["B", "BOTTOM", "24", "32", "39", "47", "69", "78"],
+    ]);
+  });
+
+  it("panels in the engineer's format, generated from the project, on one sheet", () => {
     const p = exampleProject();
     p.drawingIndex = [
-      { number: "S0.0", title: "General notes" },
-      { number: "S1.0", title: "Foundation plan" },
+      { number: "S-0", title: "General notes" },
+      { number: "S-1", title: "Foundation plan" },
     ];
+    p.s0Notes = { "SITE DRAINAGE RECOMMENDATIONS": "**KEEP** WATER AWAY." };
     const g = generalNotesSheet(p, designProject(p));
     expect(g.index).toEqual([
-      ["S0.0", "General notes"],
-      ["S1.0", "Foundation plan"],
+      ["S-0", "GENERAL NOTES"],
+      ["S-1", "FOUNDATION PLAN"],
     ]);
-    expect(g.codes[0]).toMatch(/2025 CBC/);
-    expect(g.criteria.find(([k]) => k === "Seismic")![1]).toMatch(/S_DS = 1\.000/);
+    expect(g.sheetNo).toBe("S-0");
+    const panel = (t: string) => g.panels.find((x) => x.title === t)!;
+    const notes = (t: string) => (panel(t) as Extract<S0Panel, { kind: "notes" }>).lines;
+    expect(notes("SITE DRAINAGE RECOMMENDATIONS")).toEqual(["KEEP WATER AWAY."]);
+    expect(notes("CODES AND STANDARDS")[0]).toMatch(/^1\. 2025 CBC/);
+    const crit = panel("STRUCTURAL CRITERIA") as Extract<S0Panel, { kind: "criteria" }>;
+    const seis = crit.groups.find((x) => x.head.startsWith("SEISMIC"))!.rows;
+    expect(seis.find(([k]) => k === "SDS / SD1")![1]).toMatch(/^1\.000/);
     // shear walls with the same sheathing and nailing share one row
-    const sw = g.nailing.filter((r) => r[1].startsWith("Shear wall sheathing"));
+    const nail = panel("NAILING SCHEDULE - DESIGNED CONNECTIONS") as Extract<S0Panel, { kind: "table" }>;
+    const sw = nail.rows.filter((r) => r[1].startsWith("SHEAR WALL SHEATHING"));
     expect(sw.length).toBe(1);
     expect(sw[0][0]).toMatch(/1SW-1.*1SW-2/);
-    expect(g.hardware.some((r) => r[0].includes("HDU2"))).toBe(true);
+    const hw = panel("HARDWARE SCHEDULE") as Extract<S0Panel, { kind: "table" }>;
+    expect(hw.rows.some((r) => r[0].includes("HDU2"))).toBe(true);
+    expect((panel("SHEAR WALL SCHEDULE") as Extract<S0Panel, { kind: "table" }>).rows.length).toBeGreaterThan(0);
     const dxf = generalNotesDxf(g, {
       project: "P",
       address: "",
@@ -442,9 +461,9 @@ describe("S0.0 general notes sheet", () => {
       revision: "0",
       preparedBy: "",
     });
-    expect(dxf).toContain("GENERAL NOTES");
-    expect(dxf).toContain("S0.0");
+    expect(dxf).toContain("REINFORCED CONCRETE LAP SPLICE SCHEDULE");
     expect(dxf).toContain("FASTENING SCHEDULE - TYPICAL FRAMING");
+    expect(dxf).not.toContain("S-0.1"); // fits one sheet
     expect(dxf).not.toMatch(/\\U\+00A7/);
   });
 });

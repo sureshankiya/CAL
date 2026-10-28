@@ -162,11 +162,15 @@ function Index() {
 
   async function exportNotesSheet() {
     if (printBlocked()) return;
-    const name = reportFileName(deferred, "html").replace(/-calculations\.html$|\.html$/, "-S0.0-general-notes.dxf");
+    const sheet = generalNotesSheet(deferred, design);
+    const name = reportFileName(deferred, "html").replace(
+      /-calculations\.html$|\.html$/,
+      `-${sheet.sheetNo.replace(/[^\w.-]+/g, "")}-general-notes.dxf`,
+    );
     try {
       const { generalNotesDxf } = await import("@/lib/dxf");
       const i = deferred.info;
-      const text = generalNotesDxf(generalNotesSheet(deferred, design), {
+      const text = generalNotesDxf(sheet, {
         project: i.name,
         address: i.address,
         client: i.client,
@@ -372,7 +376,7 @@ function Index() {
               title="S0.0 general notes drawing sheet (ARCH D, 36 x 24): drawing index, codes, design criteria, notes, nailing, hardware and special inspections"
               onClick={exportNotesSheet}
             >
-              Export S0.0 notes sheet
+              Export S0 general notes sheet
             </button>
             <button type="button" onClick={handlePrint} className={primary}>
               Print / Save PDF

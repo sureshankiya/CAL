@@ -85,23 +85,36 @@ function wrap(s: string, n: number): string[] {
 
 class Writer {
   out: string[] = [];
-  text(layer: string, x: number, y: number, h: number, s: string) {
+  /** rot: degrees; center: x, y is the middle-centre of the text (TEXT 72 = 1, 73 = 2) */
+  text(layer: string, x: number, y: number, h: number, s: string, o: { rot?: number; center?: boolean } = {}) {
+    const at = [x.toFixed(4), y.toFixed(4)];
+    // width factor 0.85: wrapping assumes 0.9 h per character, which holds for txt.shx and romans.shx
     this.out.push(
       "0",
       "TEXT",
       "8",
       layer,
       "10",
-      x.toFixed(4),
+      at[0],
       "20",
-      y.toFixed(4),
+      at[1],
       "30",
       "0",
       "40",
       h.toFixed(4),
       "1",
       dxfText(s),
+      "41",
+      "0.85",
     );
+    if (o.rot) this.out.push("50", o.rot.toFixed(1));
+    if (o.center) this.out.push("72", "1", "73", "2", "11", at[0], "21", at[1], "31", "0");
+  }
+  rect(layer: string, x0: number, y0: number, x1: number, y1: number) {
+    this.line(layer, x0, y0, x1, y0);
+    this.line(layer, x1, y0, x1, y1);
+    this.line(layer, x1, y1, x0, y1);
+    this.line(layer, x0, y1, x0, y0);
   }
   line(layer: string, x1: number, y1: number, x2: number, y2: number) {
     this.out.push(
@@ -258,191 +271,273 @@ export interface SheetInfo {
   preparedBy: string;
 }
 
-/** ARCH D sheet, inches: border margin, title-block strip on the right, five note columns. */
-const SH = { w: 36, h: 24, m: 0.5, tb: 3, cols: 5, gutter: 0.3 };
+/**
+ * ARCH D sheet, inches, in the engineer's S0 format: four columns of boxed panels with a title
+ * bar, the drawing index at the top of the last column, title block in a strip on the right.
+ */
+const SH = { w: 36, h: 24, m: 0.5, tb: 2, cols: 4, gutter: 0.15, gap: 0.12 };
+const TOP = SH.h - SH.m - 0.25;
+const BOTTOM = SH.m + 0.25;
+const X0 = SH.m + 0.25;
+const CW = (SH.w - SH.m - SH.tb - 0.25 - X0 - (SH.cols - 1) * SH.gutter) / SH.cols;
+/** text heights tried, largest first: the largest that fits the sheet is used */
+const T_MAX = 0.14;
+const T_MIN = 0.07;
+/** advance width of an upper-case character of the STANDARD (txt.shx) font, × text height */
+const ADV = 0.9;
 
-class SheetFlow {
-  k = -1;
-  col = 0;
-  y = 0;
-  readonly cw: number;
-  readonly top = SH.h - SH.m - 0.35;
-  readonly bottom = SH.m + 0.35;
-  constructor(
-    private w: Writer,
-    private info: SheetInfo,
-    private title: string,
-  ) {
-    const usable = SH.w - 2 * SH.m - SH.tb - 0.5;
-    this.cw = (usable - (SH.cols - 1) * SH.gutter) / SH.cols;
-    this.sheet();
-  }
-  get ox() {
-    return this.k * (SH.w + 2);
-  }
-  x(col = this.col) {
-    return this.ox + SH.m + 0.25 + col * (this.cw + SH.gutter);
-  }
-  private sheet() {
-    this.k++;
-    this.col = 0;
-    this.y = this.top;
-    const { w } = this;
-    const o = this.ox;
-    const B = "S-ANNO-TTLB";
-    const [x0, x1, y0, y1] = [o + SH.m, o + SH.w - SH.m, SH.m, SH.h - SH.m];
-    w.line(B, x0, y0, x1, y0);
-    w.line(B, x1, y0, x1, y1);
-    w.line(B, x1, y1, x0, y1);
-    w.line(B, x0, y1, x0, y0);
-    const tx = x1 - SH.tb;
-    w.line(B, tx, y0, tx, y1);
-    const chars = Math.floor((SH.tb - 0.3) / CHAR_W);
-    let ty = y1 - 0.35;
-    const field = (label: string, value: string, h = H) => {
-      w.text(B, tx + 0.15, ty, 0.07, label.toUpperCase());
-      ty -= 0.18;
-      for (const s of wrap(value || "-", Math.floor(chars * (H / h)))) {
-        w.text(B, tx + 0.15, ty, h, s);
-        ty -= h * 1.6;
-      }
-      ty -= 0.12;
-      w.line(B, tx, ty + 0.06, x1, ty + 0.06);
-      ty -= 0.12;
-    };
-    field("Prepared by", this.info.preparedBy);
-    field("Project", this.info.project, 1.33 * H);
-    field("Address", this.info.address);
-    field("Client", this.info.client);
-    field("Job no.", this.info.jobRef);
-    field("Date", this.info.date);
-    field("Revision", this.info.revision);
-    // engineer's stamp
-    const s0 = ty - 2.7;
-    w.text(B, tx + 0.15, ty, 0.07, "ENGINEER'S STAMP");
-    w.line(B, tx + 0.15, ty - 0.15, x1 - 0.15, ty - 0.15);
-    w.line(B, x1 - 0.15, ty - 0.15, x1 - 0.15, s0);
-    w.line(B, x1 - 0.15, s0, tx + 0.15, s0);
-    w.line(B, tx + 0.15, s0, tx + 0.15, ty - 0.15);
-    // sheet title and number
-    w.line(B, tx, y0 + 1.6, x1, y0 + 1.6);
-    w.text(B, tx + 0.15, y0 + 1.35, 0.07, "SHEET TITLE");
-    w.text(B, tx + 0.15, y0 + 1.05, 0.16, this.title);
-    w.text(B, tx + 0.15, y0 + 0.7, 0.07, "SHEET");
-    w.text(B, tx + 0.15, y0 + 0.2, 0.4, `S0.${this.k}`);
-  }
-  /** room for h below the cursor, else the next column / sheet */
-  ensure(h: number): boolean {
-    if (this.y - h >= this.bottom) return false;
-    this.col++;
-    if (this.col >= SH.cols) this.sheet();
-    else this.y = this.top;
-    return true;
-  }
-  heading(t: string) {
-    this.ensure(4 * ROW);
-    if (this.y < this.top - 1e-6) this.y -= 0.5 * ROW;
-    const h = 1.33 * H;
-    this.w.text("S-ANNO-TTLB", this.x(), this.y - h, h, t.toUpperCase());
-    this.w.line("S-ANNO-TTLB", this.x(), this.y - h - 0.05, this.x() + t.length * 0.9 * h, this.y - h - 0.05);
-    this.y -= h + 2 * ROW * 0.6;
-  }
-  notes(items: string[], numbered = true) {
-    const chars = Math.floor(this.cw / CHAR_W);
-    items.forEach((it, i) => {
-      const tag = numbered ? `${i + 1}. ` : "";
-      const lines = wrap(it, chars - tag.length);
-      lines.forEach((s, k) => {
-        this.ensure(ROW);
-        this.w.text("S-ANNO-NOTE", this.x() + (k ? tag.length * CHAR_W : 0), this.y - H, H, k ? s : tag + s);
-        this.y -= ROW;
-      });
-      this.y -= 0.35 * ROW;
-    });
-  }
-  /** table across the column; fr = column width fractions */
-  table(head: string[], fr: number[], rows: string[][]) {
-    const L = "S-ANNO-SCHD";
-    const widths = fr.map((f) => f * this.cw);
-    const chars = widths.map((wd) => Math.max(3, Math.floor((wd - 2 * PAD) / CHAR_W)));
-    const row = (cells: string[], header: boolean) => {
-      const wrapped = cells.map((c, i) => wrap(c, chars[i]));
-      const h = Math.max(...wrapped.map((c) => c.length)) * ROW + 0.4 * ROW;
-      if (this.ensure(h) && !header) row(head, true);
-      const x0 = this.x();
-      const xs = [x0];
-      for (const wd of widths) xs.push(xs[xs.length - 1] + wd);
-      const top = this.y;
-      wrapped.forEach((c, i) =>
-        c.forEach((s, k) => this.w.text(L, xs[i] + PAD, top - ROW * (k + 1) + 0.2 * ROW, H, s)),
-      );
-      this.y -= h;
-      this.w.line(L, x0, top, xs[xs.length - 1], top);
-      this.w.line(L, x0, this.y, xs[xs.length - 1], this.y);
-      for (const xx of xs) this.w.line(L, xx, top, xx, this.y);
-      if (header) this.w.line(L, x0, this.y + 0.02, xs[xs.length - 1], this.y + 0.02);
-    };
-    row(head, true);
-    for (const r of rows) row(r, false);
-    this.y -= 0.5 * ROW;
-  }
+interface Row {
+  h: number;
+  draw(w: Writer, x: number, top: number): void;
+}
+interface Block {
+  title: string;
+  rows: Row[];
+  /** table header, repeated where the panel continues in the next column */
+  repeat: Row[];
+}
+interface Segment {
+  sheet: number;
+  col: number;
+  top: number;
+  bottom: number;
+  title: string;
+  rows: Row[];
 }
 
-/** S0.0 general notes sheet (continues on S0.1 … when the content overflows). */
-export function generalNotesDxf(g: GeneralNotesSheet, info: SheetInfo): string {
-  const w = new Writer();
-  const f = new SheetFlow(w, info, "GENERAL NOTES");
-  f.heading("Drawing index");
-  f.table(
-    ["Sheet", "Title"],
-    [0.22, 0.78],
-    g.index.map(([a, b]) => [a, b]),
-  );
-  f.heading("Codes and standards");
-  f.notes(g.codes);
-  f.heading("Structural design criteria");
-  f.table(
-    ["Item", "Design value"],
-    [0.36, 0.64],
-    g.criteria.map(([a, b]) => [a, b]),
-  );
-  for (const s of g.notes) {
-    f.heading(s.title);
-    f.notes(s.notes);
-  }
-  if (g.deferred.length) {
-    f.heading("Deferred submittals");
-    f.notes(g.deferred);
-  }
-  if (g.nailing.length) {
-    f.heading("Nailing schedule — designed connections");
-    f.table(["Mark", "Connection", "Fastener", "Spacing"], [0.13, 0.3, 0.3, 0.27], g.nailing);
-  }
-  f.heading("Fastening schedule — typical framing");
-  f.table(
-    ["Connection", "Fastener", "Location / spacing"],
-    [0.44, 0.27, 0.29],
-    g.typicalNailing.map((r) => [...r]),
-  );
-  f.notes(
-    [
-      "Common wire nails unless noted. Other fasteners permitted by IBC / CBC Table 2304.10.2 may be substituted as listed there. Scheduled connections on the plans and calculations govern.",
-    ],
-    false,
-  );
-  if (g.hardware.length) {
-    f.heading("Hardware schedule");
-    f.table(["Product", "Description", "Fasteners", "Location"], [0.24, 0.24, 0.24, 0.28], g.hardware);
-    f.notes(
-      [
-        "Install all connectors with the full number and size of fasteners listed by the manufacturer; substitutions require the engineer's approval.",
+function blocks(g: GeneralNotesSheet, t: number): Block[] {
+  const ls = 1.5 * t;
+  const pad = 0.6 * t;
+  const chars = (wd: number) => Math.max(3, Math.floor((wd - 2 * pad) / (ADV * t)));
+  const N = "S-ANNO-NOTE";
+  const S = "S-ANNO-SCHD";
+  const textRows = (s: string, after = 0.4 * t, layer = N): Row[] =>
+    wrap(s, chars(CW)).map((l, i, a) => ({
+      h: ls + (i === a.length - 1 ? after : 0),
+      draw: (w, x, top) => w.text(layer, x + pad, top - 1.15 * t, t, l),
+    }));
+  /** table row: cells wrapped in their columns, grid lines on the row */
+  const tableRow = (cells: string[], fr: number[], header = false): Row => {
+    const wd = fr.map((f) => f * CW);
+    const wrapped = cells.map((c, i) => wrap(c, chars(wd[i]) + 1));
+    const h = Math.max(...wrapped.map((c) => c.length)) * ls + 0.5 * t;
+    return {
+      h,
+      draw: (w, x, top) => {
+        let cx = x;
+        wrapped.forEach((c, i) => {
+          c.forEach((l, k) => w.text(S, cx + 0.6 * pad, top - 0.25 * t - 1.15 * t - k * ls, t, l));
+          if (i) w.line(S, cx, top, cx, top - h);
+          cx += wd[i];
+        });
+        w.line(S, x, top - h, x + CW, top - h);
+        if (header) w.line(S, x, top - h + 0.03, x + CW, top - h + 0.03);
+      },
+    };
+  };
+  const spacer = (h: number): Row => ({ h, draw: () => {} });
+  return g.panels.map((p): Block => {
+    if (p.kind === "notes")
+      return { title: p.title, rows: [spacer(pad), ...p.lines.flatMap((l) => textRows(l))], repeat: [] };
+    if (p.kind === "criteria")
+      return {
+        title: p.title,
+        repeat: [],
+        rows: [
+          spacer(pad),
+          ...p.groups.flatMap((gr) => [
+            ...wrap(gr.head, chars(CW)).map((l): Row => ({
+              h: ls,
+              draw: (w, x, top) => {
+                w.text(N, x + pad, top - 1.15 * t, t, l);
+                w.line(N, x + pad, top - 1.35 * t, x + pad + l.length * ADV * t, top - 1.35 * t);
+              },
+            })),
+            ...gr.rows.map(([a, b], i, all): Row => {
+              const la = wrap(a, chars(0.56 * CW));
+              const lb = wrap(b, chars(0.44 * CW));
+              const n = Math.max(la.length, lb.length);
+              return {
+                h: n * ls + (i === all.length - 1 ? 0.6 * t : 0),
+                draw: (w, x, top) => {
+                  la.forEach((l, k) => w.text(N, x + pad + 0.15, top - 1.15 * t - k * ls, t, l));
+                  lb.forEach((l, k) => w.text(N, x + 0.56 * CW, top - 1.15 * t - k * ls, t, l));
+                },
+              };
+            }),
+          ]),
+          ...p.foot.flatMap((l) => textRows(l)),
+        ],
+      };
+    const head = tableRow(p.head, p.widths, true);
+    const caption = p.caption
+      ? [
+          {
+            h: ls + 0.5 * t,
+            draw: (w: Writer, x: number, top: number) => {
+              w.text(S, x + CW / 2, top - (ls + 0.5 * t) / 2, t, p.caption!, { center: true });
+              w.line(S, x, top - ls - 0.5 * t, x + CW, top - ls - 0.5 * t);
+            },
+          },
+        ]
+      : [];
+    return {
+      title: p.title,
+      repeat: [...caption, head],
+      rows: [
+        ...caption,
+        head,
+        ...p.rows.map((r) => tableRow(r, p.widths)),
+        ...(p.foot?.length ? [spacer(pad), ...p.foot.flatMap((l) => textRows(l))] : []),
       ],
-      false,
-    );
+    };
+  });
+}
+
+/** Flows the panels down the columns; the drawing index sits at the top of the last column of the first sheet. */
+function layout(bs: Block[], t: number): Segment[] {
+  const hb = 2.4 * t;
+  const pad = 0.6 * t;
+  const segs: Segment[] = [];
+  const sum = (rs: Row[]) => rs.reduce((a, r) => a + r.h, 0);
+  const index = bs.find((b) => b.title === "DRAWING INDEX");
+  let indexBottom = TOP;
+  if (index) {
+    const h = hb + sum(index.rows) + pad;
+    segs.push({ sheet: 0, col: SH.cols - 1, top: TOP, bottom: TOP - h, title: index.title, rows: index.rows });
+    indexBottom = TOP - h - SH.gap;
   }
-  if (g.inspections.length) {
-    f.heading("Special inspections (IBC / CBC Ch. 17)");
-    f.table(["Item", "Type", "Members"], [0.5, 0.2, 0.3], g.inspections);
+  let col = 0;
+  const colTop = (c: number) => (c === SH.cols - 1 && index ? indexBottom : TOP);
+  let y = colTop(0);
+  for (const b of bs) {
+    if (b === index) continue;
+    let seg: Segment | undefined;
+    const close = () => {
+      if (!seg) return;
+      y -= pad;
+      seg.bottom = y;
+      segs.push(seg);
+      seg = undefined;
+    };
+    let cont = false;
+    // a panel starts in a column only with its first few rows (no title stranded at the foot)
+    const lead = sum(b.rows.slice(0, 6));
+    for (const r of b.rows) {
+      const head = seg ? 0 : hb + (cont ? sum(b.repeat) : lead - r.h);
+      if (y - head - r.h - pad < BOTTOM) {
+        close();
+        col++;
+        y = colTop(col);
+      }
+      if (!seg) {
+        seg = {
+          sheet: Math.floor(col / SH.cols),
+          col: col % SH.cols,
+          top: y,
+          bottom: y,
+          title: cont ? `${b.title} (CONT.)` : b.title,
+          rows: cont ? [...b.repeat] : [],
+        };
+        y -= hb + (cont ? sum(b.repeat) : 0);
+        cont = true;
+      }
+      if (b.repeat.includes(r) && seg.rows.includes(r)) continue;
+      seg.rows.push(r);
+      y -= r.h;
+    }
+    close();
+    y -= SH.gap;
+  }
+  // the last panel of each column runs to the bottom of the column: no blank space under it
+  const last = new Map<string, Segment>();
+  for (const s of segs) last.set(`${s.sheet}:${s.col}`, s);
+  for (const s of last.values()) s.bottom = BOTTOM;
+  return segs;
+}
+
+function titleBlock(w: Writer, ox: number, info: SheetInfo, sheetNo: string) {
+  const B = "S-ANNO-TTLB";
+  const x1 = ox + SH.w - SH.m;
+  const x0 = x1 - SH.tb;
+  const xl = x0 + 0.1;
+  const wd = SH.tb - 0.2;
+  w.rect(B, ox + SH.m, SH.m, x1, SH.h - SH.m);
+  w.line(B, x0, SH.m, x0, SH.h - SH.m);
+  let y = SH.h - SH.m;
+  const box = (h: number, label: string, fill: (top: number, bottom: number) => void) => {
+    const bottom = y - h;
+    if (label) w.text(B, xl, y - 0.14, 0.07, label);
+    fill(y, bottom);
+    w.line(B, x0, bottom, x1, bottom);
+    y = bottom;
+  };
+  const lines = (s: string, h: number, top: number) =>
+    wrap(s || "-", Math.floor(wd / (ADV * h))).forEach((l, k) => w.text(B, xl, top - k * 1.5 * h, h, l));
+  box(0.55, "DATE ISSUED", (top) => w.text(B, x0 + SH.tb / 2, top - 0.36, 0.12, info.date || "-", { center: true }));
+  box(1.55, "", (top, bottom) => {
+    const cols = [0, 0.3, 0.9, 1.65, SH.tb];
+    const heads = ["NO.", "DATE", "REVISION", "BY"];
+    heads.forEach((s, i) => w.text(B, x0 + (cols[i] + cols[i + 1]) / 2, top - 0.12, 0.07, s, { center: true }));
+    for (let r = top - 0.24; r > bottom + 0.01; r -= 0.26) w.line(B, x0, r, x1, r);
+    for (const c of cols.slice(1, -1)) w.line(B, x0 + c, top, x0 + c, bottom);
+    if (info.revision && info.revision !== "0") {
+      w.text(B, x0 + 0.15, top - 0.42, 0.08, info.revision, { center: true });
+      w.text(B, x0 + 0.6, top - 0.42, 0.07, info.date, { center: true });
+    }
+  });
+  box(1.3, "PREPARED BY", (top) => lines(info.preparedBy, 0.1, top - 0.38));
+  box(1.9, "PLAN CHECK / PERMIT", () => {});
+  box(2.5, "ENGINEER'S STAMP", () => {});
+  const rest = y - (SH.m + 2.9);
+  box(rest, "", (_top, bottom) => {
+    // job address and client, read from the bottom as on the issued sheets
+    const xs = [xl + 0.12, xl + 0.6, xl + 1.15, xl + 1.55];
+    w.text(B, xs[0], bottom + 0.2, 0.09, "PREPARED FOR", { rot: 90 });
+    w.text(B, xs[1], bottom + 0.2, 0.3, info.project || "-", { rot: 90 });
+    w.text(B, xs[2], bottom + 0.2, 0.22, info.address || "-", { rot: 90 });
+    w.text(B, xs[3], bottom + 0.2, 0.12, info.client ? `CLIENT: ${info.client}` : "", { rot: 90 });
+  });
+  box(0.75, "SHEET TITLE", (top) => w.text(B, x0 + SH.tb / 2, top - 0.48, 0.16, "GENERAL NOTES", { center: true }));
+  box(1.15, "", (top) => {
+    [
+      ["DATE", info.date],
+      ["SCALE", "AS NOTED"],
+      ["DRAWN BY", info.preparedBy],
+      ["JOB NO.", info.jobRef],
+    ].forEach(([k, v], i) => {
+      w.text(B, xl, top - 0.22 - i * 0.26, 0.07, k);
+      w.text(B, xl + 0.7, top - 0.22 - i * 0.26, 0.08, (v || "-").slice(0, 16));
+      w.line(B, xl + 0.65, top - 0.26 - i * 0.26, x1 - 0.1, top - 0.26 - i * 0.26);
+    });
+  });
+  w.text(B, xl, y - 0.14, 0.07, "SHEET NUMBER");
+  w.text(B, x0 + SH.tb / 2, SH.m + 0.75, 0.55, sheetNo, { center: true });
+}
+
+/** S0 general notes sheet; content that does not fit one sheet at the smallest text height continues on further sheets. */
+export function generalNotesDxf(g: GeneralNotesSheet, info: SheetInfo): string {
+  let t = T_MAX;
+  let segs = layout(blocks(g, t), t);
+  while (t > T_MIN + 1e-9 && segs.some((s) => s.sheet > 0)) {
+    t = Math.max(T_MIN, t - 0.0025);
+    segs = layout(blocks(g, t), t);
+  }
+  const w = new Writer();
+  const hb = 2.4 * t;
+  const sheets = Math.max(...segs.map((s) => s.sheet)) + 1;
+  for (let k = 0; k < sheets; k++) titleBlock(w, k * (SH.w + 2), info, k ? `${g.sheetNo}.${k}` : g.sheetNo);
+  for (const s of segs) {
+    const x = s.sheet * (SH.w + 2) + X0 + s.col * (CW + SH.gutter);
+    const L = "S-ANNO-TTLB";
+    w.rect(L, x, s.bottom, x + CW, s.top);
+    w.line(L, x, s.top - hb, x + CW, s.top - hb);
+    w.text(L, x + CW / 2, s.top - hb / 2, 1.25 * t, s.title, { center: true });
+    let y = s.top - hb;
+    for (const r of s.rows) {
+      r.draw(w, x, y);
+      y -= r.h;
+    }
   }
   return [
     "0",

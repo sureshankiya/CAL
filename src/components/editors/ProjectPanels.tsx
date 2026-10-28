@@ -8,6 +8,7 @@ import { CE_TABLE } from "@/engine/loads/snow";
 import { SOIL_CLASSES, soilClass } from "@/engine/data/soil";
 import { HARDWARE_KIND_LABEL, defaultHardware, type HardwareItem, type HardwareKind } from "@/engine/data/hardware";
 import { SEISMIC_SYSTEMS } from "@/engine/loads/seismic";
+import { S0_PANELS, S0_TEMPLATE } from "@/engine/data/s0Template";
 import { defaultLateral, generateWeights, type LateralSpec, type WallLineOpening } from "@/engine/project";
 import {
   NEW_MEMBER_LABEL,
@@ -73,7 +74,39 @@ function DrawingIndexEditor({ p, set }: { p: Project; set: SetProject }) {
           <span />
         )}
       </Grid>
-      <Hint>Printed on the S0.0 general notes sheet. Empty: the index lists S0.0 only.</Hint>
+      <Hint>Printed on the S0 general notes sheet. Empty: the index lists S-0 only.</Hint>
+    </Collapsible>
+  );
+}
+
+/** The engineer's standard S0 note text, editable per project (an edited panel is stored in project.s0Notes). */
+function S0NotesEditor({ p, set }: { p: Project; set: SetProject }) {
+  const [key, setKey] = useState(S0_PANELS[0]);
+  const own = p.s0Notes?.[key];
+  const put = (v: string | undefined) =>
+    set((x) => {
+      const next = { ...x.s0Notes };
+      if (v === undefined) delete next[key];
+      else next[key] = v;
+      return { ...x, s0Notes: Object.keys(next).length ? next : undefined };
+    });
+  return (
+    <Collapsible title={`S0 general notes text (${Object.keys(p.s0Notes ?? {}).length} edited)`}>
+      <Select
+        value={key}
+        options={S0_PANELS.map((k) => ({ value: k, label: `${k}${p.s0Notes?.[k] !== undefined ? " (edited)" : ""}` }))}
+        onChange={setKey}
+      />
+      <textarea
+        className={`${inputCls} h-48 font-mono text-[11px]`}
+        value={own ?? S0_TEMPLATE[key]}
+        onChange={(e) => put(e.target.value)}
+      />
+      {own !== undefined ? <SmallButton onClick={() => put(undefined)}>Reset to standard text</SmallButton> : null}
+      <Hint>
+        One note per line. {"{FC}"} = concrete f&apos;c, {"{ASCE}"} = ASCE 7 edition, {"{FLOOR_JOISTS}"} = floor joist
+        callouts (line dropped when there are none).
+      </Hint>
     </Collapsible>
   );
 }
@@ -146,6 +179,7 @@ export function ProjectInfoPanel({ p, set }: { p: Project; set: SetProject }) {
         />
       </Field>
       <DrawingIndexEditor p={p} set={set} />
+      <S0NotesEditor p={p} set={set} />
       {p.importLog?.length ? (
         <Collapsible title={`Drawing import — open items (${p.importLog.length}, not printed)`}>
           <ul className="list-disc space-y-1 pl-4 text-xs">

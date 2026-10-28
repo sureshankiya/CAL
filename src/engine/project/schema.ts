@@ -1157,6 +1157,8 @@ export const projectSchema = z.object({
   hardware: z.array(hardwareItemSchema).default([]),
   /** drawing index for the general notes sheet (sheet number, title) */
   drawingIndex: z.array(z.object({ number: z.string(), title: z.string() })).optional(),
+  /** S0 sheet: per-panel replacement of the standard note text (data/s0Template.ts), keyed by panel title */
+  s0Notes: z.record(z.string()).optional(),
   lateral: lateralSchema.optional(),
   drawings: z.array(drawingSchema).default([]),
   review: z.array(reviewItemSchema).default([]),
