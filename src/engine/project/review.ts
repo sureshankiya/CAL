@@ -87,6 +87,8 @@ export function targetFields(m: MemberSpec): TargetField[] {
         { field: "b", label: "Segment length (ft)", numeric: true },
         { field: "h", label: "Wall height (ft)", numeric: true },
       ];
+    case "shearPanel":
+      return [...common, { field: "h", label: "Wall height (ft)", numeric: true }];
     case "steelBeam":
       return [...common, ...spans(m.spans.length), { field: "shape", label: "Steel shape", numeric: false }];
     case "steelColumn":
@@ -124,6 +126,15 @@ export function targetFields(m: MemberSpec): TargetField[] {
         { field: "span", label: "Truss span (ft)", numeric: true },
         { field: "pitch", label: "Pitch (in/12)", numeric: true },
         { field: "spacing", label: "Spacing (in)", numeric: true },
+      ];
+    case "steelTruss":
+      return [
+        ...common,
+        { field: "span", label: "Truss span (ft)", numeric: true },
+        { field: "rise", label: "Rise (ft)", numeric: true },
+        { field: "spacing", label: "Spacing (ft)", numeric: true },
+        { field: "sections.TC.shape", label: "Top chord shape", numeric: false },
+        { field: "sections.BC.shape", label: "Bottom chord shape", numeric: false },
       ];
     case "holdownFooting":
       return [

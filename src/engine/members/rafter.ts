@@ -221,6 +221,21 @@ function build(ctx: DesignContext, r: RafterInput): Built {
         ref: snow.refs.ps,
       });
     }
+    const sur = r.gable ? snow.unbalanced.surcharge : undefined;
+    if (sur) {
+      // conservative: the leeward surcharge is added to the governing uniform snow case
+      const ws = sur.pd * trib * cos * cos;
+      const x1 = Math.max(total - sur.length / cos, 0);
+      loads.push({ type: "S", kind: "udl", x1, x2: total, w1: ws, label: "Snow drift surcharge" });
+      lines.push({
+        type: "S",
+        label: `Snow — unbalanced drift surcharge, ${fmt(sur.length, 2)} ft (horizontal) from the ridge: ${snow.unbalanced.note}`,
+        expr: `${fmt(sur.pd, 2)} psf × ${fmt(trib, 3)} ft × cos²(${ang}) from ${fmt(x1, 2)} ft to ${fmt(total, 2)} ft`,
+        value: ws,
+        unit: "plf",
+        ref: snow.refs.unbal,
+      });
+    }
   }
   if (r.windPressure) {
     const w = r.windPressure * trib;

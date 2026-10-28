@@ -23,6 +23,7 @@ import { fromDefault, type AssumptionEntry } from "../core/provenance";
 import {
   buildParallelChord,
   buildTruss,
+  type CustomLayout,
   type MemberGroup,
   type TrussGeometry,
   type TrussType,
@@ -62,7 +63,9 @@ export interface WoodTrussInput {
   id: string;
   mark: string;
   description: string;
-  type: Exclude<TrussType, "custom">;
+  type: TrussType;
+  /** type "custom": joints and members (TrussCalc custom truss builder) */
+  customLayout?: CustomLayout;
   span: number;
   /** pitched trusses: rise per 12 */
   pitch: number;
@@ -196,12 +199,73 @@ function nodal(g: TrussGeometry, ids: number[], q: (x: number) => number, out: N
   });
 }
 
+/** TrussCalc custom-layout rules (truss-model.ts); the first broken rule, or undefined. */
+export function customLayoutError(layout: CustomLayout | undefined, span: number): string | undefined {
+  if (!layout || layout.nodes.length < 4 || layout.nodes.length > 20) return "Use 4–20 joints in the custom truss.";
+  const { nodes, members } = layout;
+  if (members.length !== 2 * nodes.length - 3)
+    return "A pin-jointed truss needs exactly 2 × joints − 3 members; add or remove a member.";
+  if (nodes.some((n) => !Number.isFinite(n.x) || !Number.isFinite(n.y) || n.x < 0 || n.x > span || n.y < 0 || n.y > 30))
+    return "Joint coordinates must be within the span and 0–30 ft above the bearings.";
+  if (
+    members.some(
+      ({ a, b }) =>
+        a < 0 ||
+        b < 0 ||
+        a >= nodes.length ||
+        b >= nodes.length ||
+        a === b ||
+        Math.hypot(nodes[a].x - nodes[b].x, nodes[a].y - nodes[b].y) < 0.05,
+    )
+  )
+    return "Each member must connect two distinct, separated joints.";
+  if (new Set(members.map(({ a, b }) => [a, b].sort((x, y) => x - y).join("-"))).size !== members.length)
+    return "Duplicate member connections are not allowed.";
+  const idx = nodes.map((n, i) => ({ ...n, i }));
+  const top = idx.filter((n) => n.top).sort((a, b) => a.x - b.x);
+  const bottom = idx.filter((n) => n.bottom).sort((a, b) => a.x - b.x);
+  const hasLink = (a: number, b: number, group: string) =>
+    members.some((m) => m.group === group && ((m.a === a && m.b === b) || (m.a === b && m.b === a)));
+  if (
+    top.length < 2 ||
+    bottom.length < 3 ||
+    Math.abs(top[0].x) > 0.01 ||
+    Math.abs(top[top.length - 1].x - span) > 0.01 ||
+    Math.abs(bottom[0].x) > 0.01 ||
+    Math.abs(bottom[bottom.length - 1].x - span) > 0.01 ||
+    bottom[0].y !== 0 ||
+    bottom[bottom.length - 1].y !== 0
+  )
+    return "Mark roof and bottom joints across the full span, with bearings at (0, 0) and (span, 0).";
+  if (nodes.some((n, i) => nodes.some((o, j) => i !== j && Math.hypot(n.x - o.x, n.y - o.y) < 0.05)))
+    return "Joints must have distinct coordinates.";
+  if (top.slice(1, -1).some((n) => n.y < 0.1)) return "Interior roof joints must have a positive rise.";
+  if (
+    top.some((n, i) => i > 0 && (n.x <= top[i - 1].x || !hasLink(top[i - 1].i, n.i, "TC"))) ||
+    bottom.some((n, i) => i > 0 && (n.x <= bottom[i - 1].x || !hasLink(bottom[i - 1].i, n.i, "BC")))
+  )
+    return "Connect consecutive roof joints as top chords and consecutive lower joints as bottom chords.";
+  try {
+    solveTruss(
+      buildTruss("custom", span, 0, 0, layout),
+      nodes.map(() => ({ fx: 0, fy: -1 })),
+    );
+  } catch {
+    return "Truss is unstable: triangulate the web and connect every joint to the supports.";
+  }
+  return undefined;
+}
+
 export function designWoodTruss(ctx: DesignContext, t: WoodTrussInput): WoodTrussResult {
   const nds = ndsOf(ctx);
   const parallel = t.type === "parallel";
+  if (t.type === "custom") {
+    const err = customLayoutError(t.customLayout, t.span);
+    if (err) throw new Error(`Custom truss: ${err}`);
+  }
   const g = parallel
     ? buildParallelChord(t.span, t.depth ?? 2.5, t.panels ?? 8, t.pattern ?? "warren", t.overhang)
-    : buildTruss(t.type, t.span, t.pitch, t.overhang);
+    : buildTruss(t.type, t.span, t.pitch, t.overhang, t.customLayout);
   const mat = (l: TrussLumber) =>
     resolveWood({ kind: "sawn", species: l.species, grade: l.grade, size: l.size, plies: 1 }, nds);
   const mats = { TC: mat(t.tc), BC: mat(t.bc), WEB: mat(t.web) };
@@ -278,6 +342,15 @@ export function designWoodTruss(ctx: DesignContext, t: WoodTrussInput): WoodTrus
         unit: "plf",
         ref: sn.refs.unbal,
       });
+    if (unbal?.surcharge)
+      lines.push({
+        type: "S",
+        label: "Snow, unbalanced drift surcharge (leeward, from the ridge)",
+        expr: `${fmt(unbal.surcharge.pd, 2)} psf × ${fmt(trib, 3)} ft over ${fmt(unbal.surcharge.length, 2)} ft — ${unbal.note}`,
+        value: unbal.surcharge.pd * trib,
+        unit: "plf",
+        ref: sn.refs.unbal,
+      });
   }
   if (wW)
     lines.push({
@@ -306,7 +379,15 @@ export function designWoodTruss(ctx: DesignContext, t: WoodTrussInput): WoodTrus
   nodal(g, bcIds, () => wL, cases.L);
   nodal(g, tcIds, () => wLr, cases.Lr);
   nodal(g, tcIds, () => wS, cases.S);
-  if (unbal) nodal(g, tcIds, (x) => (x < t.span / 2 ? unbal.windward : unbal.leeward) * trib, cases.Su);
+  const sur = unbal?.surcharge;
+  if (unbal)
+    nodal(
+      g,
+      tcIds,
+      (x) =>
+        (x < t.span / 2 ? unbal.windward : unbal.leeward + (sur && x <= t.span / 2 + sur.length ? sur.pd : 0)) * trib,
+      cases.Su,
+    );
   nodal(g, tcIds, () => wW, cases.W, +1);
   let self = 0;
   for (const m of g.members) {
@@ -319,7 +400,7 @@ export function designWoodTruss(ctx: DesignContext, t: WoodTrussInput): WoodTrus
   if (g.overhang > 0) {
     const tailSelf = mats.TC.selfWeight * ohSlope;
     self += 2 * tailSelf;
-    const ends = parallel ? [tcIds[0], tcIds[tcIds.length - 1]] : [g.supportLeft, g.supportRight];
+    const ends = [tcIds[0], tcIds[tcIds.length - 1]];
     for (const id of ends) {
       cases.D[id].fy -= wD * g.overhang + tailSelf;
       cases.Lr[id].fy -= wLr * g.overhang;
@@ -791,7 +872,9 @@ export function designWoodTruss(ctx: DesignContext, t: WoodTrussInput): WoodTrus
     ? `${t.panels ?? 8}-panel parallel-chord (${t.pattern ?? "warren"})`
     : t.type === "king-queen"
       ? "king + queen post"
-      : t.type;
+      : t.type === "custom"
+        ? `custom (${g.nodes.length} joints, ${g.members.length} members)`
+        : t.type;
   return {
     id: t.id,
     mark: t.mark,

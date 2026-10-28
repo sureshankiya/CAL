@@ -13,6 +13,7 @@ import type {
   Project,
   RafterSpec,
   ShearWallSpec,
+  ShearPanelSpec,
   TrussSpec,
   WallSpec,
   SteelBeamSpec,
@@ -29,6 +30,7 @@ import type {
   HoldownFootingSpec,
   TieInSpec,
   WoodTrussSpec,
+  SteelTrussSpec,
 } from "./schema";
 import { zeroLoads } from "../core/loads";
 
@@ -48,6 +50,7 @@ export type NewMemberKind =
   | "pad"
   | "shearWall"
   | "ftaoWall"
+  | "shearPanel"
   | "roofDiaphragm"
   | "floorDiaphragm"
   | "transfer"
@@ -61,6 +64,7 @@ export type NewMemberKind =
   | "holdownFooting"
   | "tieIn"
   | "woodTruss"
+  | "steelTruss"
   | "retainingWall"
   | "guardPost"
   | "cfsWall";
@@ -81,6 +85,7 @@ export const NEW_MEMBER_LABEL: Record<NewMemberKind, string> = {
   pad: "Pad footing (PF)",
   shearWall: "Shear wall (SW)",
   ftaoWall: "Shear wall — force transfer around opening (SW)",
+  shearPanel: "Portal frame / prefabricated shear panel (SSW)",
   roofDiaphragm: "Roof diaphragm (RD)",
   floorDiaphragm: "Floor diaphragm (FD)",
   transfer: "Shear transfer connection (ST)",
@@ -94,6 +99,7 @@ export const NEW_MEMBER_LABEL: Record<NewMemberKind, string> = {
   holdownFooting: "Shear-wall / hold-down footing (HF)",
   tieIn: "Tie-in to existing concrete — dowels / adhesive anchors (TI)",
   woodTruss: "Wood truss — designed in HouseCalc (T)",
+  steelTruss: "Steel roof truss (STR)",
   retainingWall: "Cantilever retaining wall (RW)",
   guardPost: "Deck guard post (GP)",
   cfsWall: "Cold-formed steel stud wall (CS)",
@@ -322,6 +328,15 @@ export function newMemberSpec(p: Project, kind: NewMemberKind, structureId: stri
             }
           : {}),
       } satisfies ShearWallSpec;
+    case "shearPanel":
+      return {
+        kind: "shearPanel",
+        ...base,
+        lineId: p.lateral?.lines[0]?.id ?? "",
+        panelId: p.hardware.find((h) => h.kind === "panel")?.id ?? "",
+        count: 1,
+        h: 9,
+      } satisfies ShearPanelSpec;
     case "roofDiaphragm":
     case "floorDiaphragm": {
       const st = p.lateral?.stories ?? [];
@@ -551,6 +566,38 @@ export function newMemberSpec(p: Project, kind: NewMemberKind, structureId: stri
         joint: { type: "plate", value: 100, zone: 12, source: "truss plate manufacturer ESR — enter the value" },
         deflection: { preset: "custom", live: 360, total: 240 },
       } satisfies WoodTrussSpec;
+    case "steelTruss":
+      return {
+        kind: "steelTruss",
+        ...base,
+        pattern: "pratt",
+        span: 60,
+        rise: 8,
+        chordDepth: 4,
+        overhang: 0,
+        panels: 8,
+        spacing: 6,
+        method: "LRFD",
+        sections: {
+          TC: { shape: "HSS8x4x3/8", grade: "A500C" },
+          BC: { shape: "HSS4x4x1/4", grade: "A500C" },
+          EV: { shape: "HSS4x4x1/4", grade: "A500C" },
+          V: { shape: "HSS3x3x3/16", grade: "A500C" },
+          D: { shape: "HSS3x3x3/16", grade: "A500C" },
+        },
+        topBracing: 0,
+        bottomBracing: 0,
+        roofDead: roofDead ? { assemblyId: roofDead } : { psf: 15, basis: "sloped" },
+        ceilingDead: { psf: 0 },
+        roofLive: true,
+        snow: p.criteria.snow.pg > 0,
+        windDown: 0,
+        windUplift: 0,
+        selfWeight: true,
+        netArea: 1,
+        U: 1,
+        deflection: { preset: "roof-no-ceiling" },
+      } satisfies SteelTrussSpec;
     case "retainingWall":
       return {
         kind: "retainingWall",
@@ -641,6 +688,7 @@ export function supportCount(m: MemberSpec): number {
   switch (m.kind) {
     case "rafter":
     case "woodTruss":
+    case "steelTruss":
       return 2;
     case "truss":
       return m.bearings.length;
@@ -658,6 +706,7 @@ export function supportCount(m: MemberSpec): number {
     case "tieIn":
     case "retainingWall":
     case "guardPost":
+    case "shearPanel":
       return 0;
     case "cfsWall":
       return 1;
@@ -679,6 +728,8 @@ export function supportLabels(m: MemberSpec): string[] {
       return ["Plate", "Ridge"];
     case "woodTruss":
       return ["Left heel (line)", "Right heel (line)"];
+    case "steelTruss":
+      return ["Left bearing", "Right bearing"];
     case "truss":
       return m.bearings.map((b) => b.name);
     case "wall":

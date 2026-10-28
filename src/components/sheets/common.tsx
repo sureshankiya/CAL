@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { getCycle, type CodeCycle } from "@/engine/core/codes";
-import { VERSION_LOCKED, softwareText } from "@/engine/version";
+import { PRERELEASE, VERSION_LOCKED, softwareText } from "@/engine/version";
 import { fmt } from "@/engine/core/fmt";
 import { TABLES } from "@/engine/data/library";
 import type { Project } from "@/engine/project";
@@ -104,7 +104,7 @@ export function DesignBasis({
       <TR
         desc="Engine / data library"
         expr={
-          VERSION_LOCKED ? (
+          VERSION_LOCKED && !PRERELEASE ? (
             softwareText(c.id)
           ) : final ? (
             softwareText(c.id).replace(/; UNLOCKED build — not for issue$/, "")

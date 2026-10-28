@@ -8,8 +8,18 @@
  */
 
 import { memberLength, type BeamLoad } from "../analysis/beam";
-import { fmtInFraction } from "../core/fmt";
-import { designWoodBeam, type WoodBeamInput, type WoodBeamResult, type WoodMaterial } from "../design/wood";
+import { fmt, fmtInFraction } from "../core/fmt";
+import { fromDefault } from "../core/provenance";
+import { fireBeam, type FireInput } from "../design/fire";
+import { openingChecks, type MemberOpening } from "../design/openings";
+import { plyConnection, type PlyConnectionInput } from "../design/plies";
+import {
+  designWoodBeam,
+  governingCheck,
+  type WoodBeamInput,
+  type WoodBeamResult,
+  type WoodMaterial,
+} from "../design/wood";
 import { firstPassing } from "../design/sizing";
 import { GLULAM_WIDTHS, PSL_WIDTHS, SCL_DEPTHS, SCL_PLY_WIDTH, sawnSection } from "../data/sections";
 import { assemblyDesignValue } from "../loads/dead";
@@ -60,6 +70,12 @@ export interface BeamInput {
   wetService?: boolean;
   incised?: boolean;
   crOverride?: number;
+  /** calculated fire resistance of the exposed beam (NDS Ch. 16) */
+  fire?: FireInput;
+  /** built-up members: fastening between the plies */
+  plyConnection?: PlyConnectionInput;
+  /** notches and bored holes */
+  openings?: MemberOpening[];
 }
 
 export interface BeamResult extends MemberResultBase {
@@ -77,7 +93,7 @@ export function materialCallout(m: WoodMaterial): string {
 function build(ctx: DesignContext, b: BeamInput) {
   const total = memberLength({ spans: b.spans, leftCantilever: b.leftCantilever, rightCantilever: b.rightCantilever });
   const { loads, lines } = areaWallLoads(ctx, b.area, b.walls, total);
-  const ex = extraToBeamLoads(b.extra, total);
+  const ex = extraToBeamLoads(b.extra, total, ctx);
   loads.push(...ex.loads);
   lines.push(...ex.lines);
   return { total, loads, lines };
@@ -134,8 +150,45 @@ export function designBeam(ctx: DesignContext, b: BeamInput): BeamResult {
   const built = build(ctx, b);
   const design = designWoodBeam(woodInput(ctx, b, built.loads));
   const flags: string[] = [];
-  if (b.material.kind === "sawn" && b.material.plies > 1)
-    flags.push("Built-up plies fastened per the multi-ply connection schedule (Phase 2 check)");
+  if (b.fire) {
+    const gravity = design.combos.filter((r) => !r.combo.factors.W && !r.combo.factors.E);
+    const M = Math.max(0, ...gravity.map((r) => Math.max(r.Mpos, -r.Mneg)));
+    const fr = fireBeam(design.mat, b.fire, M, design.factors.leTop, design.factors.CV);
+    design.checks.push(fr.check);
+    design.assumptions.push(
+      fromDefault(
+        `Fire resistance ${fmt(b.fire.hours, 1)} h (NDS Ch. 16)`,
+        fr.lines.join("; "),
+        "NDS 16.2; Table 16.2.2",
+      ),
+    );
+    design.pass = design.checks.every((c) => c.pass);
+    design.governing = governingCheck(design.checks);
+    if (b.material.kind === "glulam")
+      flags.push(
+        "Glulam exposed on 3 sides: one core lamination replaced by an outer tension lamination per NDS 16.2.1 — specify on the drawings",
+      );
+    if (b.material.kind === "sawn" && b.material.plies > 1)
+      flags.push(
+        "Fire design of built-up members: plies through-bolted or the residual section taken per ply — VERIFY",
+      );
+  }
+  const plies = b.material.kind === "glulam" ? 1 : b.material.plies;
+  if (plies > 1 && b.plyConnection) {
+    const pc = plyConnection(design, design.mat, b.plyConnection);
+    design.checks.push(...pc.checks);
+    design.assumptions.push(fromDefault("Ply connection", `${pc.callout}; ${pc.lines.join("; ")}`, "NDS 12.3"));
+    flags.push(
+      `Plies fastened together with ${pc.callout}; concentrated side loads (hangers, girder trusses): through-bolt or fasten at each load per the manufacturer`,
+    );
+  } else if (plies > 1) flags.push("Built-up plies: fastening between plies not designed — enter the ply connection");
+  if (b.openings?.length) {
+    const op = openingChecks(design, b.openings);
+    design.checks.push(...op.checks);
+    for (const l of op.lines) design.assumptions.push(fromDefault("Notches and holes", l, "NDS 3.1.2, 3.4.3, 4.4.3"));
+  }
+  design.pass = design.checks.every((c) => c.pass);
+  design.governing = governingCheck(design.checks);
   if (b.material.kind === "scl") flags.push("SCL design values per manufacturer ESR — VERIFY");
   if (
     b.area.some(

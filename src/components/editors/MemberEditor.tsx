@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { LOAD_TYPES, type LoadType } from "@/engine/core/loads";
+import type { ExtraLoad } from "@/engine/members/common";
 import { NAILS } from "@/engine/design/dowel";
 import { GLULAM, SCL } from "@/engine/data/engineered";
 import { TJI_SERIES, tjiDepths } from "@/engine/data/ijoist";
@@ -20,6 +21,7 @@ import {
   type PostSpec,
   type Project,
   type ShearWallSpec,
+  type ShearPanelSpec,
   type TrussSpec,
   type WallSpec,
   type SteelBeamSpec,
@@ -33,11 +35,15 @@ import {
   type HoldownFootingSpec,
   type TieInSpec,
   type WoodTrussSpec,
+  type SteelTrussSpec,
   type RetainingWallSpec,
   type GuardPostSpec,
   type CfsWallSpec,
 } from "@/engine/project";
 import { C_SHAPES, HSS_NAMES, ROUND_NAMES, STEEL_GRADES, W_SHAPES, steelShape } from "@/engine/data/steel";
+import { buildTruss, type CustomLayout, type MemberGroup } from "@/engine/analysis/trussGeometry";
+import { customLayoutError } from "@/engine/members/woodTruss";
+import { STEEL_TRUSS_GROUPS, STEEL_TRUSS_PATTERNS } from "@/engine/members/steelTruss";
 import { DIAPHRAGM_ROWS } from "@/engine/data/diaphragm";
 import { SHEATHING, edgeSpacings, panel1532Shear } from "@/engine/data/sdpws";
 import { ANCHOR_STEELS } from "@/engine/design/anchors";
@@ -353,18 +359,28 @@ function DeflField({
   );
 }
 
-type Extra = {
-  kind: "line" | "point";
-  type: LoadType;
-  label: string;
-  w?: number;
-  x1?: number;
-  x2?: number;
-  P?: number;
-  x?: number;
+type Extra = Omit<ExtraLoad, "source">;
+
+const DRIFT_DEFAULT: NonNullable<Extra["drift"]> = {
+  case: "step",
+  luUpper: 30,
+  luLower: 20,
+  hr: 4,
+  rise: 0,
+  trib: 1.333,
+  dir: "right",
 };
 
-function ExtraLoadsEditor({ extra, onChange }: { extra: Extra[]; onChange: (e: Extra[]) => void }) {
+function ExtraLoadsEditor({
+  extra,
+  onChange,
+  drift,
+}: {
+  extra: Extra[];
+  onChange: (e: Extra[]) => void;
+  /** offer the snow drift load (members designed with the beam solver) */
+  drift?: boolean;
+}) {
   const set = (i: number, patch: Partial<Extra>) => onChange(extra.map((e, k) => (k === i ? { ...e, ...patch } : e)));
   return (
     <div className="space-y-2">
@@ -384,8 +400,16 @@ function ExtraLoadsEditor({ extra, onChange }: { extra: Extra[]; onChange: (e: E
               options={[
                 { value: "line", label: "Line (plf)" },
                 { value: "point", label: "Point (lb)" },
+                ...(drift || e.kind === "drift"
+                  ? [{ value: "drift" as const, label: "Snow drift (ASCE 7 §7.7 / 7.8)" }]
+                  : []),
               ]}
-              onChange={(v) => set(i, { kind: v })}
+              onChange={(v) =>
+                set(
+                  i,
+                  v === "drift" ? { kind: v, type: "S", drift: e.drift ?? DRIFT_DEFAULT, x: e.x ?? 0 } : { kind: v },
+                )
+              }
             />
             <Select
               value={e.type}
@@ -393,7 +417,9 @@ function ExtraLoadsEditor({ extra, onChange }: { extra: Extra[]; onChange: (e: E
               onChange={(v) => set(i, { type: v })}
             />
           </Grid>
-          {e.kind === "line" ? (
+          {e.kind === "drift" ? (
+            <DriftFields e={e} set={(patch) => set(i, patch)} />
+          ) : e.kind === "line" ? (
             <Grid cols={3}>
               <Field label="w (plf)">
                 <NumberInput value={e.w ?? 0} onChange={(v) => set(i, { w: v ?? 0 })} />
@@ -421,6 +447,57 @@ function ExtraLoadsEditor({ extra, onChange }: { extra: Extra[]; onChange: (e: E
         + Add line / point load
       </AddButton>
     </div>
+  );
+}
+
+function DriftFields({ e, set }: { e: Extra; set: (patch: Partial<Extra>) => void }) {
+  const d = e.drift ?? DRIFT_DEFAULT;
+  const sd = (patch: Partial<typeof d>) => set({ drift: { ...d, ...patch } });
+  return (
+    <>
+      <Grid cols={3}>
+        <Field label="Case">
+          <Select
+            value={d.case}
+            options={[
+              { value: "step", label: "Roof step (§7.7)" },
+              { value: "parapet", label: "Parapet / projection (§7.8)" },
+            ]}
+            onChange={(v) => sd({ case: v })}
+          />
+        </Field>
+        <Field label={d.case === "step" ? "Upper roof length (ft)" : "Roof length upwind (ft)"}>
+          <NumberInput value={d.luUpper} min={0} onChange={(v) => sd({ luUpper: v ?? 0 })} />
+        </Field>
+        {d.case === "step" ? (
+          <Field label="Lower roof length (ft)">
+            <NumberInput value={d.luLower} allowEmpty min={0} onChange={(v) => sd({ luLower: v })} />
+          </Field>
+        ) : null}
+        <Field label="Step / parapet height h_r (ft)">
+          <NumberInput value={d.hr} min={0} onChange={(v) => sd({ hr: v ?? 0 })} />
+        </Field>
+        <Field label="Lower roof rise (in/ft)">
+          <NumberInput value={d.rise} min={0} onChange={(v) => sd({ rise: v ?? 0 })} />
+        </Field>
+        <Field label="Tributary width (ft)">
+          <NumberInput value={d.trib} min={0} onChange={(v) => sd({ trib: v ?? 0 })} />
+        </Field>
+        <Field label="Peak at x (ft)">
+          <NumberInput value={e.x ?? 0} min={0} onChange={(v) => set({ x: v ?? 0 })} />
+        </Field>
+        <Field label="Drift toward">
+          <Select
+            value={d.dir}
+            options={[
+              { value: "right", label: "+x (right)" },
+              { value: "left", label: "−x (left)" },
+            ]}
+            onChange={(v) => sd({ dir: v })}
+          />
+        </Field>
+      </Grid>
+    </>
   );
 }
 
@@ -551,7 +628,14 @@ function CommonFields({ p, m, upd }: { p: Project; m: MemberSpec; upd: Upd<Membe
           />
         </Field>
         {m.status !== "new" ? (
-          <Check checked={!!m.fieldVerified} onChange={(v) => upd({ fieldVerified: v })} label="Field verified" />
+          <div>
+            <Check checked={!!m.fieldVerified} onChange={(v) => upd({ fieldVerified: v })} label="Field verified" />
+            <Check
+              checked={!!m.ungraded}
+              onChange={(v) => upd({ ungraded: v || undefined })}
+              label="No grade stamp (grade assumed)"
+            />
+          </div>
         ) : (
           <span />
         )}
@@ -636,7 +720,7 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
             <DeadField p={p} value={m.dead} kinds={["floor", "deck", "ceiling"]} onChange={(v) => upd({ dead: v })} />
             <LiveField value={m.live} onChange={(v) => upd({ live: v as typeof m.live })} />
             <Collapsible title={`Additional loads (${m.extra.length})`}>
-              <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
+              <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} drift />
             </Collapsible>
             <DeflField value={m.deflection} onChange={(v) => upd({ deflection: v as typeof m.deflection })} />
             <KcrField value={m.Kcr} onChange={(v) => upd({ Kcr: v })} />
@@ -649,6 +733,38 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
               onChange={(v) => upd({ addSelfWeight: v })}
               label="Add member self weight (not in assembly)"
             />
+            <Check
+              checked={!!m.vibration}
+              onChange={(v) => upd({ vibration: v })}
+              label="Floor vibration check, f ≥ 15 Hz (Dolan et al. 1999)"
+            />
+            <Collapsible title={`Notches and holes (${m.openings?.length ?? 0})`} open={!!m.openings?.length}>
+              <OpeningsEditor value={m.openings ?? []} onChange={(v) => upd({ openings: v.length ? v : undefined })} />
+            </Collapsible>
+            {m.status !== "new" ? (
+              <>
+                <Check
+                  checked={!!m.sister}
+                  onChange={(v) => upd({ sister: v ? { species: m.species, grade: "No.2", size: m.size } : undefined })}
+                  label="Sister with a new joist (full length, bearing at both supports)"
+                />
+                {m.sister ? (
+                  <>
+                    <SawnFields
+                      species={m.sister.species}
+                      grade={m.sister.grade}
+                      size={m.sister.size}
+                      sizes={DIMENSION_SIZES}
+                      onChange={(x) => upd({ sister: { ...m.sister!, ...x } })}
+                    />
+                    <PlyConnectionFields
+                      value={m.sister.connection}
+                      onChange={(v) => upd({ sister: { ...m.sister!, connection: v } })}
+                    />
+                  </>
+                ) : null}
+              </>
+            ) : null}
           </Section>
         </>
       );
@@ -845,7 +961,7 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
             />
             <LiveField value={m.live} onChange={(v) => upd({ live: v as typeof m.live })} roof />
             <Collapsible title={`Additional loads (${m.extra.length})`}>
-              <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
+              <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} drift />
             </Collapsible>
             <DeflField value={m.deflection} onChange={(v) => upd({ deflection: v as typeof m.deflection })} />
             <KcrField value={m.Kcr} onChange={(v) => upd({ Kcr: v })} />
@@ -853,6 +969,11 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
               checked={!!m.addSelfWeight}
               onChange={(v) => upd({ addSelfWeight: v })}
               label="Add manufacturer self weight"
+            />
+            <Check
+              checked={!!m.vibration}
+              onChange={(v) => upd({ vibration: v })}
+              label="Floor vibration check, f ≥ 15 Hz (Dolan et al. 1999)"
             />
           </Section>
         </>
@@ -878,6 +999,9 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
       break;
     case "shearWall":
       body = <ShearWallEditor p={p} m={m} upd={upd as Upd<ShearWallSpec>} />;
+      break;
+    case "shearPanel":
+      body = <ShearPanelEditor p={p} m={m} upd={upd as Upd<ShearPanelSpec>} />;
       break;
     case "steelBeam":
       body = <SteelBeamEditor p={p} m={m} upd={upd as Upd<SteelBeamSpec>} />;
@@ -911,6 +1035,9 @@ export function MemberEditor({ p, m, onChange }: { p: Project; m: MemberSpec; on
       break;
     case "woodTruss":
       body = <WoodTrussEditor p={p} m={m} upd={upd as Upd<WoodTrussSpec>} />;
+      break;
+    case "steelTruss":
+      body = <SteelTrussEditor p={p} m={m} upd={upd as Upd<SteelTrussSpec>} />;
       break;
     case "retainingWall":
       body = <RetainingWallEditor p={p} m={m} upd={upd as Upd<RetainingWallSpec>} />;
@@ -1082,7 +1209,7 @@ function BeamEditor({ p, m, upd }: { p: Project; m: BeamSpec; upd: Upd<BeamSpec>
       <AreaWallsEditor p={p} area={m.area} walls={m.walls} onChange={(x) => upd(x)} />
       <Section title="Other loads and criteria">
         <Collapsible title={`Line / point loads (${m.extra.length})`} open={m.extra.length > 0}>
-          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
+          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} drift />
         </Collapsible>
         <DeflField value={m.deflection} onChange={(v) => upd({ deflection: v as BeamSpec["deflection"] })} />
         <KcrField value={m.Kcr} onChange={(v) => upd({ Kcr: v })} />
@@ -1096,7 +1223,169 @@ function BeamEditor({ p, m, upd }: { p: Project; m: BeamSpec; upd: Upd<BeamSpec>
             <NumberInput value={m.crOverride} allowEmpty min={1} max={1.15} onChange={(v) => upd({ crOverride: v })} />
           </Field>
         ) : null}
+        <FireFields value={m.fire} beam onChange={(v) => upd({ fire: v })} />
+        {m.material.kind !== "glulam" && m.material.plies > 1 ? (
+          <PlyConnectionFields value={m.plyConnection} onChange={(v) => upd({ plyConnection: v })} />
+        ) : null}
+        <Collapsible title={`Notches and holes (${m.openings?.length ?? 0})`} open={!!m.openings?.length}>
+          <OpeningsEditor value={m.openings ?? []} onChange={(v) => upd({ openings: v.length ? v : undefined })} />
+        </Collapsible>
       </Section>
+    </>
+  );
+}
+
+type OpeningSpec = NonNullable<BeamSpec["openings"]>[number];
+
+function OpeningsEditor({ value, onChange }: { value: OpeningSpec[]; onChange: (v: OpeningSpec[]) => void }) {
+  const set = (i: number, patch: Partial<OpeningSpec>) =>
+    onChange(value.map((o, k) => (k === i ? { ...o, ...patch } : o)));
+  return (
+    <div className="space-y-2">
+      {value.map((o, i) => (
+        <Grid key={i} cols={4}>
+          <Select
+            value={o.type}
+            options={[
+              { value: "hole", label: "Bored hole" },
+              { value: "notch-top", label: "Notch, top" },
+              { value: "notch-bottom", label: "Notch, bottom" },
+            ]}
+            onChange={(v) => set(i, { type: v })}
+          />
+          <Field label="x from left end (ft)">
+            <NumberInput value={o.x} min={0} onChange={(v) => set(i, { x: v ?? 0 })} />
+          </Field>
+          <Field label={o.type === "hole" ? "Diameter (in)" : "Notch depth (in)"}>
+            <NumberInput value={o.size} min={0.125} onChange={(v) => set(i, { size: v ?? o.size })} />
+          </Field>
+          <div className="flex gap-1">
+            <Field label={o.type === "hole" ? "Offset from mid-depth (in, + up)" : "Notch length (in)"}>
+              <NumberInput value={o.offset} allowEmpty onChange={(v) => set(i, { offset: v })} />
+            </Field>
+            <SmallButton tone="danger" title="Remove" onClick={() => onChange(value.filter((_, k) => k !== i))}>
+              ✕
+            </SmallButton>
+          </div>
+        </Grid>
+      ))}
+      <AddButton onClick={() => onChange([...value, { type: "hole", x: 1, size: 1 }])}>+ Add notch / hole</AddButton>
+    </div>
+  );
+}
+
+type PlySpec = NonNullable<BeamSpec["plyConnection"]>;
+
+function PlyConnectionFields({ value, onChange }: { value?: PlySpec; onChange: (v: PlySpec | undefined) => void }) {
+  return (
+    <>
+      <Check
+        checked={!!value}
+        onChange={(v) =>
+          onChange(v ? { fastener: "nail", nail: "16d-common", rows: 2, spacing: 12, load: "one-side" } : undefined)
+        }
+        label="Design the fastening between plies"
+      />
+      {value ? (
+        <Grid cols={3}>
+          <Field label="Load applied">
+            <Select
+              value={value.load}
+              options={[
+                { value: "top", label: "Top (no transfer)" },
+                { value: "one-side", label: "One side face" },
+                { value: "both-sides", label: "Both side faces" },
+              ]}
+              onChange={(v) => onChange({ ...value, load: v })}
+            />
+          </Field>
+          <Field label="Fastener">
+            <Select
+              value={value.fastener}
+              options={[
+                { value: "nail", label: "Nails" },
+                { value: "bolt", label: "Through-bolts" },
+              ]}
+              onChange={(v) => onChange({ ...value, fastener: v })}
+            />
+          </Field>
+          {value.fastener === "nail" ? (
+            <Field label="Nail">
+              <Select
+                value={value.nail ?? "16d-common"}
+                options={NAILS.map((n) => ({ value: n.key, label: n.label }))}
+                onChange={(v) => onChange({ ...value, nail: v })}
+              />
+            </Field>
+          ) : (
+            <Field label="Bolt diameter (in)">
+              <NumberInput
+                value={value.boltDia ?? 0.5}
+                min={0.375}
+                onChange={(v) => onChange({ ...value, boltDia: v ?? 0.5 })}
+              />
+            </Field>
+          )}
+          <Field label="Rows">
+            <NumberInput
+              value={value.rows}
+              min={1}
+              step="1"
+              onChange={(v) => onChange({ ...value, rows: Math.max(1, Math.round(v ?? 2)) })}
+            />
+          </Field>
+          <Field label="Spacing (in. o.c.)">
+            <NumberInput value={value.spacing} min={1} onChange={(v) => onChange({ ...value, spacing: v ?? 12 })} />
+          </Field>
+        </Grid>
+      ) : null}
+    </>
+  );
+}
+
+type FireSpec = NonNullable<BeamSpec["fire"]>;
+
+function FireFields({
+  value,
+  onChange,
+  beam,
+}: {
+  value?: FireSpec;
+  onChange: (v: FireSpec | undefined) => void;
+  /** beams choose 3 or 4 exposed sides; posts are exposed on 4 */
+  beam?: boolean;
+}) {
+  return (
+    <>
+      <Check
+        checked={!!value}
+        onChange={(v) => onChange(v ? { hours: 1, sides: beam ? 3 : 4 } : undefined)}
+        label="Calculated fire resistance (NDS Ch. 16, exposed member)"
+      />
+      {value ? (
+        <Grid>
+          <Field label="Fire resistance (hours)">
+            <NumberInput
+              value={value.hours}
+              min={0.25}
+              max={2}
+              onChange={(v) => onChange({ ...value, hours: v ?? 1 })}
+            />
+          </Field>
+          {beam ? (
+            <Field label="Exposed faces">
+              <Select
+                value={String(value.sides) as "3" | "4"}
+                options={[
+                  { value: "3", label: "3 sides (sides and bottom)" },
+                  { value: "4", label: "4 sides" },
+                ]}
+                onChange={(v) => onChange({ ...value, sides: v === "4" ? 4 : 3 })}
+              />
+            </Field>
+          ) : null}
+        </Grid>
+      ) : null}
     </>
   );
 }
@@ -1332,7 +1621,7 @@ function WallEditor({ p, m, upd }: { p: Project; m: WallSpec; upd: Upd<WallSpec>
       <AreaWallsEditor p={p} area={m.area} walls={m.walls} onChange={(x) => upd(x)} />
       <Section title="Other loads">
         <Collapsible title={`Line / point loads (${m.extra.length})`} open={m.extra.length > 0}>
-          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
+          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} drift />
         </Collapsible>
       </Section>
       <Section title={`Stud packs under point loads (${m.packs.length})`}>
@@ -1495,6 +1784,7 @@ function PostEditor({ p, m, upd }: { p: Project; m: PostSpec; upd: Upd<PostSpec>
           )}
         </Grid>
         <Check checked={m.selfWeight} onChange={(v) => upd({ selfWeight: v })} label="Include post self weight" />
+        <FireFields value={m.fire} onChange={(v) => upd({ fire: v })} />
       </Section>
       <Section title="Other loads">
         <Collapsible title={`Point loads (${m.extra.length})`} open={m.extra.length > 0}>
@@ -1773,6 +2063,52 @@ function FootingEditor({ p, m, upd }: { p: Project; m: FootingSpec; upd: Upd<Foo
   );
 }
 
+function ShearPanelEditor({ p, m, upd }: { p: Project; m: ShearPanelSpec; upd: Upd<ShearPanelSpec> }) {
+  const lines = p.lateral?.lines ?? [];
+  const panels = p.hardware.filter((h) => h.kind === "panel");
+  return (
+    <Section title="Portal frame / prefabricated shear panel">
+      <CommonFields p={p} m={m} upd={upd as Upd<MemberSpec>} />
+      <Field label="Wall line">
+        <Select
+          value={m.lineId}
+          options={[
+            { value: "", label: "— select —" },
+            ...lines.map((l) => ({ value: l.id, label: `${l.name} (${l.dir})` })),
+          ]}
+          onChange={(v) => upd({ lineId: v })}
+        />
+      </Field>
+      <Field label="Product (hardware list)">
+        <Select
+          value={m.panelId}
+          options={[
+            { value: "", label: "— add one in the hardware list —" },
+            ...panels.map((h) => ({ value: h.id, label: `${h.manufacturer} ${h.model}` })),
+          ]}
+          onChange={(v) => upd({ panelId: v })}
+        />
+      </Field>
+      <Grid cols={3}>
+        <Field label="Number of panels">
+          <NumberInput
+            value={m.count}
+            min={1}
+            step="1"
+            onChange={(v) => upd({ count: Math.max(1, Math.round(v ?? 1)) })}
+          />
+        </Field>
+        <Field label="Wall height (ft)">
+          <NumberInput value={m.h} min={2} onChange={(v) => upd({ h: v ?? m.h })} />
+        </Field>
+        <Field label="Start along the line (ft)">
+          <NumberInput value={m.x} allowEmpty min={0} onChange={(v) => upd({ x: v })} />
+        </Field>
+      </Grid>
+    </Section>
+  );
+}
+
 function ShearWallEditor({ p, m, upd }: { p: Project; m: ShearWallSpec; upd: Upd<ShearWallSpec> }) {
   const lines = p.lateral?.lines ?? [];
   const setSide = (i: number, patch: Partial<ShearWallSpec["sides"][number]>) =>
@@ -1811,6 +2147,7 @@ function ShearWallEditor({ p, m, upd }: { p: Project; m: ShearWallSpec; upd: Upd
           checked={!!m.opening}
           onChange={(v) =>
             upd({
+              perforated: v ? undefined : m.perforated,
               opening: v
                 ? {
                     L1: m.b / 4,
@@ -1877,6 +2214,81 @@ function ShearWallEditor({ p, m, upd }: { p: Project; m: ShearWallSpec; upd: Upd
               </Field>
             </Grid>
             <Hint>Wall length b_s must equal L1 + Lo + L2.</Hint>
+          </>
+        ) : null}
+        <Check
+          checked={!!m.perforated}
+          onChange={(v) =>
+            upd({
+              opening: v ? undefined : m.opening,
+              perforated: v
+                ? { segments: [m.b / 3, m.b / 3], openings: [{ width: m.b / 3, height: Math.min(4, m.h) }] }
+                : undefined,
+            })
+          }
+          label="Perforated shear wall (SDPWS 4.3.3.5)"
+        />
+        {m.perforated ? (
+          <>
+            {m.perforated.segments.map((L, i) => {
+              const pf = m.perforated!;
+              const o = pf.openings[i];
+              const setSeg = (v: number) =>
+                upd({ perforated: { ...pf, segments: pf.segments.map((x, k) => (k === i ? v : x)) } });
+              const setOp = (patch: Partial<{ width: number; height: number }>) =>
+                upd({ perforated: { ...pf, openings: pf.openings.map((x, k) => (k === i ? { ...x, ...patch } : x)) } });
+              return (
+                <Grid key={i} cols={3}>
+                  <Field label={`Segment ${i + 1} L_i (ft)`}>
+                    <NumberInput value={L} min={0.5} onChange={(v) => setSeg(v ?? L)} />
+                  </Field>
+                  {o ? (
+                    <>
+                      <Field label={`Opening ${i + 1} width (ft)`}>
+                        <NumberInput value={o.width} min={0.5} onChange={(v) => setOp({ width: v ?? o.width })} />
+                      </Field>
+                      <Field label={`Opening ${i + 1} height (ft)`}>
+                        <NumberInput value={o.height} min={0.5} onChange={(v) => setOp({ height: v ?? o.height })} />
+                      </Field>
+                    </>
+                  ) : null}
+                </Grid>
+              );
+            })}
+            <div className="flex gap-2">
+              <AddButton
+                onClick={() =>
+                  upd({
+                    perforated: {
+                      segments: [...m.perforated!.segments, 2],
+                      openings: [...m.perforated!.openings, { width: 3, height: 4 }],
+                    },
+                  })
+                }
+              >
+                + Add opening and segment
+              </AddButton>
+              {m.perforated.openings.length > 1 ? (
+                <SmallButton
+                  tone="danger"
+                  title="Remove the last opening and segment"
+                  onClick={() =>
+                    upd({
+                      perforated: {
+                        segments: m.perforated!.segments.slice(0, -1),
+                        openings: m.perforated!.openings.slice(0, -1),
+                      },
+                    })
+                  }
+                >
+                  ✕
+                </SmallButton>
+              ) : null}
+            </div>
+            <Hint>
+              Segments and openings alternate from the left end: segment 1, opening 1, segment 2, … Wall length b_s must
+              equal ΣL_i + Σ opening widths.
+            </Hint>
           </>
         ) : null}
       </Section>
@@ -2022,6 +2434,60 @@ function ShearWallEditor({ p, m, upd }: { p: Project; m: ShearWallSpec; upd: Upd
             />
           </Field>
         </Grid>
+        <Check
+          checked={!!m.rod}
+          onChange={(v) =>
+            upd({
+              holdownId: v ? undefined : m.holdownId,
+              rod: v
+                ? { d: 0.625, steel: ANCHOR_STEELS[0].label, plate: { w: 3, l: 5.5 }, takeUp: 0.04, shrinkage: 0.05 }
+                : undefined,
+            })
+          }
+          label="Continuous rod tie-down (in place of a hold-down device)"
+        />
+        {m.rod ? (
+          <Grid cols={3}>
+            <Field label="Rod diameter (in)">
+              <Select
+                value={String(m.rod.d)}
+                options={["0.5", "0.625", "0.75", "0.875", "1", "1.125", "1.25"]}
+                onChange={(v) => upd({ rod: { ...m.rod!, d: Number(v) } })}
+              />
+            </Field>
+            <Field label="Rod steel">
+              <Select
+                value={m.rod.steel}
+                options={ANCHOR_STEELS.map((x) => x.label)}
+                onChange={(v) => upd({ rod: { ...m.rod!, steel: v } })}
+              />
+            </Field>
+            <Field label="Plate W × L (in)">
+              <div className="flex gap-1">
+                <NumberInput
+                  value={m.rod.plate.w}
+                  min={1}
+                  onChange={(v) => upd({ rod: { ...m.rod!, plate: { ...m.rod!.plate, w: v ?? 3 } } })}
+                />
+                <NumberInput
+                  value={m.rod.plate.l}
+                  min={1}
+                  onChange={(v) => upd({ rod: { ...m.rod!, plate: { ...m.rod!.plate, l: v ?? 5.5 } } })}
+                />
+              </div>
+            </Field>
+            <Field label="Take-up device deflection (in)">
+              <NumberInput value={m.rod.takeUp} min={0} onChange={(v) => upd({ rod: { ...m.rod!, takeUp: v ?? 0 } })} />
+            </Field>
+            <Field label="Shrinkage this story (in)">
+              <NumberInput
+                value={m.rod.shrinkage}
+                min={0}
+                onChange={(v) => upd({ rod: { ...m.rod!, shrinkage: v ?? 0 } })}
+              />
+            </Field>
+          </Grid>
+        ) : null}
         <Grid cols={3}>
           <Field label="Sill anchor">
             <Select
@@ -2321,7 +2787,7 @@ function SteelBeamEditor({ p, m, upd }: { p: Project; m: SteelBeamSpec; upd: Upd
       <AreaWallsEditor p={p} area={m.area} walls={m.walls} onChange={(x) => upd(x)} />
       <Section title="Other loads and criteria">
         <Collapsible title={`Line / point loads (${m.extra.length})`} open={m.extra.length > 0}>
-          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} />
+          <ExtraLoadsEditor extra={m.extra} onChange={(e) => upd({ extra: e })} drift />
         </Collapsible>
         <DeflField value={m.deflection} onChange={(v) => upd({ deflection: v as SteelBeamSpec["deflection"] })} />
         <Check checked={m.selfWeight} onChange={(v) => upd({ selfWeight: v })} label="Include member self weight" />
@@ -3614,6 +4080,259 @@ function TieInEditor({ p, m, upd }: { p: Project; m: TieInSpec; upd: Upd<TieInSp
   );
 }
 
+/** Starting layout for a custom truss: the current preset (pitched types) or a Fink at the current span / pitch. */
+function layoutFrom(m: WoodTrussSpec): CustomLayout {
+  const base = m.type === "parallel" || m.type === "custom" ? "fink" : m.type;
+  const g = buildTruss(base, m.span, m.pitch || 4);
+  return {
+    nodes: g.nodes.map(({ x, y, onTopChord, onBottomChord }) => ({ x, y, top: onTopChord, bottom: onBottomChord })),
+    members: g.members.map(({ a, b, group }) => ({ a, b, group })),
+  };
+}
+
+/** TrussCalc custom truss builder: joint coordinates and member connections, validated before analysis. */
+function CustomLayoutFields({
+  layout,
+  span,
+  onChange,
+}: {
+  layout: CustomLayout;
+  span: number;
+  onChange: (l: CustomLayout) => void;
+}) {
+  const err = customLayoutError(layout, span);
+  const name = (i: number) => "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i] ?? `N${i}`;
+  const setNode = (i: number, patch: Partial<CustomLayout["nodes"][number]>) =>
+    onChange({ ...layout, nodes: layout.nodes.map((n, k) => (k === i ? { ...n, ...patch } : n)) });
+  const setMember = (i: number, patch: Partial<CustomLayout["members"][number]>) =>
+    onChange({ ...layout, members: layout.members.map((x, k) => (k === i ? { ...x, ...patch } : x)) });
+  const removeNode = (i: number) =>
+    onChange({
+      nodes: layout.nodes.filter((_, k) => k !== i),
+      members: layout.members
+        .filter((x) => x.a !== i && x.b !== i)
+        .map((x) => ({ ...x, a: x.a > i ? x.a - 1 : x.a, b: x.b > i ? x.b - 1 : x.b })),
+    });
+  const nodeOpts = layout.nodes.map((_, i) => ({ value: String(i), label: name(i) }));
+  return (
+    <Collapsible title={`Custom layout: ${layout.nodes.length} joints, ${layout.members.length} members`} open>
+      <p className="text-[11px] text-muted-foreground">
+        Origin at the left bearing (0, 0); right bearing at (span, 0). Members = 2 × joints − 3 (statically
+        determinate).
+      </p>
+      {layout.nodes.map((n, i) => (
+        <div key={`n${i}`} className="grid grid-cols-[2rem_1fr_1fr_auto_auto_auto] items-end gap-2">
+          <span className="pb-2 text-xs font-bold">{name(i)}</span>
+          <Field label="x (ft)">
+            <NumberInput value={n.x} onChange={(v) => setNode(i, { x: v ?? 0 })} />
+          </Field>
+          <Field label="y (ft)">
+            <NumberInput value={n.y} onChange={(v) => setNode(i, { y: v ?? 0 })} />
+          </Field>
+          <Check checked={n.top} onChange={(v) => setNode(i, { top: v })} label="Top chord" />
+          <Check checked={n.bottom} onChange={(v) => setNode(i, { bottom: v })} label="Bottom chord" />
+          <SmallButton tone="danger" title="Remove joint" onClick={() => removeNode(i)}>
+            ✕
+          </SmallButton>
+        </div>
+      ))}
+      <AddButton
+        onClick={() =>
+          onChange({ ...layout, nodes: [...layout.nodes, { x: span / 2, y: 1, top: false, bottom: false }] })
+        }
+      >
+        + Joint
+      </AddButton>
+      {layout.members.map((x, i) => (
+        <div key={`m${i}`} className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
+          <Field label={`Member ${i + 1} from`}>
+            <Select value={String(x.a)} options={nodeOpts} onChange={(v) => setMember(i, { a: Number(v) })} />
+          </Field>
+          <Field label="to">
+            <Select value={String(x.b)} options={nodeOpts} onChange={(v) => setMember(i, { b: Number(v) })} />
+          </Field>
+          <Field label="Group">
+            <Select<MemberGroup>
+              value={x.group}
+              options={[
+                { value: "TC", label: "Top chord" },
+                { value: "BC", label: "Bottom chord" },
+                { value: "WEB", label: "Web" },
+                { value: "EV", label: "End vertical" },
+              ]}
+              onChange={(v) => setMember(i, { group: v })}
+            />
+          </Field>
+          <SmallButton
+            tone="danger"
+            title="Remove member"
+            onClick={() => onChange({ ...layout, members: layout.members.filter((_, k) => k !== i) })}
+          >
+            ✕
+          </SmallButton>
+        </div>
+      ))}
+      <AddButton onClick={() => onChange({ ...layout, members: [...layout.members, { a: 0, b: 1, group: "WEB" }] })}>
+        + Member
+      </AddButton>
+      <p className={`text-[11px] font-medium ${err ? "text-destructive" : "text-emerald-700"}`}>
+        {err ?? "Layout valid — stable and statically determinate."}
+      </p>
+    </Collapsible>
+  );
+}
+
+const STEEL_TRUSS_SHAPES = [
+  ...HSS_NAMES,
+  ...ROUND_NAMES,
+  ...W_SHAPES.map((x) => x.name),
+  ...C_SHAPES.map((x) => x.name),
+];
+
+function SteelTrussEditor({ p, m, upd }: { p: Project; m: SteelTrussSpec; upd: Upd<SteelTrussSpec> }) {
+  const req = STEEL_TRUSS_PATTERNS[m.pattern].required;
+  const section = (k: keyof typeof STEEL_TRUSS_GROUPS) => {
+    const s = m.sections[k];
+    const optional = k !== "TC" && k !== "BC";
+    return (
+      <Grid cols={3} key={k}>
+        <Field label={`${STEEL_TRUSS_GROUPS[k]} section`}>
+          <Select
+            value={s?.shape ?? "none"}
+            options={[
+              ...(optional && !req.includes(k) ? [{ value: "none", label: "None — omitted" }] : []),
+              ...STEEL_TRUSS_SHAPES.map((x) => ({ value: x, label: x })),
+            ]}
+            onChange={(v) => {
+              if (v === "none") return upd({ sections: { ...m.sections, [k]: undefined } });
+              const g = gradeOptions(v);
+              upd({
+                sections: {
+                  ...m.sections,
+                  [k]: { shape: v, grade: s && g.some((x) => x.value === s.grade) ? s.grade : g[0]?.value },
+                },
+              });
+            }}
+          />
+        </Field>
+        <Field label="Grade">
+          {s ? (
+            <Select
+              value={s.grade}
+              options={gradeOptions(s.shape)}
+              onChange={(v) => upd({ sections: { ...m.sections, [k]: { ...s, grade: v } } })}
+            />
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </Field>
+        <span />
+      </Grid>
+    );
+  };
+  return (
+    <>
+      <Section title="Steel roof truss (STR)">
+        <CommonFields p={p} m={m} upd={upd as Upd<MemberSpec>} />
+        <Grid cols={4}>
+          <Field label="Pattern">
+            <Select
+              value={m.pattern}
+              options={(Object.keys(STEEL_TRUSS_PATTERNS) as Array<SteelTrussSpec["pattern"]>).map((k) => ({
+                value: k,
+                label: STEEL_TRUSS_PATTERNS[k].label,
+              }))}
+              onChange={(v) => upd({ pattern: v })}
+            />
+          </Field>
+          <Field label="Span (ft)">
+            <NumberInput value={m.span} min={8} onChange={(v) => upd({ span: v ?? m.span })} />
+          </Field>
+          <Field label="Rise (ft)">
+            <NumberInput value={m.rise} min={0.5} onChange={(v) => upd({ rise: v ?? m.rise })} />
+          </Field>
+          <Field label="Panels (even, 4–16)">
+            <NumberInput
+              value={m.panels}
+              min={4}
+              max={16}
+              step="2"
+              onChange={(v) => upd({ panels: Math.max(4, Math.min(16, Math.round((v ?? 8) / 2) * 2)) })}
+            />
+          </Field>
+        </Grid>
+        <Grid cols={4}>
+          <Field label="Spacing (ft o.c.)">
+            <NumberInput value={m.spacing} min={1} onChange={(v) => upd({ spacing: v ?? m.spacing })} />
+          </Field>
+          <Field label="Overhang each side (ft)">
+            <NumberInput value={m.overhang} min={0} onChange={(v) => upd({ overhang: v ?? 0 })} />
+          </Field>
+          {m.pattern === "pitched-parallel" ? (
+            <Field label="Chord spacing (ft)">
+              <NumberInput value={m.chordDepth} min={0.5} onChange={(v) => upd({ chordDepth: v ?? 4 })} />
+            </Field>
+          ) : (
+            <span />
+          )}
+          <Field label="Method">
+            <Select value={m.method} options={METHODS} onChange={(v) => upd({ method: v })} />
+          </Field>
+        </Grid>
+        {(Object.keys(STEEL_TRUSS_GROUPS) as Array<keyof typeof STEEL_TRUSS_GROUPS>).map(section)}
+        <Grid cols={4}>
+          <Field label="Top-chord bracing (ft, 0 = panel pts)" hint="Purlin spacing along the chord">
+            <NumberInput value={m.topBracing} min={0} onChange={(v) => upd({ topBracing: v ?? 0 })} />
+          </Field>
+          <Field label="Bottom-chord bracing (ft, 0 = panel pts)">
+            <NumberInput value={m.bottomBracing} min={0} onChange={(v) => upd({ bottomBracing: v ?? 0 })} />
+          </Field>
+          <Field label="A_n / A_g (tension)">
+            <NumberInput value={m.netArea} min={0.5} max={1} onChange={(v) => upd({ netArea: v ?? 1 })} />
+          </Field>
+          <Field label="Shear lag U (Table D3.1)">
+            <NumberInput value={m.U} min={0.4} max={1} onChange={(v) => upd({ U: v ?? 1 })} />
+          </Field>
+        </Grid>
+      </Section>
+      <Section title="Loads">
+        <DeadField
+          p={p}
+          value={m.roofDead}
+          kinds={["roof"]}
+          roof
+          label="Roof dead load"
+          onChange={(v) => upd({ roofDead: v })}
+        />
+        <DeadField
+          p={p}
+          value={m.ceilingDead}
+          kinds={["ceiling"]}
+          label="Bottom-chord dead load (ceiling / MEP)"
+          onChange={(v) => upd({ ceilingDead: v })}
+        />
+        <Grid cols={3}>
+          <Field label="Wind down (psf, strength)">
+            <NumberInput value={m.windDown} min={0} onChange={(v) => upd({ windDown: v ?? 0 })} />
+          </Field>
+          <Field label="Net wind uplift (psf, strength)">
+            <NumberInput value={m.windUplift} min={0} onChange={(v) => upd({ windUplift: v ?? 0 })} />
+          </Field>
+          <span />
+        </Grid>
+        <Check checked={m.roofLive} onChange={(v) => upd({ roofLive: v })} label="Roof live load (project criteria)" />
+        <Check
+          checked={m.snow}
+          onChange={(v) => upd({ snow: v })}
+          label="Snow, balanced and unbalanced (project criteria)"
+        />
+        <Check checked={m.selfWeight} onChange={(v) => upd({ selfWeight: v })} label="Include truss self weight" />
+        <DeflField value={m.deflection} onChange={(v) => upd({ deflection: v as typeof m.deflection })} />
+      </Section>
+    </>
+  );
+}
+
 function WoodTrussEditor({ p, m, upd }: { p: Project; m: WoodTrussSpec; upd: Upd<WoodTrussSpec> }) {
   const parallel = m.type === "parallel";
   const lumber = (key: "tc" | "bc" | "web", title: string) => (
@@ -3642,6 +4361,7 @@ function WoodTrussEditor({ p, m, upd }: { p: Project; m: WoodTrussSpec; upd: Upd
                 { value: "queen", label: "Queen post" },
                 { value: "king-queen", label: "King + queen post" },
                 { value: "parallel", label: "Parallel chord" },
+                { value: "custom", label: "Custom (edit joints and members)" },
               ]}
               onChange={(v) =>
                 upd({
@@ -3649,6 +4369,7 @@ function WoodTrussEditor({ p, m, upd }: { p: Project; m: WoodTrussSpec; upd: Upd
                   ...(v === "parallel"
                     ? { depth: m.depth ?? 2.5, panels: m.panels ?? 8, pattern: m.pattern ?? "warren" }
                     : {}),
+                  ...(v === "custom" && !m.customLayout ? { customLayout: layoutFrom(m) } : {}),
                 })
               }
             />
@@ -3714,6 +4435,13 @@ function WoodTrussEditor({ p, m, upd }: { p: Project; m: WoodTrussSpec; upd: Upd
             <span />
           )}
         </Grid>
+        {m.type === "custom" ? (
+          <CustomLayoutFields
+            layout={m.customLayout ?? layoutFrom(m)}
+            span={m.span}
+            onChange={(customLayout) => upd({ customLayout })}
+          />
+        ) : null}
         {lumber("tc", "Top chord")}
         {lumber("bc", "Bottom chord")}
         {lumber("web", "Webs")}

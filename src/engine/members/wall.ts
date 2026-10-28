@@ -196,7 +196,7 @@ function evaluate(ctx: DesignContext, wl: WallInput, size = wl.size, spacing = w
 
   // loads along the wall
   const dist = areaWallLoads(ctx, wl.area, wl.walls, wl.length);
-  const ex = extraToBeamLoads(wl.extra, wl.length);
+  const ex = extraToBeamLoads(wl.extra, wl.length, ctx);
   const allLoads = [...dist.loads, ...ex.loads];
   const lines: LoadLine[] = [...dist.lines, ...ex.lines];
   const self = resolveDead(ctx, wl.self);

@@ -22,6 +22,7 @@ import type { ShearWallResult } from "@/engine/members/shearWall";
 import type { TrussResult } from "@/engine/members/truss";
 import type { StudCheck, WallResult } from "@/engine/members/wall";
 import { hardwareLabel } from "@/engine/data/hardware";
+import type { ShearPanelResult } from "@/engine/members/shearPanel";
 import {
   B,
   DataTable,
@@ -626,6 +627,110 @@ export function ConnectorSheet({ m, r, index, total }: SheetProps<ConnectorResul
   );
 }
 
+export function ShearPanelSheet({ m, r, index, total }: SheetProps<ShearPanelResult>) {
+  const h = r.item;
+  const pn = h.panel!;
+  const d = r.demand;
+  const n = r.input.count;
+  return (
+    <Frame
+      m={m}
+      r={r}
+      title={
+        pn.type === "portal"
+          ? "Portal frame — tabulated design values"
+          : "Prefabricated shear panel — tabulated design values"
+      }
+      subtitle={
+        <>
+          Demand from the lateral analysis (share of the wall line), checked against the manufacturer / APA allowable
+          values — member {index} of {total}: {r.mark}
+        </>
+      }
+    >
+      <DesignBasis
+        m={m}
+        material={<>Manufacturer catalogue / ICC-ES evaluation report; APA (portal frames)</>}
+        tables={["hardware"]}
+      />
+      <SectionHead title="Panel" />
+      <TR desc="Mark / product" expr={<B>{`${r.mark} — ${r.callout}`}</B>} />
+      {r.input.description ? <TR desc="Description" expr={<>{r.input.description}</>} /> : null}
+      <TR desc="Evaluation report / source" expr={<>{h.report || h.source || <Flag>Not entered</Flag>}</>} />
+      <TR
+        desc="Tabulated allowable values (ASD)"
+        expr={
+          <>
+            V<sub>s</sub> = {f0(pn.Vs)} lb; V<sub>w</sub> = {f0(pn.Vw)} lb
+            {pn.drift ? `; drift ${f3(pn.drift)} in. at V_s` : ""}
+            {pn.anchorT ? `; anchor tension ${f0(pn.anchorT)} lb` : ""}
+            {h.checked ? "" : <Flag> — VERIFY against the current catalogue / report</Flag>}
+          </>
+        }
+      />
+      <TR
+        desc="Wall line"
+        expr={
+          <>
+            {d.lineName} — share of the line force {f1(d.share * 100)} %; {n} panel{n > 1 ? "s" : ""}
+          </>
+        }
+      />
+      <LoadLines lines={r.loadLines} title="Lateral load on the panel(s), strength level" />
+      <SectionHead title="In-plane shear and overturning per panel (ASD)" />
+      <TR
+        desc="Seismic"
+        expr={
+          <>
+            V = 0.7 E<sub>h</sub> / n = 0.7 × {f0(d.Eh)} / {n} = {f0(r.Vs)} lb ≤ V<sub>s,allow</sub> = {f0(pn.Vs)} lb
+          </>
+        }
+        pass={r.Vs <= pn.Vs}
+      />
+      <TR
+        desc="Wind"
+        expr={
+          <>
+            V = 0.6 W / n = 0.6 × {f0(d.W)} / {n} = {f0(r.Vw)} lb ≤ V<sub>w,allow</sub> = {f0(pn.Vw)} lb
+          </>
+        }
+        pass={r.Vw <= pn.Vw}
+      />
+      <TR
+        desc="Overturning at each panel end"
+        expr={
+          <>
+            T = V h / b = {f0(Math.max(r.Tmax.seismic, r.Tmax.wind))} lb (
+            {r.Tmax.seismic >= r.Tmax.wind ? "0.7E" : "0.6W"})
+          </>
+        }
+      />
+      {r.drift.dxe > 0 ? (
+        <TR
+          desc="Seismic drift (Eq. 12.8-15)"
+          expr={
+            <>
+              δ<sub>xe</sub> = δ<sub>tab</sub> Q<sub>E</sub> / (V<sub>s</sub> / 0.7) = {fmt(r.drift.dxe, 4)} in; δ
+              <sub>x</sub> = C<sub>d</sub> δ<sub>xe</sub> / I<sub>e</sub> = {fmt(r.drift.dx, 4)} in ≤ Δ<sub>a</sub> ={" "}
+              {f2(r.drift.allow)} in
+            </>
+          }
+          pass={r.drift.ratio <= 1}
+        />
+      ) : null}
+      <ChecksSummary checks={r.checks} />
+      <MemberResult r={r} />
+      <AssumptionRows items={r.assumptions} />
+      <SpecificNotes flags={r.flags} />
+      <LimitationNotes
+        notes={[
+          "Tabulated values apply only with the manufacturer's / APA anchorage, top connection, framing and foundation details.",
+        ]}
+      />
+    </Frame>
+  );
+}
+
 export function FootingSheet({ m, r, index, total, received }: SheetProps<FootingResult>) {
   const f = r.input;
   const c = r.concrete;
@@ -881,6 +986,97 @@ function wallLineView(p: Project, memberId: string): { x?: number; line?: WallLi
   return { x: me.x, line: { name: l.name, length: l.length, openings: l.openings ?? [], segments } };
 }
 
+function PerforatedBlock({ r }: { r: ShearWallResult }) {
+  const s = r.input;
+  const d = r.demand;
+  const p = r.psw!;
+  return (
+    <>
+      <SectionHead title="Perforated shear wall — SDPWS-2021 4.3.3.5 (ASD)" />
+      <TR
+        desc="Geometry"
+        expr={
+          <>
+            L<sub>tot</sub> = {f2(s.b)} ft; ΣL<sub>i</sub> = {p.segments.map((x) => f2(x.L)).join(" + ")} = {f2(p.sumL)}{" "}
+            ft; A<sub>o</sub> = {p.openings.map((o) => `${f2(o.width)} × ${f2(o.height)}`).join(" + ")} = {f1(p.Ao)} ft²
+          </>
+        }
+      />
+      <DataTable
+        caption="Full-height segments"
+        head={["Segment", "L_i (ft)", "h / L_i", "C_ar", "L_i C_ar (ft)"]}
+        align={["left", "right", "right", "right", "right"]}
+        small
+        rows={p.segments.map((x, i) => [`${i + 1}`, f2(x.L), f3(x.aspect), f3(x.Car), f2(x.L * x.Car)])}
+      />
+      <TR
+        desc="Sheathing area ratio — Eq. 4.3-6"
+        expr={
+          <>
+            r = 1 / (1 + A<sub>o</sub> / (h ΣL<sub>i</sub>)) = 1 / (1 + {f1(p.Ao)} / ({f2(s.h)} × {f2(p.sumL)})) ={" "}
+            {f3(p.r)}
+          </>
+        }
+      />
+      <TR
+        desc="Shear capacity adjustment factor — Eq. 4.3-5"
+        expr={
+          <>
+            C<sub>o</sub> = r / (3 − 2r) × L<sub>tot</sub> / ΣL<sub>i</sub> = {f3(p.r)} / (3 − 2 × {f3(p.r)}) ×{" "}
+            {f2(s.b)} / {f2(p.sumL)} = {f3(p.Co)}
+          </>
+        }
+      />
+      <TR
+        desc="Unit shear, seismic — Eq. 4.3-9"
+        expr={
+          <>
+            v<sub>max</sub> = 0.7 E<sub>h</sub> / (C<sub>o</sub> ΣL<sub>i</sub>C<sub>ar</sub>) = 0.7 × {f0(d.Eh)} / (
+            {f3(p.Co)} × {f2(p.sumLadj)}) = {f1(r.vS)} plf ≤ v<sub>s,ASD</sub> = {f1(r.vAllowS)} plf
+          </>
+        }
+        pass={r.vS <= r.vAllowS}
+      />
+      <TR
+        desc="Unit shear, wind — Eq. 4.3-9"
+        expr={
+          <>
+            v<sub>max</sub> = 0.6 W / (C<sub>o</sub> ΣL<sub>i</sub>C<sub>ar</sub>) = 0.6 × {f0(d.W)} / ({f3(p.Co)} ×{" "}
+            {f2(p.sumLadj)}) = {f1(r.vW)} plf ≤ v<sub>wc</sub> / 2 = {f1(r.vAllowW)} plf
+          </>
+        }
+        pass={r.vW <= r.vAllowW}
+      />
+      <TR
+        desc="Nominal unit shear limit — 4.3.5.3"
+        expr={
+          <>
+            v<sub>sc</sub> = {f0(r.vsc)} plf ≤ {f0(p.limit.s)} plf
+          </>
+        }
+        pass={r.vsc <= p.limit.s}
+      />
+      <TR
+        desc="Chord / hold-down force — Eq. 4.3-8"
+        expr={
+          <>
+            T = C = V h / (C<sub>o</sub> ΣL<sub>i</sub>), less the end-post tributary dead load (chord table below)
+          </>
+        }
+      />
+      <TR
+        desc="Uplift between hold-downs — 4.3.6.4.2.2"
+        expr={
+          <>
+            t = v<sub>max</sub> = {f1(p.t.s)} plf (0.7E); {f1(p.t.w)} plf (0.6W) — bottom plate of each full-height
+            segment anchored for t
+          </>
+        }
+      />
+    </>
+  );
+}
+
 export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResult>) {
   const s = r.input;
   const d = r.demand;
@@ -893,8 +1089,12 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
       subtitle={
         <>
           In accordance with {m.cycle.sdpws}, ANSI/AWC {m.cycle.nds} (ASD) and the{" "}
-          {r.ftao ? "force-transfer-around-openings method (SDPWS 4.3.5.2)" : "segmented shear wall method"} — member{" "}
-          {index} of {total}: {r.mark}
+          {r.ftao
+            ? "force-transfer-around-openings method (SDPWS 4.3.5.2)"
+            : r.psw
+              ? "perforated shear wall method (SDPWS 4.3.3.5)"
+              : "segmented shear wall method"}{" "}
+          — member {index} of {total}: {r.mark}
         </>
       }
     >
@@ -994,19 +1194,23 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         expr={
           <>
             {rich(
-              r.ftao
-                ? r.aspect <= 2
-                  ? "pier h_o / L ≤ 2: 1.00"
-                  : `1.25 − 0.125 h_o / L = ${f3(r.Car)}`
-                : r.aspect <= 2
-                  ? "h / b_s ≤ 2: 1.00"
-                  : `1.25 − 0.125 h / b_s = ${f3(r.Car)}`,
+              r.psw
+                ? "applied to each full-height segment (perforated wall table below)"
+                : r.ftao
+                  ? r.aspect <= 2
+                    ? "pier h_o / L ≤ 2: 1.00"
+                    : `1.25 − 0.125 h_o / L = ${f3(r.Car)}`
+                  : r.aspect <= 2
+                    ? "h / b_s ≤ 2: 1.00"
+                    : `1.25 − 0.125 h / b_s = ${f3(r.Car)}`,
             )}
           </>
         }
       />
       <LoadLines lines={r.loadLines} title="Loading on the wall" />
-      {r.ftao ? (
+      {r.psw ? (
+        <PerforatedBlock r={r} />
+      ) : r.ftao ? (
         <>
           <SectionHead title="Force transfer around opening — SDPWS 4.3.5.2 (Diekmann rational analysis, ASD)" />
           <TR
@@ -1109,11 +1313,12 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         expr={
           <>
             {rich(
-              s.overturning === "full"
-                ? `T = (V h − w_D b² / 2) / a, a = b − end-post thickness = ${f3(r.arm)} ft`
-                : `T = V h / b − w_D s / 2 (end-post tributary dead load), b = ${f3(r.arm)} ft`,
+              r.psw
+                ? `T = V h / (C_o ΣL_i) − w_D s / 2 (SDPWS Eq. 4.3-8, end-post tributary dead load), C_o ΣL_i = ${f3(r.psw.Co * r.psw.sumL)} ft; C = V h / (C_o ΣL_i) + w s / 2`
+                : s.overturning === "full"
+                  ? `T = (V h − w_D b² / 2) / a, a = b − end-post thickness = ${f3(r.arm)} ft; C = V h / a + w s / 2`
+                  : `T = V h / b − w_D s / 2 (end-post tributary dead load), b = ${f3(r.arm)} ft; C = V h / a + w s / 2`,
             )}
-            ; C = V h / a + w s / 2
           </>
         }
       />
@@ -1161,6 +1366,51 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
               expr={
                 <>
                   {d.stacked.mark}: seismic {f0(d.stacked.Ts)} lb, wind {f0(d.stacked.Tw)} lb (included)
+                </>
+              }
+            />
+          ) : null}
+        </>
+      ) : null}
+      {r.rod && s.rod ? (
+        <>
+          <SectionHead title="Continuous rod tie-down (this story)" />
+          <TR
+            desc={`Rod ${fmtInFraction(s.rod.d)} in. ${s.rod.steel}`}
+            expr={
+              <>
+                T = {f0(r.rod.T)} lb ≤ T<sub>a</sub> = 0.75 F<sub>u</sub> A<sub>b</sub> / 2.00 = {f0(r.rod.Ta)} lb (AISC
+                360 J3.6)
+              </>
+            }
+            pass={r.rod.T <= r.rod.Ta}
+          />
+          <TR
+            desc="Bearing plate on the top plates"
+            expr={
+              <>
+                ΔT = {f0(r.rod.dT)} lb (this story); f<sub>c⊥</sub> = ΔT / A = {f0(r.rod.dT)} / {f2(r.rod.Abrg)} ={" "}
+                {f0(r.rod.fcperp)} psi ≤ F<sub>c⊥</sub> = {f0(r.rod.Fcperp)} psi
+              </>
+            }
+            pass={r.rod.fcperp <= r.rod.Fcperp}
+          />
+          <TR
+            desc="Displacement per story"
+            expr={
+              <>
+                T h / (A<sub>t</sub> E) + device + shrinkage = {fmt(r.rod.delta.rod, 4)} + {fmt(r.rod.delta.device, 3)}{" "}
+                + {fmt(r.rod.delta.shrink, 3)} = {fmt(r.rod.delta.total, 3)} in ≤ 0.20 in (ICC-ES AC316)
+              </>
+            }
+            pass={r.rod.delta.total <= 0.2}
+          />
+          {d.stacked ? (
+            <TR
+              desc="Tension from the stories above"
+              expr={
+                <>
+                  {d.stacked.mark}: seismic {f0(d.stacked.Ts)} lb, wind {f0(d.stacked.Tw)} lb (included in T)
                 </>
               }
             />
@@ -1278,7 +1528,16 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         desc="Strength-level unit shear (ρ = 1.0, §12.12.1)"
         expr={
           <>
-            v = Q<sub>E</sub> / b<sub>s</sub>
+            {r.psw ? (
+              <>
+                v<sub>max</sub> = Q<sub>E</sub> / (C<sub>o</sub> ΣL<sub>i</sub>), b = ΣL<sub>i</sub> = {f2(r.psw.sumL)}{" "}
+                ft
+              </>
+            ) : (
+              <>
+                v = Q<sub>E</sub> / b<sub>s</sub>
+              </>
+            )}
             {eq(`${f2(r.drift.v)} plf`)}
           </>
         }
@@ -1296,8 +1555,14 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         desc="Shear wall deflection"
         expr={
           <>
-            δ<sub>sw</sub> = 8 v h³/(E A b) + v h/(1000 G<sub>a</sub>) + h Δ<sub>a</sub>/b = {fmt(r.drift.bend, 4)} +{" "}
-            {fmt(r.drift.shear, 4)} + {fmt(r.drift.slip, 4)}
+            δ<sub>sw</sub> = [8 v h³/(E A b) + v h/(1000 G<sub>a</sub>) + h Δ<sub>a</sub>/b]
+            {r.psw ? (
+              <>
+                {" "}
+                / C<sub>o</sub> (SDPWS 4.3.2.2)
+              </>
+            ) : null}{" "}
+            = {fmt(r.drift.bend, 4)} + {fmt(r.drift.shear, 4)} + {fmt(r.drift.slip, 4)}
             {eq(`${fmt(r.drift.dxe, 4)} in`)}
           </>
         }
@@ -1332,7 +1597,14 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
             "Sheathing / nailing",
             r.sides.map((x) => `${x.row.label}; ${x.row.nail} @ ${x.spacing} in. edges, 12 in. field`).join(" + "),
           ],
-          ["Hold-down", r.holdown ? `${r.holdown.item.model} each end, T = ${f0(r.holdown.T)} lb` : "None required"],
+          [
+            "Hold-down",
+            r.rod && s.rod
+              ? `${fmtInFraction(s.rod.d)} in. continuous rod each end, T = ${f0(r.rod.T)} lb`
+              : r.holdown
+                ? `${r.holdown.item.model} each end, T = ${f0(r.holdown.T)} lb`
+                : "None required",
+          ],
           [
             "Sill anchors",
             `${s.sill.type === "cast-in" ? `${fmtInFraction(s.sill.d)} in. dia. anchor bolts, ${f0(s.sill.embed)} in. embedment` : (s.sill.label ?? "post-installed")} @ ${f0(s.sill.spacing)} in. o.c.`,

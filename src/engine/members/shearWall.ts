@@ -17,6 +17,11 @@
  *    pier unit shear v_p = V / (L1 + L2); hold-down H = V h / L; unit shear above and below the
  *    opening v_ab = H / (h_a + h_b); strap force at the opening corners F = (v_p − v) L_i;
  *    pier aspect h_o / L_i ≤ 3.5 and L_i ≥ 2 ft; aspect factor on the piers
+ *  - perforated shear walls (SDPWS-2021 4.3.3.5): C_o = r / (3 − 2r) × L_tot / ΣL_i,
+ *    r = 1 / (1 + A_o / (h ΣL_i)) (Eq. 4.3-5, 4.3-6); v_max = V / (C_o ΣL_i) (Eq. 4.3-9) on the
+ *    aspect-adjusted segment lengths; chord T = C = V h / (C_o ΣL_i) (Eq. 4.3-8); uplift between
+ *    hold-downs t = v_max (4.3.6.4.2.2); nominal shear limits (4.3.5.3); deflection with v_max and
+ *    b = ΣL_i divided by C_o (4.3.2.2)
  *  - seismic drift: SDPWS Eq. 4.3-1 δ_sw at strength level, δ_x = C_d δ_xe / I_e (ASCE 7
  *    Eq. 12.8-15) vs Δ_a (Table 12.12-1); wind deflection at a service factor
  */
@@ -77,6 +82,40 @@ export interface HoldownAnchor {
   omega: boolean;
 }
 
+export interface ContinuousRod {
+  /** rod diameter, in */
+  d: number;
+  /** rod steel (ANCHOR_STEELS label) */
+  steel: string;
+  /** bearing plate on the top plates, in (width across the wall, length along it) */
+  plate: { w: number; l: number };
+  /** take-up / shrinkage-compensating device deflection at its rated load, in (manufacturer) */
+  takeUp: number;
+  /** wood shrinkage between bearing plates in this story, in */
+  shrinkage: number;
+}
+
+/** UNC threads per inch by diameter (ASME B1.1), for the tensile stress area. */
+const UNC_TPI: Record<string, number> = {
+  "0.5": 13,
+  "0.625": 11,
+  "0.75": 10,
+  "0.875": 9,
+  "1": 8,
+  "1.125": 7,
+  "1.25": 7,
+};
+
+/** Tensile stress area A_t = 0.7854 (d − 0.9743 / n)², in². */
+export function rodTensileArea(d: number): number {
+  const n = UNC_TPI[String(d)];
+  if (!n) throw new Error(`Rod diameter ${d} in.: use 1/2 to 1-1/4 in.`);
+  return 0.7854 * (d - 0.9743 / n) ** 2;
+}
+
+/** ICC-ES AC316 displacement limit for continuous rod systems, in per story (rod + device + shrinkage) */
+export const ROD_STORY_LIMIT = 0.2;
+
 export interface ShearWallInput {
   id: string;
   mark: string;
@@ -98,11 +137,35 @@ export interface ShearWallInput {
   sill: SillAnchor;
   sillSize: string;
   holdownAnchor?: HoldownAnchor;
+  /** continuous rod tie-down at each end in place of a hold-down device (multi-story) */
+  rod?: ContinuousRod;
   /** vertical anchor stiffness k_a, lb/in, when no hold-down device is selected */
   ka?: number;
   windService: { factor: number; limitN: number };
   /** force transfer around one opening (FTAO): pier lengths and opening, ft; strap from the hardware list */
   opening?: { L1: number; Lo: number; L2: number; ha: number; hb: number; strapId?: string };
+  /** perforated shear wall: full-height segments (one at each end) with the openings between them, ft */
+  perforated?: { segments: number[]; openings: Array<{ width: number; height: number }> };
+}
+
+export interface PswResult {
+  segments: Array<{ L: number; aspect: number; Car: number }>;
+  openings: Array<{ width: number; height: number }>;
+  sumL: number;
+  sumLadj: number;
+  Ao: number;
+  r: number;
+  Co: number;
+  /** nominal unit shear limit per 4.3.5.3, plf (seismic / wind) */
+  limit: { s: number; w: number };
+  /** uplift between hold-downs t = v_max, ASD plf */
+  t: { s: number; w: number };
+}
+
+/** SDPWS-2021 Eq. 4.3-5 / 4.3-6: opening adjustment factor C_o. */
+export function perforatedCo(Ltot: number, h: number, sumL: number, Ao: number): { r: number; Co: number } {
+  const r = 1 / (1 + Ao / (h * sumL));
+  return { r, Co: (r / (3 - 2 * r)) * (Ltot / sumL) };
 }
 
 export interface FtaoResult {
@@ -182,6 +245,17 @@ export interface ShearWallResult extends MemberResultBase {
   compression: { C: number; col: ColumnResult; combo: string };
   holdown?: { item: HardwareItem; T: number; ratio: number };
   hdAnchor?: { Tu: number; basis: string; t: ConcreteTension; ratio: number };
+  rod?: {
+    At: number;
+    Ab: number;
+    Ta: number;
+    T: number;
+    dT: number;
+    Abrg: number;
+    fcperp: number;
+    Fcperp: number;
+    delta: { rod: number; device: number; shrink: number; total: number };
+  };
   sill: {
     perBolt: number;
     Z?: number;
@@ -205,6 +279,7 @@ export interface ShearWallResult extends MemberResultBase {
   };
   windDefl: { v: number; d: number; allow: number; ratio: number };
   ftao?: FtaoResult;
+  psw?: PswResult;
 }
 
 /** SDPWS-2021 ASD reduction for seismic: 2.0 wood-based panels (v_s = v_n / 1.4), 2.8 gypsum / plaster (Table 4.3C). */
@@ -257,7 +332,7 @@ function combineSides(sides: Array<{ row: SheathingRow; vs: number; vw: number; 
 }
 
 /** Capacity weight used to share a wall line between its walls: allowable seismic capacity of the segment, lb. */
-export function shearWallWeight(s: Pick<ShearWallInput, "sides" | "b" | "h" | "opening">): number {
+export function shearWallWeight(s: Pick<ShearWallInput, "sides" | "b" | "h" | "opening" | "perforated">): number {
   const sides = s.sides.map((x) => {
     const v = sideValues(x.key, x.spacing);
     return { ...v, vs: x.vsOverride ?? v.vs, vw: x.vsOverride ? Math.round((1.4 * x.vsOverride) / 5) * 5 : v.vw };
@@ -268,6 +343,17 @@ export function shearWallWeight(s: Pick<ShearWallInput, "sides" | "b" | "h" | "o
     const ho = s.h - s.opening.ha - s.opening.hb;
     const Lp = s.opening.L1 + s.opening.L2;
     return asdS * aspectFactor(fam, ho / Math.min(s.opening.L1, s.opening.L2)) * Lp;
+  }
+  if (s.perforated) {
+    const { segments, openings } = s.perforated;
+    const sumL = segments.reduce((a, L) => a + L, 0);
+    const { Co } = perforatedCo(
+      s.b,
+      s.h,
+      sumL,
+      openings.reduce((a, o) => a + o.width * o.height, 0),
+    );
+    return asdS * Co * segments.reduce((a, L) => a + L * aspectFactor(fam, s.h / L), 0);
   }
   return asdS * aspectFactor(fam, s.h / s.b) * s.b;
 }
@@ -359,6 +445,53 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
       ),
     );
   }
+  let psw: PswResult | undefined;
+  if (s.perforated) {
+    if (s.opening) throw new Error("Choose either FTAO or the perforated shear wall method, not both");
+    const { segments, openings } = s.perforated;
+    if (segments.length < 2 || openings.length !== segments.length - 1)
+      throw new Error(
+        "Perforated shear wall: a full-height segment at each end, with one opening between each pair of segments (SDPWS 4.3.5.3)",
+      );
+    const sumL = segments.reduce((a, L) => a + L, 0);
+    const sumO = openings.reduce((a, o) => a + o.width, 0);
+    if (Math.abs(sumL + sumO - s.b) > 0.01)
+      throw new Error(
+        `Perforated shear wall: ΣL_i + Σ openings = ${fmt(sumL + sumO, 2)} ft must equal the wall length ${fmt(s.b, 2)} ft`,
+      );
+    if (openings.some((o) => o.height > s.h))
+      throw new Error("Perforated shear wall: an opening is taller than the wall");
+    const Ao = openings.reduce((a, o) => a + o.width * o.height, 0);
+    const { r, Co } = perforatedCo(s.b, s.h, sumL, Ao);
+    const segs = segments.map((L) => ({ L, aspect: s.h / L, Car: aspectFactor(family, s.h / L) }));
+    const sumLadj = segs.reduce((a, x) => a + x.L * x.Car, 0);
+    aspect = Math.max(...segs.map((x) => x.aspect));
+    Car = 1;
+    vS = (0.7 * dem.Eh) / (Co * sumLadj);
+    vW = (0.6 * dem.W) / (Co * sumLadj);
+    const nSides = sides.length;
+    psw = {
+      segments: segs,
+      openings,
+      sumL,
+      sumLadj,
+      Ao,
+      r,
+      Co,
+      limit: { s: 1740 * nSides, w: 2435 * nSides },
+      t: { s: vS, w: vW },
+    };
+    assumptions.push(
+      fromDefault(
+        "Perforated shear wall",
+        "Segments with h / b_s > 2 enter ΣL_i at b_s × C_ar (SDPWS-2021 4.3.4.3); chord forces from Eq. 4.3-8 with the end-post tributary dead load; deflection per 4.3.2.2",
+        "SDPWS-2021 4.3.3.5, 4.3.5.3",
+      ),
+    );
+    flags.push(
+      `Perforated shear wall: hold-downs at each end; top plate continuous over the openings; bottom plate of each full-height segment anchored for uplift t = v_max (${fmt(Math.max(vS, vW), 0)} plf ASD) and shear (SDPWS 4.3.6.4.2.2)`,
+    );
+  }
   const vAllowS = asdS * Car;
   const vAllowW = (vwc * Car) / 2;
 
@@ -435,11 +568,13 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
       ? (kind === "seismic" ? dem.stacked.Ts : dem.stacked.Tw) *
         Math.min(1, (c.factors.E ?? c.factors.W ?? 0) / (kind === "seismic" ? 0.7 : 0.6))
       : 0;
-    const T =
-      s.overturning === "full"
+    const ot = psw ? (V * s.h) / (psw.Co * psw.sumL) : (V * s.h) / arm;
+    const T = psw
+      ? ot - wD * tribEnd + stackedT
+      : s.overturning === "full"
         ? (V * s.h - (wD * s.b * s.b) / 2) / arm + stackedT
-        : (V * s.h) / arm - wD * tribEnd + stackedT;
-    const C = (V * s.h) / arm + wG * tribEnd;
+        : ot - wD * tribEnd + stackedT;
+    const C = ot + wG * tribEnd;
     return { combo: c.label, kind, V, wG, T, C };
   });
   const Ts = Math.max(0, ...chord.filter((r) => r.kind === "seismic").map((r) => r.T));
@@ -480,8 +615,24 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
       CD: 1.6,
       unit: "lb",
     });
+  if (psw)
+    checks.push({
+      name: "Perforated wall: nominal unit shear v_s ≤ 1,740 plf per sheathed side (SDPWS 4.3.5.3)",
+      category: "detailing",
+      demand: vsc,
+      capacity: psw.limit.s,
+      ratio: vsc / psw.limit.s,
+      pass: vsc <= psw.limit.s,
+      combo: "—",
+      CD: 1,
+      unit: "plf",
+    });
   checks.push({
-    name: ftao ? "Pier aspect ratio h_o / L_pier (SDPWS 4.3.5.2)" : "Aspect ratio h/b_s (SDPWS-2021 Table 4.3.3)",
+    name: ftao
+      ? "Pier aspect ratio h_o / L_pier (SDPWS 4.3.5.2)"
+      : psw
+        ? "Segment aspect ratio h / L_i, largest (SDPWS-2021 Table 4.3.4)"
+        : "Aspect ratio h/b_s (SDPWS-2021 Table 4.3.3)",
     category: "detailing",
     demand: aspect,
     capacity: maxAspect,
@@ -494,7 +645,9 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   checks.push({
     name: ftao
       ? "Unit shear, seismic — max(pier, above / below opening) (ASD v_s / 2.0)"
-      : "Unit shear, seismic (SDPWS-2021 Table 4.3A–4.3C, ASD)",
+      : psw
+        ? "Unit shear, seismic v_max = V / (C_o ΣL_i) (SDPWS Eq. 4.3-9, ASD)"
+        : "Unit shear, seismic (SDPWS-2021 Table 4.3A–4.3C, ASD)",
     demand: vS,
     capacity: vAllowS,
     ratio: vS / vAllowS,
@@ -506,7 +659,9 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   checks.push({
     name: ftao
       ? "Unit shear, wind — max(pier, above / below opening) (ASD v_w / 2.0)"
-      : "Unit shear, wind (SDPWS-2021 Table 4.3A–4.3C, ASD v_w / 2.0)",
+      : psw
+        ? "Unit shear, wind v_max = V / (C_o ΣL_i) (SDPWS Eq. 4.3-9, ASD v_w / 2.0)"
+        : "Unit shear, wind (SDPWS-2021 Table 4.3A–4.3C, ASD v_w / 2.0)",
     demand: vW,
     capacity: vAllowW,
     ratio: vW / vAllowW,
@@ -540,7 +695,71 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   // hold-down
   let holdown: ShearWallResult["holdown"];
   const Tmax = Math.max(Ts, Tw);
-  if (s.holdownId) {
+  let rod: ShearWallResult["rod"];
+  if (s.rod) {
+    if (s.holdownId) throw new Error("Choose a hold-down device or a continuous rod, not both");
+    const rd = s.rod;
+    const steel = ANCHOR_STEELS.find((x) => x.label === rd.steel) ?? ANCHOR_STEELS[0];
+    const Ab = (Math.PI * rd.d * rd.d) / 4;
+    const At = rodTensileArea(rd.d);
+    // AISC 360 J3.6: R_n = F_nt A_b, F_nt = 0.75 F_u, Ω = 2.00
+    const Ta = (0.75 * steel.futa * Ab) / 2;
+    const dT = Math.max(Ts - (dem.stacked?.Ts ?? 0), Tw - (dem.stacked?.Tw ?? 0), 0);
+    const plateWood = resolveWood(
+      { kind: "sawn", species: s.stud.species, grade: s.stud.grade, size: s.stud.size, plies: 1 },
+      nds,
+    );
+    const Abrg = rd.plate.w * rd.plate.l - (Math.PI * (rd.d + 1 / 8) ** 2) / 4;
+    const fcperp = dT / Abrg;
+    const L = dem.hsx * 12;
+    const dRod = (Tmax * L) / (At * 29_000_000);
+    const delta = { rod: dRod, device: rd.takeUp, shrink: rd.shrinkage, total: dRod + rd.takeUp + rd.shrinkage };
+    rod = { At, Ab, Ta, T: Tmax, dT, Abrg, fcperp, Fcperp: plateWood.Fcperp, delta };
+    checks.push(
+      {
+        name: `Continuous rod ${fmt(rd.d, 3)} in. ${steel.label} — tension (AISC 360 J3.6, Ω = 2.00)`,
+        demand: Tmax,
+        capacity: Ta,
+        ratio: Tmax / Ta,
+        pass: Tmax <= Ta,
+        combo: Ts >= Tw ? "seismic" : "wind",
+        CD: 1,
+        unit: "lb",
+      },
+      {
+        name: `Rod bearing plate ${fmt(rd.plate.w, 2)} × ${fmt(rd.plate.l, 2)} in. on the top plates — this story's increment (NDS 3.10.2)`,
+        demand: fcperp,
+        capacity: plateWood.Fcperp,
+        ratio: fcperp / plateWood.Fcperp,
+        pass: fcperp <= plateWood.Fcperp,
+        combo: Ts >= Tw ? "seismic" : "wind",
+        CD: 1,
+        unit: "psi",
+      },
+      {
+        name: `Rod system displacement per story ≤ ${ROD_STORY_LIMIT} in. (rod + take-up device + shrinkage; ICC-ES AC316)`,
+        category: "serviceability",
+        demand: delta.total,
+        capacity: ROD_STORY_LIMIT,
+        ratio: delta.total / ROD_STORY_LIMIT,
+        pass: delta.total <= ROD_STORY_LIMIT,
+        combo: Ts >= Tw ? "seismic" : "wind",
+        CD: 1,
+        unit: "in",
+      },
+    );
+    assumptions.push(
+      fromDefault(
+        "Continuous rod",
+        `A_b = ${fmt(Ab, 3)} in², A_t = ${fmt(At, 3)} in² (UNC); T_a = 0.75 F_u A_b / 2.00 = ${fmt(Ta, 0)} lb; elongation T L / (A_t E) = ${fmt(Tmax, 0)} × ${fmt(L, 1)} / (${fmt(At, 3)} × 29,000,000) = ${fmt(dRod, 4)} in; take-up device ${fmt(rd.takeUp, 3)} in, shrinkage ${fmt(rd.shrinkage, 3)} in (entered); plate bearing ΔT = ${fmt(dT, 0)} lb (this story) on ${fmt(Abrg, 2)} in²`,
+        "AISC 360 J3.6; ICC-ES AC316 (0.20 in. per story) — confirm the system's evaluation report",
+        true,
+      ),
+    );
+    flags.push(
+      `Continuous rod tie-down at each end of ${s.mark}: ${fmt(rd.d, 3)} in. ${steel.label} rod with coupler at each floor, ${fmt(rd.plate.w, 2)} × ${fmt(rd.plate.l, 2)} in. bearing plate and take-up device at this level; install per the system's evaluation report`,
+    );
+  } else if (s.holdownId) {
     const item = ctx.hardware?.find((x) => x.id === s.holdownId);
     if (!item) throw new Error(`Hold-down ${s.holdownId} not in the project hardware list`);
     if (item.tension === undefined)
@@ -586,10 +805,16 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     const wD9 = 0.9 * g.D;
     const wDs = (0.9 - 0.2 * dem.SDS) * g.D;
     const QEh = a.omega ? dem.Omega0 * dem.QE : dem.Eh;
-    const Tu_s =
-      s.overturning === "full" ? (QEh * s.h - (wDs * s.b * s.b) / 2) / arm : (QEh * s.h) / arm - wDs * tribEnd;
-    const Tu_w =
-      s.overturning === "full" ? (dem.W * s.h - (wD9 * s.b * s.b) / 2) / arm : (dem.W * s.h) / arm - wD9 * tribEnd;
+    const Tu_s = psw
+      ? (QEh * s.h) / (psw.Co * psw.sumL) - wDs * tribEnd
+      : s.overturning === "full"
+        ? (QEh * s.h - (wDs * s.b * s.b) / 2) / arm
+        : (QEh * s.h) / arm - wDs * tribEnd;
+    const Tu_w = psw
+      ? (dem.W * s.h) / (psw.Co * psw.sumL) - wD9 * tribEnd
+      : s.overturning === "full"
+        ? (dem.W * s.h - (wD9 * s.b * s.b) / 2) / arm
+        : (dem.W * s.h) / arm - wD9 * tribEnd;
     const stackedU = dem.stacked?.Tu ?? 0;
     const Tu = Math.max(Tu_s, Tu_w, 0) + stackedU;
     const basis =
@@ -624,7 +849,7 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     const ts = Number(s.sillSize.split("x")[0]) >= 3 ? 2.5 : 1.5;
     const bz = boltInConcrete(s.sill.d, ts, SPECIFIC_GRAVITY[s.stud.species], s.sill.embed);
     const Zprime = bz.Z * 1.6;
-    const vStrength = dem.Eh / s.b;
+    const vStrength = psw ? vS / 0.7 : dem.Eh / s.b;
     const Vu = vStrength * (s.sill.spacing / 12);
     const t = anchorTension({
       d: s.sill.d,
@@ -674,6 +899,20 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
       CD: 1,
       unit: "lb",
     });
+    if (psw) {
+      // uplift between hold-downs t = v_max at the bottom plate, strength level (ρQ_E / 0.7 or W / 0.6)
+      const Nu = Math.max(psw.t.s / 0.7, psw.t.w / 0.6) * (s.sill.spacing / 12);
+      checks.push({
+        name: `Sill anchor — uplift t = v_max between hold-downs, concrete ${t.governs} (SDPWS 4.3.6.4.2.2; ACI 318-19 17.6)`,
+        demand: Nu,
+        capacity: t.phiNn,
+        ratio: Nu / t.phiNn,
+        pass: Nu <= t.phiNn,
+        combo: psw.t.s / 0.7 >= psw.t.w / 0.6 ? "ρQ_E (strength)" : "W (strength)",
+        CD: 1,
+        unit: "lb",
+      });
+    }
     assumptions.push(
       fromDefault(
         "Sill bolt in concrete",
@@ -714,21 +953,26 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
   const A = post.A;
   const hdItem = holdown?.item;
   const ka = hdItem?.tension && hdItem.deflection ? hdItem.tension / hdItem.deflection : (s.ka ?? 30000);
-  if (!hdItem?.deflection)
+  if (!hdItem?.deflection && !rod)
     assumptions.push(
       fromDefault("Anchor stiffness", `k_a = ${fmt(ka, 0)} lb/in`, s.ka ? "entered" : "default (Tedds default)", !s.ka),
     );
-  const vd = dem.QE / s.b;
+  // perforated: v = v_max, b = ΣL_i, result / C_o (SDPWS 4.3.2.2)
+  const bD = psw ? psw.sumL : s.b;
+  const coD = psw ? psw.Co : 1;
+  const vd = dem.QE / (coD * bD);
   const wDd = (0.6 - 0.2 * dem.SDS) * g.D;
-  const Td =
-    s.overturning === "full"
+  const Td = psw
+    ? Math.max(0, vd * s.h - wDd * tribEnd)
+    : s.overturning === "full"
       ? Math.max(0, (dem.QE * s.h - (wDd * s.b * s.b) / 2) / arm)
       : Math.max(0, vd * s.h - wDd * tribEnd);
-  const da = Td / ka;
-  const bend = (8 * vd * s.h ** 3) / (E * A * s.b);
+  // rod: elongation at T_δ plus the device and shrinkage (SDPWS Δ_a)
+  const da = rod ? (Td * dem.hsx * 12) / (rod.At * 29_000_000) + rod.delta.device + rod.delta.shrink : Td / ka;
+  const bend = (8 * vd * s.h ** 3) / (E * A * bD) / coD;
   const vdShear = ftao ? Math.max(dem.QE / (ftao.L1 + ftao.L2), (dem.QE * s.h) / s.b / (ftao.ha + ftao.hb)) : vd;
-  const shear = (vdShear * s.h) / (1000 * Gac);
-  const slip = (s.h * da) / s.b;
+  const shear = (vdShear * s.h) / (1000 * Gac) / coD;
+  const slip = (s.h * da) / bD / coD;
   const dxe = bend + shear + slip;
   const dx = (dem.Cd * dxe) / dem.Ie;
   const allow = dem.driftFactor * dem.hsx * 12;
@@ -743,14 +987,14 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     CD: 1,
     unit: "in",
   });
-  const vwd = (s.windService.factor * dem.W) / s.b;
+  const vwd = (s.windService.factor * dem.W) / (coD * bD);
   const Tw0 = Math.max(
     0,
-    s.overturning === "full"
+    s.overturning === "full" && !psw
       ? (s.windService.factor * dem.W * s.h - (0.6 * g.D * s.b * s.b) / 2) / arm
       : vwd * s.h - 0.6 * g.D * tribEnd,
   );
-  const dw = (8 * vwd * s.h ** 3) / (E * A * s.b) + (vwd * s.h) / (1000 * Gac) + (s.h * (Tw0 / ka)) / s.b;
+  const dw = ((8 * vwd * s.h ** 3) / (E * A * bD) + (vwd * s.h) / (1000 * Gac) + (s.h * (Tw0 / ka)) / bD) / coD;
   const allowW = (s.h * 12) / s.windService.limitN;
   checks.push({
     name: `Wind deflection (${fmt(s.windService.factor, 2)}W) ≤ h/${fmt(s.windService.limitN, 0)}`,
@@ -793,7 +1037,11 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     id: s.id,
     mark: s.mark,
     kind: "shearWall",
-    title: ftao ? "Wood shear wall — force transfer around opening" : "Wood shear wall",
+    title: ftao
+      ? "Wood shear wall — force transfer around opening"
+      : psw
+        ? "Wood shear wall — perforated (SDPWS 4.3.3.5)"
+        : "Wood shear wall",
     callout: `${fmtFtIn(s.b)} × ${fmtFtIn(s.h)}: ${sideText}${hdItem ? `; ${hdItem.model}` : ""}`,
     pass: checks.every((c) => c.pass),
     governing,
@@ -828,9 +1076,11 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     compression: { C: cRow.C, col, combo: cRow.combo },
     holdown,
     hdAnchor,
+    rod,
     sill,
     drift: { v: vd, Td, da, ka, bend, shear, slip, dxe, dx, allow, ratio: dx / allow },
     windDefl: { v: vwd, d: dw, allow: allowW, ratio: dw / allowW },
     ftao,
+    psw,
   };
 }

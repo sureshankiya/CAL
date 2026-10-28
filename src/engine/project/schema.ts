@@ -39,8 +39,40 @@ export const deadRefSchema = z.object({
 });
 export const liveRefSchema = z.object({ use: liveUseSchema.optional(), psf: nonneg.optional() });
 
+/** Snow drift on a lower roof (ASCE 7 §7.7) or at a parapet / projection (§7.8), applied as a triangular load. */
+export const driftLoadSchema = z.object({
+  case: z.enum(["step", "parapet"]),
+  luUpper: pos,
+  luLower: nonneg.optional(),
+  hr: pos,
+  /** lower roof rise, in/ft (for the balanced load p_s) */
+  rise: nonneg.default(0),
+  /** tributary width (joist spacing or beam tributary), ft */
+  trib: pos,
+  /** direction from the peak (at x) toward the drift toe */
+  dir: z.enum(["right", "left"]),
+});
+
+export const openingSchema = z.object({
+  type: z.enum(["hole", "notch-top", "notch-bottom"]),
+  x: nonneg,
+  size: pos,
+  offset: num.optional(),
+});
+
+export const plyConnectionSchema = z.object({
+  fastener: z.enum(["nail", "bolt"]),
+  nail: z.string().optional(),
+  boltDia: pos.optional(),
+  rows: z.number().int().min(1),
+  spacing: pos,
+  load: z.enum(["top", "one-side", "both-sides"]),
+});
+
+export const fireSchema = z.object({ hours: pos, sides: z.union([z.literal(3), z.literal(4)]) });
+
 export const extraLoadSchema = z.object({
-  kind: z.enum(["line", "point"]),
+  kind: z.enum(["line", "point", "drift"]),
   type: loadTypeSchema,
   label: z.string(),
   w: num.optional(),
@@ -48,6 +80,7 @@ export const extraLoadSchema = z.object({
   x2: nonneg.optional(),
   P: num.optional(),
   x: nonneg.optional(),
+  drift: driftLoadSchema.optional(),
 });
 
 /** Load carried from another member's support reaction (load-path link). */
@@ -82,6 +115,8 @@ const common = {
   status: z.enum(["new", "existing", "modified"]).default("new"),
   /** existing members: properties confirmed in the field */
   fieldVerified: z.boolean().optional(),
+  /** existing lumber without a legible grade stamp: grade assumed */
+  ungraded: z.boolean().optional(),
   existingNote: z.string().optional(),
   /** inputs still to be entered (e.g. from a drawing-data conversion); each prints VERIFY */
   pendingInputs: z.array(z.string()).optional(),
@@ -109,6 +144,16 @@ export const joistSpecSchema = z.object({
   wetService: z.boolean().optional(),
   incised: z.boolean().optional(),
   addSelfWeight: z.boolean().optional(),
+  vibration: z.boolean().optional(),
+  openings: z.array(openingSchema).optional(),
+  sister: z
+    .object({
+      species: speciesSchema,
+      grade: gradeSchema,
+      size: z.string(),
+      connection: plyConnectionSchema.optional(),
+    })
+    .optional(),
 });
 
 export const rafterSpecSchema = z.object({
@@ -174,6 +219,7 @@ export const ijoistSpecSchema = z.object({
   deflection: deflectionSchema,
   Kcr: pos.optional(),
   addSelfWeight: z.boolean().optional(),
+  vibration: z.boolean().optional(),
   cdOverride: pos.optional(),
 });
 
@@ -235,6 +281,10 @@ export const beamSpecSchema = z.object({
   wetService: z.boolean().optional(),
   incised: z.boolean().optional(),
   crOverride: pos.optional(),
+  /** calculated fire resistance, NDS Ch. 16 */
+  fire: fireSchema.optional(),
+  plyConnection: plyConnectionSchema.optional(),
+  openings: z.array(openingSchema).optional(),
 });
 
 export const studPackSchema = z.object({
@@ -301,6 +351,8 @@ export const postSpecSchema = z.object({
   selfWeight: z.boolean(),
   wetService: z.boolean().optional(),
   incised: z.boolean().optional(),
+  /** calculated fire resistance, NDS Ch. 16 */
+  fire: fireSchema.optional(),
 });
 
 export const trussSpecSchema = z.object({
@@ -395,11 +447,35 @@ export const shearWallSpecSchema = z.object({
     })
     .optional(),
   ka: pos.optional(),
+  /** continuous rod tie-down in place of a hold-down device */
+  rod: z
+    .object({
+      d: pos,
+      steel: z.string(),
+      plate: z.object({ w: pos, l: pos }),
+      takeUp: nonneg,
+      shrinkage: nonneg,
+    })
+    .optional(),
   windService: z.object({ factor: pos, limitN: pos }),
   /** start position along the wall line, ft (for the collector force profile) */
   x: nonneg.optional(),
   /** force transfer around one opening (FTAO) */
   opening: z.object({ L1: pos, Lo: pos, L2: pos, ha: pos, hb: nonneg, strapId: z.string().optional() }).optional(),
+  /** perforated shear wall (SDPWS 4.3.3.5): full-height segments with the openings between them */
+  perforated: z
+    .object({ segments: z.array(pos).min(2), openings: z.array(z.object({ width: pos, height: pos })).min(1) })
+    .optional(),
+});
+
+export const shearPanelSpecSchema = z.object({
+  kind: z.literal("shearPanel"),
+  ...common,
+  lineId: z.string(),
+  x: nonneg.optional(),
+  panelId: z.string(),
+  count: z.number().int().min(1),
+  h: pos,
 });
 
 const steelMethodSchema = z.enum(["LRFD", "ASD"]);
@@ -767,7 +843,16 @@ export const cfsWallSpecSchema = z.object({
 export const woodTrussSpecSchema = z.object({
   kind: z.literal("woodTruss"),
   ...common,
-  type: z.enum(["fink", "howe", "king", "queen", "king-queen", "parallel"]),
+  type: z.enum(["fink", "howe", "king", "queen", "king-queen", "parallel", "custom"]),
+  /** custom: joints (ft, origin at the left bearing) and members; bearings at the outer bottom-chord joints */
+  customLayout: z
+    .object({
+      nodes: z.array(z.object({ x: z.number(), y: z.number(), top: z.boolean(), bottom: z.boolean() })),
+      members: z.array(
+        z.object({ a: z.number().int().min(0), b: z.number().int().min(0), group: z.enum(["TC", "BC", "WEB", "EV"]) }),
+      ),
+    })
+    .optional(),
   span: pos,
   pitch: nonneg,
   depth: pos.optional(),
@@ -795,6 +880,54 @@ export const woodTrussSpecSchema = z.object({
   deflection: deflectionSchema,
 });
 
+const steelTrussSectionSchema = z.object({ shape: z.string(), grade: z.string() });
+
+export const steelTrussSpecSchema = z.object({
+  kind: z.literal("steelTruss"),
+  ...common,
+  pattern: z.enum([
+    "king",
+    "queen",
+    "pratt",
+    "howe",
+    "warren",
+    "fink",
+    "double-fink",
+    "fan",
+    "modified-queen",
+    "scissors",
+    "north-light",
+    "bowstring",
+    "pitched-parallel",
+  ]),
+  span: pos,
+  rise: pos,
+  chordDepth: nonneg,
+  overhang: nonneg,
+  panels: z.number().int().min(4).max(16),
+  spacing: pos,
+  method: steelMethodSchema,
+  sections: z.object({
+    TC: steelTrussSectionSchema,
+    BC: steelTrussSectionSchema,
+    EV: steelTrussSectionSchema.optional(),
+    V: steelTrussSectionSchema.optional(),
+    D: steelTrussSectionSchema.optional(),
+  }),
+  topBracing: nonneg,
+  bottomBracing: nonneg,
+  roofDead: deadRefSchema,
+  ceilingDead: deadRefSchema,
+  roofLive: z.boolean(),
+  snow: z.boolean(),
+  windDown: nonneg,
+  windUplift: nonneg,
+  selfWeight: z.boolean(),
+  netArea: pos.max(1),
+  U: pos.max(1),
+  deflection: deflectionSchema,
+});
+
 export const memberSpecSchema = z.discriminatedUnion("kind", [
   joistSpecSchema,
   rafterSpecSchema,
@@ -807,6 +940,7 @@ export const memberSpecSchema = z.discriminatedUnion("kind", [
   connectorSpecSchema,
   footingSpecSchema,
   shearWallSpecSchema,
+  shearPanelSpecSchema,
   steelBeamSpecSchema,
   steelColumnSpecSchema,
   basePlateSpecSchema,
@@ -818,6 +952,7 @@ export const memberSpecSchema = z.discriminatedUnion("kind", [
   holdownFootingSpecSchema,
   tieInSpecSchema,
   woodTrussSpecSchema,
+  steelTrussSpecSchema,
   retainingWallSpecSchema,
   guardPostSpecSchema,
   cfsWallSpecSchema,
@@ -826,7 +961,7 @@ export const memberSpecSchema = z.discriminatedUnion("kind", [
 export const hardwareItemSchema = z.object({
   id: z.string(),
   model: z.string(),
-  kind: z.enum(["holdown", "tie", "hanger", "post-cap", "post-base", "strap", "angle"]),
+  kind: z.enum(["holdown", "tie", "hanger", "post-cap", "post-base", "strap", "angle", "panel"]),
   manufacturer: z.string(),
   description: z.string(),
   fasteners: z.string(),
@@ -841,6 +976,17 @@ export const hardwareItemSchema = z.object({
   deflection: nonneg.optional(),
   anchorDia: pos.optional(),
   minPost: pos.optional(),
+  panel: z
+    .object({
+      type: z.enum(["prefab", "portal"]),
+      width: pos,
+      height: pos,
+      Vs: nonneg,
+      Vw: nonneg,
+      drift: nonneg.optional(),
+      anchorT: nonneg.optional(),
+    })
+    .optional(),
   checked: z.boolean(),
   source: z.string(),
 });
@@ -883,7 +1029,14 @@ export const lateralSchema = z.object({
   roofRise: nonneg,
   Ke: pos,
   stories: z.array(
-    z.object({ id: z.string(), name: z.string(), height: pos, items: z.array(weightItemSchema).default([]) }),
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      height: pos,
+      items: z.array(weightItemSchema).default([]),
+      /** apparent shear stiffness of the diaphragm above, kips/in (SDPWS Table 4.2A), semi-rigid analysis */
+      diaphragmGa: pos.optional(),
+    }),
   ),
   lines: z.array(
     z.object({
@@ -899,8 +1052,12 @@ export const lateralSchema = z.object({
       openings: z.array(wallLineOpeningSchema).optional(),
     }),
   ),
-  distribution: z.enum(["flexible", "rigid", "envelope"]).default("flexible"),
+  distribution: z.enum(["flexible", "rigid", "envelope", "semirigid"]).default("flexible"),
   com: z.object({ x: nonneg, y: nonneg }).optional(),
+  /** MWFRS procedure: Ch. 28 Part 1 envelope or Ch. 27 Part 1 directional */
+  windMethod: z.enum(["envelope", "directional"]).optional(),
+  /** seismic procedure: §12.8 ELF or §12.14 simplified alternative */
+  seismicMethod: z.enum(["elf", "simplified"]).optional(),
 });
 
 export const assemblySchema = z.object({
@@ -980,7 +1137,7 @@ export const projectSchema = z.object({
     riskCategory: z.enum(["I", "II", "III", "IV"]),
     liveBasis: z.enum(["IRC", "IBC"]),
     roofLive: z.object({ L0: pos, reduce: z.boolean() }),
-    snow: z.object({ pg: nonneg, Ce: pos, Ct: pos, Is: pos, slippery: z.boolean() }),
+    snow: z.object({ pg: nonneg, Ce: pos, Ct: pos, Is: pos, slippery: z.boolean(), W2: pos.optional() }),
     Kcr: pos,
     seismic: z.object({ SDS: nonneg, SD1: nonneg, siteClass: z.string(), SDC: z.string() }),
     wind: z.object({ V: pos, exposure: z.enum(["B", "C", "D"]), Kzt: pos }),
@@ -998,6 +1155,10 @@ export const projectSchema = z.object({
   members: z.array(memberSpecSchema),
   marks: z.record(z.string()),
   hardware: z.array(hardwareItemSchema).default([]),
+  /** drawing index for the general notes sheet (sheet number, title) */
+  drawingIndex: z.array(z.object({ number: z.string(), title: z.string() })).optional(),
+  /** S0 sheet: per-panel replacement of the standard note text (data/s0Template.ts), keyed by panel title */
+  s0Notes: z.record(z.string()).optional(),
   lateral: lateralSchema.optional(),
   drawings: z.array(drawingSchema).default([]),
   review: z.array(reviewItemSchema).default([]),
@@ -1029,6 +1190,7 @@ export type TrussSpec = z.infer<typeof trussSpecSchema>;
 export type ConnectorSpec = z.infer<typeof connectorSpecSchema>;
 export type FootingSpec = z.infer<typeof footingSpecSchema>;
 export type ShearWallSpec = z.infer<typeof shearWallSpecSchema>;
+export type ShearPanelSpec = z.infer<typeof shearPanelSpecSchema>;
 export type SteelBeamSpec = z.infer<typeof steelBeamSpecSchema>;
 export type SteelColumnSpec = z.infer<typeof steelColumnSpecSchema>;
 export type BasePlateSpec = z.infer<typeof basePlateSpecSchema>;
@@ -1040,6 +1202,7 @@ export type MasonryWallSpec = z.infer<typeof masonryWallSpecSchema>;
 export type HoldownFootingSpec = z.infer<typeof holdownFootingSpecSchema>;
 export type TieInSpec = z.infer<typeof tieInSpecSchema>;
 export type WoodTrussSpec = z.infer<typeof woodTrussSpecSchema>;
+export type SteelTrussSpec = z.infer<typeof steelTrussSpecSchema>;
 export type RetainingWallSpec = z.infer<typeof retainingWallSpecSchema>;
 export type GuardPostSpec = z.infer<typeof guardPostSpecSchema>;
 export type CfsWallSpec = z.infer<typeof cfsWallSpecSchema>;
