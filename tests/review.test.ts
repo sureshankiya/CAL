@@ -410,3 +410,41 @@ describe("DXF export of schedules and notes", () => {
     expect(dxfText("≤ 0.20 in; 12′-0″; 30°; φ; ✓")).toBe("<= 0.20 in; 12'-0\"; 30%%d; phi; \\U+2713");
   });
 });
+
+import { generalNotesSheet } from "@/engine/project";
+import { generalNotesDxf } from "@/lib/dxf";
+
+describe("S0.0 general notes sheet", () => {
+  it("assembles index, codes, criteria, notes, merged nailing, hardware and inspections from the project", () => {
+    const p = exampleProject();
+    p.drawingIndex = [
+      { number: "S0.0", title: "General notes" },
+      { number: "S1.0", title: "Foundation plan" },
+    ];
+    const g = generalNotesSheet(p, designProject(p));
+    expect(g.index).toEqual([
+      ["S0.0", "General notes"],
+      ["S1.0", "Foundation plan"],
+    ]);
+    expect(g.codes[0]).toMatch(/2025 CBC/);
+    expect(g.criteria.find(([k]) => k === "Seismic")![1]).toMatch(/S_DS = 1\.000/);
+    // shear walls with the same sheathing and nailing share one row
+    const sw = g.nailing.filter((r) => r[1].startsWith("Shear wall sheathing"));
+    expect(sw.length).toBe(1);
+    expect(sw[0][0]).toMatch(/1SW-1.*1SW-2/);
+    expect(g.hardware.some((r) => r[0].includes("HDU2"))).toBe(true);
+    const dxf = generalNotesDxf(g, {
+      project: "P",
+      address: "",
+      client: "",
+      jobRef: "",
+      date: "",
+      revision: "0",
+      preparedBy: "",
+    });
+    expect(dxf).toContain("GENERAL NOTES");
+    expect(dxf).toContain("S0.0");
+    expect(dxf).toContain("FASTENING SCHEDULE - TYPICAL FRAMING");
+    expect(dxf).not.toMatch(/\\U\+00A7/);
+  });
+});

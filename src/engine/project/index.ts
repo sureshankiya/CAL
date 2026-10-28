@@ -8,6 +8,7 @@ export * from "./review";
 export * from "./lateral";
 export * from "./extraction";
 export * from "./notes";
+export * from "./generalNotesSheet";
 export * from "./sanMiguel";
 export * from "./eastLincoln";
 export * from "./deckExample";

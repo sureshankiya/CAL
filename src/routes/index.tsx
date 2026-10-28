@@ -20,6 +20,7 @@ import { reportFileName } from "@/lib/exportLayout";
 import { getCycle } from "@/engine/core/codes";
 import {
   designProject,
+  generalNotesSheet,
   duplicateMember,
   exampleProject,
   sanMiguelProject,
@@ -153,6 +154,27 @@ function Index() {
     const name = reportFileName(deferred, "html").replace(/\.html$/, "-schedules.dxf");
     try {
       const text = await (await import("@/lib/dxf")).scheduleDxf(deferred, design, entries);
+      setMessage(saveMessage(name, await saveFile(name, text, "application/dxf")));
+    } catch (e) {
+      setMessage({ tone: "error", text: `Could not export ${name}: ${e instanceof Error ? e.message : String(e)}` });
+    }
+  }
+
+  async function exportNotesSheet() {
+    if (printBlocked()) return;
+    const name = reportFileName(deferred, "html").replace(/-calculations\.html$|\.html$/, "-S0.0-general-notes.dxf");
+    try {
+      const { generalNotesDxf } = await import("@/lib/dxf");
+      const i = deferred.info;
+      const text = generalNotesDxf(generalNotesSheet(deferred, design), {
+        project: i.name,
+        address: i.address,
+        client: i.client,
+        jobRef: i.jobRef,
+        date: i.date,
+        revision: i.revision,
+        preparedBy: i.preparedBy,
+      });
       setMessage(saveMessage(name, await saveFile(name, text, "application/dxf")));
     } catch (e) {
       setMessage({ tone: "error", text: `Could not export ${name}: ${e instanceof Error ? e.message : String(e)}` });
@@ -343,6 +365,14 @@ function Index() {
               onClick={exportDxf}
             >
               Export DXF
+            </button>
+            <button
+              type="button"
+              className={btn}
+              title="S0.0 general notes drawing sheet (ARCH D, 36 x 24): drawing index, codes, design criteria, notes, nailing, hardware and special inspections"
+              onClick={exportNotesSheet}
+            >
+              Export S0.0 notes sheet
             </button>
             <button type="button" onClick={handlePrint} className={primary}>
               Print / Save PDF

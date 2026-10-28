@@ -1155,6 +1155,8 @@ export const projectSchema = z.object({
   members: z.array(memberSpecSchema),
   marks: z.record(z.string()),
   hardware: z.array(hardwareItemSchema).default([]),
+  /** drawing index for the general notes sheet (sheet number, title) */
+  drawingIndex: z.array(z.object({ number: z.string(), title: z.string() })).optional(),
   lateral: lateralSchema.optional(),
   drawings: z.array(drawingSchema).default([]),
   review: z.array(reviewItemSchema).default([]),

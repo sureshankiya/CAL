@@ -36,6 +36,48 @@ import {
 
 type SetProject = (fn: (p: Project) => Project) => void;
 
+/** sheet list printed on the S0.0 general notes sheet */
+function DrawingIndexEditor({ p, set }: { p: Project; set: SetProject }) {
+  const list = p.drawingIndex ?? [];
+  const put = (v: typeof list) => set((x) => ({ ...x, drawingIndex: v }));
+  const fromDrawings = [...new Set(p.drawings.flatMap((d) => Object.values(d.sheets)).filter((s) => s.trim()))].filter(
+    (s) => !list.some((r) => r.number === s),
+  );
+  return (
+    <Collapsible title={`Drawing index (${list.length})`}>
+      {list.map((r, i) => (
+        <div key={i} className="flex gap-1">
+          <div className="w-24">
+            <TextInput
+              value={r.number}
+              onChange={(v) => put(list.map((x, k) => (k === i ? { ...x, number: v } : x)))}
+            />
+          </div>
+          <div className="flex-1">
+            <TextInput value={r.title} onChange={(v) => put(list.map((x, k) => (k === i ? { ...x, title: v } : x)))} />
+          </div>
+          <SmallButton tone="danger" title="Remove" onClick={() => put(list.filter((_, k) => k !== i))}>
+            ✕
+          </SmallButton>
+        </div>
+      ))}
+      <Grid>
+        <SmallButton onClick={() => put([...list, { number: `S${list.length}.0`, title: "" }])}>
+          + Add sheet
+        </SmallButton>
+        {fromDrawings.length ? (
+          <SmallButton onClick={() => put([...list, ...fromDrawings.map((n) => ({ number: n, title: "" }))])}>
+            + Sheets from uploaded drawings ({fromDrawings.length})
+          </SmallButton>
+        ) : (
+          <span />
+        )}
+      </Grid>
+      <Hint>Printed on the S0.0 general notes sheet. Empty: the index lists S0.0 only.</Hint>
+    </Collapsible>
+  );
+}
+
 export function ProjectInfoPanel({ p, set }: { p: Project; set: SetProject }) {
   const info = (k: keyof Project["info"], v: string) => set((x) => ({ ...x, info: { ...x.info, [k]: v } }));
   return (
@@ -103,6 +145,7 @@ export function ProjectInfoPanel({ p, set }: { p: Project; set: SetProject }) {
           onChange={(e) => set((x) => ({ ...x, notes: e.target.value }))}
         />
       </Field>
+      <DrawingIndexEditor p={p} set={set} />
       {p.importLog?.length ? (
         <Collapsible title={`Drawing import — open items (${p.importLog.length}, not printed)`}>
           <ul className="list-disc space-y-1 pl-4 text-xs">

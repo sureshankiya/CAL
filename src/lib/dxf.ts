@@ -1,5 +1,5 @@
 import type { SheetEntry } from "@/components/report/package";
-import { generateNotes, type Project, type ProjectDesign } from "@/engine/project";
+import { generateNotes, type GeneralNotesSheet, type Project, type ProjectDesign } from "@/engine/project";
 import { layoutPackage } from "./exportLayout";
 
 /**
@@ -55,6 +55,7 @@ const CAD_SYMBOLS: Record<string, string> = {
   β: "beta",
   λ: "lambda",
   Σ: "Sum ",
+  "§": "Sec. ",
   "²": "^2",
   "³": "^3",
 };
@@ -242,4 +243,227 @@ export async function scheduleDxf(project: Project, design: ProjectDesign, entri
   } finally {
     lay.done();
   }
+}
+
+/* ---------------------------------------------------------------- general notes sheet */
+
+/** Title-block fields for the drawing sheet. */
+export interface SheetInfo {
+  project: string;
+  address: string;
+  client: string;
+  jobRef: string;
+  date: string;
+  revision: string;
+  preparedBy: string;
+}
+
+/** ARCH D sheet, inches: border margin, title-block strip on the right, five note columns. */
+const SH = { w: 36, h: 24, m: 0.5, tb: 3, cols: 5, gutter: 0.3 };
+
+class SheetFlow {
+  k = -1;
+  col = 0;
+  y = 0;
+  readonly cw: number;
+  readonly top = SH.h - SH.m - 0.35;
+  readonly bottom = SH.m + 0.35;
+  constructor(
+    private w: Writer,
+    private info: SheetInfo,
+    private title: string,
+  ) {
+    const usable = SH.w - 2 * SH.m - SH.tb - 0.5;
+    this.cw = (usable - (SH.cols - 1) * SH.gutter) / SH.cols;
+    this.sheet();
+  }
+  get ox() {
+    return this.k * (SH.w + 2);
+  }
+  x(col = this.col) {
+    return this.ox + SH.m + 0.25 + col * (this.cw + SH.gutter);
+  }
+  private sheet() {
+    this.k++;
+    this.col = 0;
+    this.y = this.top;
+    const { w } = this;
+    const o = this.ox;
+    const B = "S-ANNO-TTLB";
+    const [x0, x1, y0, y1] = [o + SH.m, o + SH.w - SH.m, SH.m, SH.h - SH.m];
+    w.line(B, x0, y0, x1, y0);
+    w.line(B, x1, y0, x1, y1);
+    w.line(B, x1, y1, x0, y1);
+    w.line(B, x0, y1, x0, y0);
+    const tx = x1 - SH.tb;
+    w.line(B, tx, y0, tx, y1);
+    const chars = Math.floor((SH.tb - 0.3) / CHAR_W);
+    let ty = y1 - 0.35;
+    const field = (label: string, value: string, h = H) => {
+      w.text(B, tx + 0.15, ty, 0.07, label.toUpperCase());
+      ty -= 0.18;
+      for (const s of wrap(value || "-", Math.floor(chars * (H / h)))) {
+        w.text(B, tx + 0.15, ty, h, s);
+        ty -= h * 1.6;
+      }
+      ty -= 0.12;
+      w.line(B, tx, ty + 0.06, x1, ty + 0.06);
+      ty -= 0.12;
+    };
+    field("Prepared by", this.info.preparedBy);
+    field("Project", this.info.project, 1.33 * H);
+    field("Address", this.info.address);
+    field("Client", this.info.client);
+    field("Job no.", this.info.jobRef);
+    field("Date", this.info.date);
+    field("Revision", this.info.revision);
+    // engineer's stamp
+    const s0 = ty - 2.7;
+    w.text(B, tx + 0.15, ty, 0.07, "ENGINEER'S STAMP");
+    w.line(B, tx + 0.15, ty - 0.15, x1 - 0.15, ty - 0.15);
+    w.line(B, x1 - 0.15, ty - 0.15, x1 - 0.15, s0);
+    w.line(B, x1 - 0.15, s0, tx + 0.15, s0);
+    w.line(B, tx + 0.15, s0, tx + 0.15, ty - 0.15);
+    // sheet title and number
+    w.line(B, tx, y0 + 1.6, x1, y0 + 1.6);
+    w.text(B, tx + 0.15, y0 + 1.35, 0.07, "SHEET TITLE");
+    w.text(B, tx + 0.15, y0 + 1.05, 0.16, this.title);
+    w.text(B, tx + 0.15, y0 + 0.7, 0.07, "SHEET");
+    w.text(B, tx + 0.15, y0 + 0.2, 0.4, `S0.${this.k}`);
+  }
+  /** room for h below the cursor, else the next column / sheet */
+  ensure(h: number): boolean {
+    if (this.y - h >= this.bottom) return false;
+    this.col++;
+    if (this.col >= SH.cols) this.sheet();
+    else this.y = this.top;
+    return true;
+  }
+  heading(t: string) {
+    this.ensure(4 * ROW);
+    if (this.y < this.top - 1e-6) this.y -= 0.5 * ROW;
+    const h = 1.33 * H;
+    this.w.text("S-ANNO-TTLB", this.x(), this.y - h, h, t.toUpperCase());
+    this.w.line("S-ANNO-TTLB", this.x(), this.y - h - 0.05, this.x() + t.length * 0.9 * h, this.y - h - 0.05);
+    this.y -= h + 2 * ROW * 0.6;
+  }
+  notes(items: string[], numbered = true) {
+    const chars = Math.floor(this.cw / CHAR_W);
+    items.forEach((it, i) => {
+      const tag = numbered ? `${i + 1}. ` : "";
+      const lines = wrap(it, chars - tag.length);
+      lines.forEach((s, k) => {
+        this.ensure(ROW);
+        this.w.text("S-ANNO-NOTE", this.x() + (k ? tag.length * CHAR_W : 0), this.y - H, H, k ? s : tag + s);
+        this.y -= ROW;
+      });
+      this.y -= 0.35 * ROW;
+    });
+  }
+  /** table across the column; fr = column width fractions */
+  table(head: string[], fr: number[], rows: string[][]) {
+    const L = "S-ANNO-SCHD";
+    const widths = fr.map((f) => f * this.cw);
+    const chars = widths.map((wd) => Math.max(3, Math.floor((wd - 2 * PAD) / CHAR_W)));
+    const row = (cells: string[], header: boolean) => {
+      const wrapped = cells.map((c, i) => wrap(c, chars[i]));
+      const h = Math.max(...wrapped.map((c) => c.length)) * ROW + 0.4 * ROW;
+      if (this.ensure(h) && !header) row(head, true);
+      const x0 = this.x();
+      const xs = [x0];
+      for (const wd of widths) xs.push(xs[xs.length - 1] + wd);
+      const top = this.y;
+      wrapped.forEach((c, i) =>
+        c.forEach((s, k) => this.w.text(L, xs[i] + PAD, top - ROW * (k + 1) + 0.2 * ROW, H, s)),
+      );
+      this.y -= h;
+      this.w.line(L, x0, top, xs[xs.length - 1], top);
+      this.w.line(L, x0, this.y, xs[xs.length - 1], this.y);
+      for (const xx of xs) this.w.line(L, xx, top, xx, this.y);
+      if (header) this.w.line(L, x0, this.y + 0.02, xs[xs.length - 1], this.y + 0.02);
+    };
+    row(head, true);
+    for (const r of rows) row(r, false);
+    this.y -= 0.5 * ROW;
+  }
+}
+
+/** S0.0 general notes sheet (continues on S0.1 … when the content overflows). */
+export function generalNotesDxf(g: GeneralNotesSheet, info: SheetInfo): string {
+  const w = new Writer();
+  const f = new SheetFlow(w, info, "GENERAL NOTES");
+  f.heading("Drawing index");
+  f.table(
+    ["Sheet", "Title"],
+    [0.22, 0.78],
+    g.index.map(([a, b]) => [a, b]),
+  );
+  f.heading("Codes and standards");
+  f.notes(g.codes);
+  f.heading("Structural design criteria");
+  f.table(
+    ["Item", "Design value"],
+    [0.36, 0.64],
+    g.criteria.map(([a, b]) => [a, b]),
+  );
+  for (const s of g.notes) {
+    f.heading(s.title);
+    f.notes(s.notes);
+  }
+  if (g.deferred.length) {
+    f.heading("Deferred submittals");
+    f.notes(g.deferred);
+  }
+  if (g.nailing.length) {
+    f.heading("Nailing schedule — designed connections");
+    f.table(["Mark", "Connection", "Fastener", "Spacing"], [0.13, 0.3, 0.3, 0.27], g.nailing);
+  }
+  f.heading("Fastening schedule — typical framing");
+  f.table(
+    ["Connection", "Fastener", "Location / spacing"],
+    [0.44, 0.27, 0.29],
+    g.typicalNailing.map((r) => [...r]),
+  );
+  f.notes(
+    [
+      "Common wire nails unless noted. Other fasteners permitted by IBC / CBC Table 2304.10.2 may be substituted as listed there. Scheduled connections on the plans and calculations govern.",
+    ],
+    false,
+  );
+  if (g.hardware.length) {
+    f.heading("Hardware schedule");
+    f.table(["Product", "Description", "Fasteners", "Location"], [0.24, 0.24, 0.24, 0.28], g.hardware);
+    f.notes(
+      [
+        "Install all connectors with the full number and size of fasteners listed by the manufacturer; substitutions require the engineer's approval.",
+      ],
+      false,
+    );
+  }
+  if (g.inspections.length) {
+    f.heading("Special inspections (IBC / CBC Ch. 17)");
+    f.table(["Item", "Type", "Members"], [0.5, 0.2, 0.3], g.inspections);
+  }
+  return [
+    "0",
+    "SECTION",
+    "2",
+    "HEADER",
+    "9",
+    "$ACADVER",
+    "1",
+    "AC1009",
+    "0",
+    "ENDSEC",
+    "0",
+    "SECTION",
+    "2",
+    "ENTITIES",
+    ...w.out,
+    "0",
+    "ENDSEC",
+    "0",
+    "EOF",
+    "",
+  ].join("\n");
 }
