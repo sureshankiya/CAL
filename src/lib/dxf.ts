@@ -1,5 +1,6 @@
 import type { SheetEntry } from "@/components/report/package";
 import { generateNotes, type GeneralNotesSheet, type Project, type ProjectDesign } from "@/engine/project";
+import type { Detail, Prim } from "./details";
 import { layoutPackage } from "./exportLayout";
 
 /**
@@ -109,6 +110,9 @@ class Writer {
     );
     if (o.rot) this.out.push("50", o.rot.toFixed(1));
     if (o.center) this.out.push("72", "1", "73", "2", "11", at[0], "21", at[1], "31", "0");
+  }
+  circle(layer: string, x: number, y: number, r: number) {
+    this.out.push("0", "CIRCLE", "8", layer, "10", x.toFixed(4), "20", y.toFixed(4), "30", "0", "40", r.toFixed(4));
   }
   rect(layer: string, x0: number, y0: number, x1: number, y1: number) {
     this.line(layer, x0, y0, x1, y0);
@@ -456,7 +460,7 @@ function layout(bs: Block[], t: number): Segment[] {
   return segs;
 }
 
-function titleBlock(w: Writer, ox: number, info: SheetInfo, sheetNo: string) {
+function titleBlock(w: Writer, ox: number, info: SheetInfo, sheetNo: string, title = "GENERAL NOTES") {
   const B = "S-ANNO-TTLB";
   const x1 = ox + SH.w - SH.m;
   const x0 = x1 - SH.tb;
@@ -498,7 +502,7 @@ function titleBlock(w: Writer, ox: number, info: SheetInfo, sheetNo: string) {
     w.text(B, xs[2], bottom + 0.2, 0.22, info.address || "-", { rot: 90 });
     w.text(B, xs[3], bottom + 0.2, 0.12, info.client ? `CLIENT: ${info.client}` : "", { rot: 90 });
   });
-  box(0.75, "SHEET TITLE", (top) => w.text(B, x0 + SH.tb / 2, top - 0.48, 0.16, "GENERAL NOTES", { center: true }));
+  box(0.75, "SHEET TITLE", (top) => w.text(B, x0 + SH.tb / 2, top - 0.48, 0.16, title, { center: true }));
   box(1.15, "", (top) => {
     [
       ["DATE", info.date],
@@ -512,7 +516,7 @@ function titleBlock(w: Writer, ox: number, info: SheetInfo, sheetNo: string) {
     });
   });
   w.text(B, xl, y - 0.14, 0.07, "SHEET NUMBER");
-  w.text(B, x0 + SH.tb / 2, SH.m + 0.75, 0.55, sheetNo, { center: true });
+  w.text(B, x0 + SH.tb / 2, SH.m + 0.55, 0.5, sheetNo, { center: true });
 }
 
 /** S0 general notes sheet; content that does not fit one sheet at the smallest text height continues on further sheets. */
@@ -539,7 +543,11 @@ export function generalNotesDxf(g: GeneralNotesSheet, info: SheetInfo): string {
       y -= r.h;
     }
   }
-  return [
+  return dxfFile(w);
+}
+
+const dxfFile = (w: Writer) =>
+  [
     "0",
     "SECTION",
     "2",
@@ -561,4 +569,220 @@ export function generalNotesDxf(g: GeneralNotesSheet, info: SheetInfo): string {
     "EOF",
     "",
   ].join("\n");
+
+/* ---------------------------------------------------------------- details sheets */
+
+/** standard architectural scales, paper inches per foot */
+const SCALES: Array<[number, string]> = [
+  [3, '3" = 1\'-0"'],
+  [1.5, '1-1/2" = 1\'-0"'],
+  [1, '1" = 1\'-0"'],
+  [0.75, '3/4" = 1\'-0"'],
+  [0.5, '1/2" = 1\'-0"'],
+  [0.375, '3/8" = 1\'-0"'],
+  [0.25, '1/4" = 1\'-0"'],
+  [0.1875, '3/16" = 1\'-0"'],
+  [0.125, '1/8" = 1\'-0"'],
+];
+const GRID = { cols: 4, rows: 4, band: 0.75 };
+
+function extent(ps: Prim[]): [number, number, number, number] {
+  const xs: number[] = [];
+  const ys: number[] = [];
+  const pts = (...q: Array<[number, number]>) => q.forEach(([x, y]) => (xs.push(x), ys.push(y)));
+  for (const p of ps) {
+    if (p.t === "line" || p.t === "dim") pts(p.a, p.b);
+    else if (p.t === "circle") pts([p.c[0] - p.r, p.c[1] - p.r], [p.c[0] + p.r, p.c[1] + p.r]);
+    else if (p.t === "earth") pts([p.x1, p.y - 2], [p.x2, p.y]);
+    else pts([p.x, p.y], [p.x + p.w, p.y + p.h]);
+  }
+  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+}
+
+/** one detail in the cell with lower-left (cx, cy) */
+function drawDetail(
+  w: Writer,
+  d: Detail,
+  num: number,
+  sheetNo: string,
+  cx: number,
+  cy: number,
+  bw: number,
+  bh: number,
+) {
+  const O = "S-DETL";
+  const HT = "S-DETL-HATC";
+  const T = "S-ANNO-TEXT";
+  const S = "S-ANNO-SYMB";
+  // title band: bubble, title, scale
+  w.line(S, cx, cy + GRID.band, cx + bw, cy + GRID.band);
+  const bx = cx + 0.42;
+  const by = cy + GRID.band / 2;
+  w.circle(S, bx, by, 0.28);
+  w.line(S, bx - 0.28, by, bx + 0.28, by);
+  w.text(S, bx, by + 0.13, 0.14, String(num), { center: true });
+  w.text(S, bx, by - 0.13, 0.08, sheetNo, { center: true });
+  const tw = bw - 1.0;
+  const th = Math.min(0.14, tw / (ADV * Math.max(1, d.title.length)));
+  w.text(S, cx + 0.85, cy + 0.4, th, d.title);
+  w.line(S, cx + 0.85, cy + 0.36, cx + 0.85 + Math.min(tw, d.title.length * ADV * th), cy + 0.36);
+  // drawing area (left) and callout column (right)
+  const ax = cx + 0.15;
+  const aw = bw * 0.56;
+  const ay = cy + GRID.band + 0.25;
+  const ah = bh - GRID.band - 0.45;
+  const [x0, y0, x1, y1] = extent(d.prims);
+  const pad = 3; // real inches kept for dimension strings
+  const [spf, label] =
+    SCALES.find(([s]) => ((x1 - x0 + 2 * pad) * s) / 12 <= aw && ((y1 - y0 + 2 * pad) * s) / 12 <= ah) ??
+    SCALES[SCALES.length - 1];
+  const k = spf / 12;
+  w.text(S, cx + 0.85, cy + 0.17, 0.08, `SCALE: ${label}`);
+  const ox = ax + aw / 2 - ((x0 + x1) / 2) * k;
+  const oy = ay + ah / 2 - ((y0 + y1) / 2) * k;
+  const P = (x: number, y: number): [number, number] => [ox + x * k, oy + y * k];
+  const seg = (layer: string, a: [number, number], b: [number, number]) => w.line(layer, a[0], a[1], b[0], b[1]);
+  const box = (x: number, y: number, ww: number, hh: number, layer = O) => {
+    const [a, b] = [P(x, y), P(x + ww, y + hh)];
+    w.rect(layer, a[0], a[1], b[0], b[1]);
+    return [a, b] as const;
+  };
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (const p of d.prims) {
+    if (p.t === "line") seg(p.hidden ? "S-DETL-HIDN" : O, P(...p.a), P(...p.b));
+    else if (p.t === "rect") box(p.x, p.y, p.w, p.h);
+    else if (p.t === "wood") {
+      const [a, b] = box(p.x, p.y, p.w, p.h);
+      seg(O, a, b);
+      seg(O, [a[0], b[1]], [b[0], a[1]]);
+    } else if (p.t === "conc") {
+      const [a, b] = box(p.x, p.y, p.w, p.h);
+      const sp = 0.09;
+      for (let x = a[0] + sp / 2; x < b[0] - 0.02; x += sp)
+        for (let y = a[1] + sp / 2; y < b[1] - 0.02; y += sp) {
+          const px = Math.min(b[0] - 0.03, x + (rnd() - 0.5) * sp * 0.6);
+          const py = Math.min(b[1] - 0.03, y + (rnd() - 0.5) * sp * 0.6);
+          if (rnd() < 0.35) {
+            const z = 0.022;
+            w.line(HT, px, py, px + z, py);
+            w.line(HT, px + z, py, px + z / 2, py + z * 0.87);
+            w.line(HT, px + z / 2, py + z * 0.87, px, py);
+          } else w.line(HT, px, py, px + 0.005, py);
+        }
+    } else if (p.t === "earth") {
+      const [a, b] = [P(p.x1, p.y), P(p.x2, p.y)];
+      seg(O, a, b);
+      for (let x = a[0] + 0.06; x < b[0] - 0.08; x += 0.2)
+        for (let j = 0; j < 3; j++) w.line(HT, x + j * 0.035, a[1], x + j * 0.035 - 0.06, a[1] - 0.06);
+    } else if (p.t === "circle") {
+      const c = P(...p.c);
+      w.circle(O, c[0], c[1], Math.max(0.01, p.r * k));
+    } else if (p.t === "dim") {
+      const a = P(...p.a);
+      const b = P(...p.b);
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (len < 0.05) continue;
+      const u = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+      const n = [-u[1], u[0]];
+      const o = Math.sign(p.off || 1) * Math.max(0.15, Math.abs(p.off * k));
+      const A: [number, number] = [a[0] + n[0] * o, a[1] + n[1] * o];
+      const B2: [number, number] = [b[0] + n[0] * o, b[1] + n[1] * o];
+      const D = "S-ANNO-DIMS";
+      const ext = (q: number[], Q: [number, number]) =>
+        w.line(
+          D,
+          q[0] + n[0] * 0.04 * Math.sign(o),
+          q[1] + n[1] * 0.04 * Math.sign(o),
+          Q[0] + n[0] * 0.05 * Math.sign(o),
+          Q[1] + n[1] * 0.05 * Math.sign(o),
+        );
+      ext(a, A);
+      ext(b, B2);
+      w.line(D, A[0], A[1], B2[0], B2[1]);
+      for (const q of [A, B2])
+        w.line(
+          D,
+          q[0] - 0.04 * (u[0] + n[0]),
+          q[1] - 0.04 * (u[1] + n[1]),
+          q[0] + 0.04 * (u[0] + n[0]),
+          q[1] + 0.04 * (u[1] + n[1]),
+        );
+      let ang = (Math.atan2(u[1], u[0]) * 180) / Math.PI;
+      if (ang > 90.1 || ang <= -89.9) ang += 180;
+      const side = Math.sign(o);
+      w.text(D, (A[0] + B2[0]) / 2 + n[0] * 0.07 * side, (A[1] + B2[1]) / 2 + n[1] * 0.07 * side, 0.07, p.text, {
+        rot: ((ang % 360) + 360) % 360,
+        center: true,
+      });
+    }
+  }
+  // callouts: top to bottom in the order of their targets, leader to each
+  const nx = ax + aw + 0.2;
+  const nw = cx + bw - 0.12 - nx;
+  const items = [...d.notes].sort((p, q) => q.at[1] - p.at[1] || p.at[0] - q.at[0]);
+  const marks = `AT: ${d.marks.join(", ")}`;
+  let h = 0.085;
+  const lay = (hh: number) => wrapAll(hh).total <= bh - GRID.band - 0.3;
+  const wrapAll = (hh: number) => {
+    const ch = Math.max(8, Math.floor(nw / (ADV * hh)));
+    const blocks = [marks, ...items.map((i) => i.text)].map((t) => wrap(t, ch));
+    return { blocks, total: blocks.reduce((a, b) => a + b.length * 1.45 * hh + 0.6 * hh, 0) };
+  };
+  while (h > 0.06 && !lay(h)) h -= 0.005;
+  const { blocks } = wrapAll(h);
+  // each callout at the height of its target (leaders near horizontal), stacked without overlap
+  const hgt = blocks.map((ls) => ls.length * 1.45 * h + 0.6 * h);
+  const tops = blocks.map(() => cy + bh - 0.2);
+  for (let i = 1; i < blocks.length; i++)
+    tops[i] = Math.min(P(...items[i - 1].at)[1] + 0.7 * h, tops[i - 1] - hgt[i - 1]);
+  // push back up from the bottom where the stack runs out of room
+  let floor = cy + GRID.band + 0.1;
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    if (tops[i] - hgt[i] < floor) tops[i] = floor + hgt[i];
+    floor = tops[i];
+  }
+  blocks.forEach((ls, i) => {
+    ls.forEach((l, j) => w.text(T, nx, tops[i] - h - j * 1.45 * h, h, l));
+    if (i === 0) return;
+    const [tx, ty] = P(...items[i - 1].at);
+    const ly = tops[i] - 0.6 * h;
+    w.line(T, nx - 0.04, ly, nx - 0.14, ly);
+    w.line(T, nx - 0.14, ly, tx, ty);
+    const L2 = Math.hypot(nx - 0.14 - tx, ly - ty) || 1;
+    const ux = (nx - 0.14 - tx) / L2;
+    const uy = (ly - ty) / L2;
+    w.line(T, tx, ty, tx + 0.07 * ux - 0.025 * uy, ty + 0.07 * uy + 0.025 * ux);
+    w.line(T, tx, ty, tx + 0.07 * ux + 0.025 * uy, ty + 0.07 * uy - 0.025 * ux);
+    w.line(
+      T,
+      tx + 0.07 * ux - 0.025 * uy,
+      ty + 0.07 * uy + 0.025 * ux,
+      tx + 0.07 * ux + 0.025 * uy,
+      ty + 0.07 * uy - 0.025 * ux,
+    );
+  });
+}
+
+/** Details sheets: 4 x 4 grid of detail boxes per sheet, title block as on the S0 sheet. */
+export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string): string {
+  const w = new Writer();
+  const per = GRID.cols * GRID.rows;
+  const sheets = Math.max(1, Math.ceil(details.length / per));
+  const x1 = SH.w - SH.m - SH.tb - 0.25;
+  const bw = (x1 - X0) / GRID.cols;
+  const bh = (TOP - BOTTOM) / GRID.rows;
+  for (let k = 0; k < sheets; k++) {
+    const ox = k * (SH.w + 2);
+    const no = k ? `${sheetNo}.${k}` : sheetNo;
+    titleBlock(w, ox, info, no, "DETAILS");
+    for (let c = 0; c <= GRID.cols; c++) w.line("S-ANNO-TTLB", ox + X0 + c * bw, BOTTOM, ox + X0 + c * bw, TOP);
+    for (let r = 0; r <= GRID.rows; r++) w.line("S-ANNO-TTLB", ox + X0, BOTTOM + r * bh, ox + x1, BOTTOM + r * bh);
+    details.slice(k * per, (k + 1) * per).forEach((d, i) => {
+      const col = i % GRID.cols;
+      const row = Math.floor(i / GRID.cols);
+      drawDetail(w, d, i + 1, no, ox + X0 + col * bw, TOP - (row + 1) * bh, bw, bh);
+    });
+  }
+  return dxfFile(w);
 }

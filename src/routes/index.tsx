@@ -185,6 +185,37 @@ function Index() {
     }
   }
 
+  async function exportDetails() {
+    if (printBlocked()) return;
+    const sheetNo = deferred.drawingIndex?.find((s) => /detail/i.test(s.title))?.number || "SD-1";
+    const name = reportFileName(deferred, "html").replace(
+      /-calculations\.html$|\.html$/,
+      `-${sheetNo.replace(/[^\w.-]+/g, "")}-details.dxf`,
+    );
+    try {
+      const [{ detailsDxf }, { projectDetails }] = await Promise.all([import("@/lib/dxf"), import("@/lib/details")]);
+      const i = deferred.info;
+      const details = projectDetails(deferred, design);
+      if (!details.length) return setMessage({ tone: "info", text: "No calculated items to detail yet." });
+      const text = detailsDxf(
+        details,
+        {
+          project: i.name,
+          address: i.address,
+          client: i.client,
+          jobRef: i.jobRef,
+          date: i.date,
+          revision: i.revision,
+          preparedBy: i.preparedBy,
+        },
+        sheetNo,
+      );
+      setMessage(saveMessage(name, await saveFile(name, text, "application/dxf")));
+    } catch (e) {
+      setMessage({ tone: "error", text: `Could not export ${name}: ${e instanceof Error ? e.message : String(e)}` });
+    }
+  }
+
   async function exportReport(kind: "pdf" | "docx") {
     if (printBlocked() || exporting) return;
     const name = reportFileName(deferred, kind);
@@ -377,6 +408,14 @@ function Index() {
               onClick={exportNotesSheet}
             >
               Export S0 general notes sheet
+            </button>
+            <button
+              type="button"
+              className={btn}
+              title="Details sheets (ARCH D, 4 x 4 details per sheet): one detail per designed condition, callouts from the calculations only"
+              onClick={exportDetails}
+            >
+              Export details sheets
             </button>
             <button type="button" onClick={handlePrint} className={primary}>
               Print / Save PDF
