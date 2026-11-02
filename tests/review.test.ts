@@ -498,8 +498,8 @@ describe("details sheets", () => {
     expect(dxf).toContain("\nCIRCLE\n");
     expect(dxf).toContain("HC-NOTE"); // slanted ROMANS callout style defined in the STYLE table
     expect(sill.foot ?? []).toEqual([]);
-    expect(ds.find((x) => x.title === "CONTINUOUS FOOTING" && !x.tpl)!.foot![0]).toMatch(
-      /^BOTTOM OF FOOTING .* MIN\. BELOW LOWEST ADJACENT GRADE$/,
+    expect(ds.find((x) => x.title === "CONTINUOUS FOOTING AT STEM WALL")!.foot![0]).toMatch(
+      /BOTTOM OF FOOTING .* MIN\. BELOW LOWEST ADJACENT GRADE$/,
     );
     expect(dxf.trim().endsWith("0\nEOF")).toBe(true);
   });
@@ -521,5 +521,23 @@ describe("details from the engineer's library (CONNECTION.dxf)", () => {
     expect(dxf).toContain("CONT. BOTTOM"); // keynote 7 rewritten from the footing's bars
     expect(dxf).not.toContain("1-#5 REBAR CONTINUOUS"); // the library's sample value is gone
     expect(dxf).toContain("SCALE: N.T.S.");
+  });
+});
+
+describe("details cover the calculation report, one typical detail per type", () => {
+  it("every calculated member is detailed and no detail type repeats on a sheet", () => {
+    for (const p of [exampleProject(), sanMiguelProject()]) {
+      const d = designProject(p);
+      const ds = projectDetails(p, d);
+      const covered = new Set(ds.flatMap((x) => x.marks));
+      for (const o of d.outcomes.values()) if (o.result) expect(covered.has(o.result.mark), o.result.mark).toBe(true);
+      const keys = ds.map((x) => `${x.cat}|${x.title}|${x.tpl?.id ?? ""}`);
+      expect(new Set(keys).size).toBe(keys.length);
+    }
+    // values that differ between members are listed by mark in the one typical detail
+    const p = exampleProject();
+    const rafter = projectDetails(p, designProject(p)).find((x) => x.title === "RAFTER AT TOP PLATE")!;
+    expect(rafter.marks).toEqual(["R-1", "R-2"]);
+    expect(rafter.notes.some((n) => /R-1: .*; R-2: /.test(n.text))).toBe(true);
   });
 });

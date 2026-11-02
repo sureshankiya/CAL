@@ -859,7 +859,7 @@ function drawDetail(w: Writer, d: Detail, num: number, cx: number, cy: number, b
     SCALES.find(([s]) => ((x1 - x0 + 2 * pad) * s) / 12 <= aw && ((y1 - y0 + 2 * pad) * s) / 12 <= ah) ??
     SCALES[SCALES.length - 1];
   const k = spf / 12;
-  titleStrip(w, d, num, label, cx, cy, bw);
+  titleStrip(w, d, num, d.nts ? "N.T.S." : label, cx, cy, bw);
   const ox = ax + aw / 2 - ((x0 + x1) / 2) * k;
   const oy = ay + ah / 2 - ((y0 + y1) / 2) * k;
   const P = (x: number, y: number): [number, number] => [ox + x * k, oy + y * k];

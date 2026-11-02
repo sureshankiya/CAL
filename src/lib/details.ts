@@ -38,6 +38,8 @@ export interface Detail {
   tpl?: { id: string; text: Array<[string, string]> };
   /** sheet the detail belongs on */
   cat?: DetailCat;
+  /** typical detail drawn from one of several members of different size: not to scale */
+  nts?: boolean;
 }
 
 /** detail sheets in the engineer's order and wording (portfolio sets: S-7 TYP. FTG. CONNECTION DETAILS …) */
@@ -359,7 +361,7 @@ function footing(r: R<"footing">): Detail {
       fc: f.fc,
       qa: f.qa,
       what: `${fmtFtIn(f.B)} wide x ${inch(f.h)} continuous footing`,
-    }).done("Continuous footing", r.mark);
+    }).done(f.stem ? "Continuous footing at stem wall" : "Continuous footing", r.mark);
   const D = new Draw();
   const top = f.thickened ? 0 : -f.depth + f.h;
   const bot = top - f.h;
@@ -814,19 +816,35 @@ function ledger(r: R<"ledger">): Detail {
   return D.done("Ledger connection", r.mark);
 }
 
-function steelColumnCap(r: R<"steelColumn">): Detail | undefined {
+function steelColumn(r: R<"steelColumn">): Detail {
   const c = r.input;
-  if (!c.cap) return undefined;
   const D = new Draw();
-  D.rect(-3, -30, 6, 30);
-  D.rect(-c.cap.length / 2, 0, c.cap.length, 0.5);
-  D.rect(-12, 0.5, 24, 11.25);
-  D.note(`Column ${c.shape} (${c.grade})`, [3, -15]);
-  D.note(`Cap plate ${inch(c.cap.length)} x ${inch(c.cap.width)}; wood beam bearing ${c.cap.species} ${c.cap.grade}`, [
-    c.cap.length / 2,
-    0.25,
-  ]);
-  return D.done("Steel column cap", r.mark);
+  const bw = Number(/(\d+(?:\.\d+)?)/.exec(c.shape.replace(/^[A-Z]+/, ""))?.[1] ?? 6);
+  const H = 40;
+  // column between a beam above and the base plate on the footing; wall thickness shown dashed
+  cut(D, -bw / 2, 1.5, bw, H - 1.5, "");
+  D.line([-bw / 2 + 0.375, 1.5], [-bw / 2 + 0.375, H], true);
+  D.line([bw / 2 - 0.375, 1.5], [bw / 2 - 0.375, H], true);
+  D.rect(-bw / 2 - 2, 0.75, bw + 4, 0.75);
+  D.conc(-14, -14, 28, 14.75);
+  D.rect(-bw / 2 - 2, 0, bw + 4, 0.75);
+  for (const x of [-bw / 2 - 1, bw / 2 + 1]) D.anchor(x, 2.2, -8, 0.625, "head");
+  const cap = c.cap;
+  const cl = cap?.length ?? bw + 4;
+  D.rect(-cl / 2, H, cl, 0.5);
+  cut(D, -18, H + 0.5, 36, 11.25, "lr");
+  for (const x of [-cl / 2 + 1.25, cl / 2 - 1.25]) boltEnd(D, [x, H + 4], 0.5);
+  D.note(`${r.mark}: ${c.shape} (${c.grade}), ${fmtFtIn(c.height)} high`, [bw / 2, H / 2]);
+  D.note(
+    cap
+      ? `Cap plate ${inch(cap.length)} x ${inch(cap.width)}, welded all around; beam bearing on ${cap.species} ${cap.grade}`
+      : "Cap plate / beam connection per plan",
+    [cl / 2, H + 0.25],
+  );
+  D.note("Bolt beam to cap plate", [cl / 2 - 1.25, H + 4]);
+  D.note("Base plate and anchor rods per base plate detail", [bw / 2 + 2, 1.1]);
+  D.note("Footing / pier per plan", [-12, -7]);
+  return D.done("Steel column", r.mark);
 }
 
 /* ------------------------------------------------------------------ framing details (full context) */
@@ -1152,7 +1170,8 @@ function studPack(r: R<"wall">, i: number): Detail {
   D.note("Solid blocking / squash blocks to match pack, full depth", [pw / 2, -6]);
   D.note("Rim / floor framing per plan", [-L + 4, -6]);
   D.note("Foundation per plan", [-L + 6, -20]);
-  return D.done(`Stud pack${k.label ? ` - ${k.label}` : ""}`, r.mark);
+  if (k.label) D.footnote(k.label);
+  return D.done("Stud pack under point load", r.mark);
 }
 
 function hanger(r: R<"connector">, p: Project, d: ProjectDesign): Detail {
@@ -1447,7 +1466,8 @@ function upliftPath(r: R<"uplift">): Detail {
   D.conc(-14, -14, 28, 14);
   D.anchor(0, 1.5, -8, 0.625, "hook");
   D.note("Anchorage to foundation per plan", [0, -4]);
-  return D.done(`Uplift load path - ${r.input.sourceMark}`, r.mark);
+  D.footnote(`Uplift from ${r.input.sourceMark}`);
+  return D.done("Uplift load path", r.mark);
 }
 
 /* ------------------------------------------------------------------ the engineer's library */
@@ -1696,7 +1716,7 @@ function libOpening(r: R<"wall">, i: number): Detail {
   const o = w.openings[i];
   const jk = o.jacks ?? 1;
   const trim = `(${jk}) ${w.size} trimmers ea. side`;
-  return lib("opening-framing", `${o.type ?? "opening"} framing - ${o.label}`, r.mark, [
+  return lib("opening-framing", "Door / window framing", r.mark, [
     ["#8", `(${o.kings}) ${w.size}`],
     ["#9", "king studs"],
     ["#10", "ea. side"],
@@ -1707,7 +1727,7 @@ function libOpening(r: R<"wall">, i: number): Detail {
     ["#15", trim],
     ["#16", ""],
     ["#17", ""],
-    ["#39", `${fmtFtIn(o.x2 - o.x1)} opening`],
+    ["#39", `${o.label}: ${fmtFtIn(o.x2 - o.x1)} ${o.type ?? "opening"}`],
     ["#41", `Header: ${o.header || "per schedule"}${o.head ? `; head height ${fmtFtIn(o.head)}` : ""}`],
     ["#42", ""],
     ["#43", ""],
@@ -1827,21 +1847,83 @@ export function projectDetails(p: Project, d: ProjectDesign): Detail[] {
         add(steelBeamBearing(r), "steel");
         break;
       case "steelColumn":
-        add(steelColumnCap(r), "steel");
+        add(steelColumn(r), "steel");
         break;
       case "steelTruss":
         add(steelTrussJoint(r), "steel");
         break;
     }
   }
-  // identical details (same drawing and callouts) are drawn once, tagged with every mark
-  const merged = new Map<string, Detail>();
-  for (const x of out) {
-    const key = JSON.stringify([x.cat, x.title, x.prims, x.notes, x.tpl]);
-    const m = merged.get(key);
-    if (m) m.marks.push(...x.marks.filter((k) => !m.marks.includes(k)));
-    else merged.set(key, { ...x, marks: [...x.marks] });
-  }
+  return typical(out);
+}
+
+/**
+ * One typical detail per type and sheet, tagged with every mark, as on the engineer's typical
+ * detail sheets: a callout whose value differs between members lists it by mark ("R-1: … ;
+ * R-2: …"); a dimension that differs reads VARIES; the drawing of the first member serves for all
+ * (not to scale when the members' geometry differs).
+ */
+export function typical(out: Detail[]): Detail[] {
   const nat = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
-  return [...merged.values()].map((x) => ({ ...x, marks: x.marks.sort(nat) }));
+  const groups = new Map<string, Detail[]>();
+  for (const x of out) {
+    const key = JSON.stringify([x.cat, x.title, x.tpl?.id ?? ""]);
+    groups.set(key, [...(groups.get(key) ?? []), x]);
+  }
+  const byMark = (vals: Array<{ marks: string[]; v: string }>) => {
+    const distinct = [...new Set(vals.map((x) => x.v))];
+    if (distinct.length === 1) return distinct[0];
+    return distinct
+      .filter(Boolean)
+      .map(
+        (v) =>
+          `${vals
+            .filter((x) => x.v === v)
+            .flatMap((x) => x.marks)
+            .sort(nat)
+            .join(", ")}: ${v}`,
+      )
+      .join("; ");
+  };
+  return [...groups.values()].map((g) => {
+    const first = g[0];
+    const marks = [...new Set(g.flatMap((x) => x.marks))].sort(nat);
+    if (g.length === 1) return { ...first, marks };
+    if (first.tpl) {
+      const keys = [...new Set(g.flatMap((x) => x.tpl!.text.map(([k]) => k)))];
+      const text = keys.map((k): [string, string] => [
+        k,
+        byMark(g.map((x) => ({ marks: x.marks, v: x.tpl!.text.find(([kk]) => kk === k)?.[1] ?? "" }))),
+      ]);
+      return { ...first, marks, tpl: { id: first.tpl.id, text } };
+    }
+    const same = (x: Detail) => x.notes.length === first.notes.length;
+    const notes = g.every(same)
+      ? first.notes.map((n, i) => ({ ...n, text: byMark(g.map((x) => ({ marks: x.marks, v: x.notes[i].text }))) }))
+      : [
+          ...first.notes,
+          ...g
+            .slice(1)
+            .flatMap((x) =>
+              x.notes
+                .filter((n) => !first.notes.some((f) => f.text === n.text))
+                .map((n) => ({ ...n, text: `${x.marks.join(", ")}: ${n.text}`, at: first.notes[0]?.at ?? n.at })),
+            ),
+        ];
+    const geometry = (x: Detail) => JSON.stringify(x.prims.map((p) => (p.t === "dim" ? { ...p, text: "" } : p)));
+    const prims = first.prims.map((p, i) =>
+      p.t === "dim" &&
+      g.some((x) => {
+        const q = x.prims[i];
+        return !q || q.t !== "dim" || q.text !== p.text;
+      })
+        ? { ...p, text: "VARIES" }
+        : p,
+    );
+    const f0 = first.foot ?? [];
+    const foot = g.every((x) => (x.foot ?? []).length === f0.length)
+      ? f0.map((_, i) => byMark(g.map((x) => ({ marks: x.marks, v: x.foot![i] }))))
+      : [...new Set(g.flatMap((x) => x.foot ?? []))];
+    return { ...first, marks, notes, prims, foot, nts: g.some((x) => geometry(x) !== geometry(first)) };
+  });
 }
