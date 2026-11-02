@@ -4,9 +4,10 @@ import type { PlyConnectionInput } from "@/engine/design/plies";
 import type { AnyResult, Project, ProjectDesign } from "@/engine/project";
 
 /**
- * Typical details generated from the calculations: one detail per distinct designed condition,
- * drawn at full size (inches) and scaled onto the sheet by the DXF writer. Only members and
- * callouts that the calculation report checks are drawn — nothing is added "typical".
+ * Details sheets: typical details generated from the calculations (one per designed condition,
+ * drawn at full size in inches and scaled onto the sheet by the DXF writer; callouts from the
+ * report only) plus the engineer's general typical details (GENERAL_DETAILS) for the permit set.
+ * The project's selection (project.detailSheets) picks which go on the sheets and on which sheet.
  */
 
 export type Pt = [number, number];
@@ -1740,7 +1741,7 @@ function libOpening(r: R<"wall">, i: number): Detail {
 
 /* ------------------------------------------------------------------ assemble */
 
-export function projectDetails(p: Project, d: ProjectDesign): Detail[] {
+function calcDetails(p: Project, d: ProjectDesign): Detail[] {
   const out: Detail[] = [];
   const add = (x: Detail | undefined, cat: DetailCat) => x && out.push({ ...x, cat });
   const srcKind = (mark: string) => [...d.outcomes.values()].find((o) => o.result?.mark === mark)?.result?.kind;
@@ -1926,4 +1927,343 @@ export function typical(out: Detail[]): Detail[] {
       : [...new Set(g.flatMap((x) => x.foot ?? []))];
     return { ...first, marks, notes, prims, foot, nts: g.some((x) => geometry(x) !== geometry(first)) };
   });
+}
+
+/* ------------------------------------------------------------------ general typical details */
+
+interface GeneralCtx {
+  p: Project;
+  /** member kinds in the project */
+  kinds: Set<string>;
+  /** library template ids used by the calculated details */
+  calcTpl: Set<string>;
+  /** titles of the calculated details */
+  calcTitle: Set<string>;
+}
+interface GeneralDetail {
+  id: string;
+  title: string;
+  cat: DetailCat;
+  /** template in detailTemplates.json */
+  tpl: string;
+  /** source drawing, shown in the selection list */
+  from: string;
+  /** included by default for this project (a typical two-storey wood-frame house) */
+  on: (c: GeneralCtx) => boolean;
+  /** project values written over the template's notes */
+  text?: (c: GeneralCtx) => Array<[string, string]>;
+}
+
+const has = (c: GeneralCtx, ...k: string[]) => k.some((x) => c.kinds.has(x));
+const roofFramed = (c: GeneralCtx) => has(c, "rafter", "ceilingJoist", "truss", "woodTruss");
+/** a building (walls or roof framing), not a deck or a stand-alone structure */
+const house = (c: GeneralCtx) => has(c, "wall", "shearWall", "cfsWall") || roofFramed(c);
+const floorFramed = (c: GeneralCtx) => house(c) && has(c, "joist", "ijoist");
+
+/**
+ * The engineer's general typical details (not from the calculations): the standard sheet set of a
+ * two-storey wood-frame house on a slab, from their 3225 set (S-6 to S-8) and 2CONNECTION library.
+ * Project-specific values in the source drawings read "PER PLAN"; a detail that a calculated detail
+ * already covers is off by default.
+ */
+export const GENERAL_DETAILS: GeneralDetail[] = [
+  {
+    id: "slab-on-grade",
+    title: "Typical slab on grade",
+    cat: "foundation",
+    tpl: "slab-on-grade",
+    from: "3225 S-6/3",
+    on: house,
+    text: ({ p }) => {
+      const s = p.slab;
+      const t = s ? inch(s.thickness) : '4"';
+      return [
+        [
+          "^CONCRETE SLAB",
+          `Concrete slab\nf'c = ${fmt(p.criteria.concrete.fc, 0)} psi\n${t} thick (U.N.O.)\n${s?.reinforcement || '#3 @ 18" o.c. e.w.'}\nat mid-depth\n4" crushed rock base\n(capillary break)`,
+        ],
+        ['^4"$', t],
+      ];
+    },
+  },
+  {
+    id: "slab-joint",
+    title: "Slab joint detail",
+    cat: "foundation",
+    tpl: "slab-joint",
+    from: "3225 S-6/7",
+    on: house,
+    text: ({ p }) => (p.slab?.reinforcement ? [["^#3 @ 18", p.slab.reinforcement]] : []),
+  },
+  {
+    id: "bar-bending",
+    title: "Typical bar bending schedule",
+    cat: "foundation",
+    tpl: "bar-bending",
+    from: "2CONNECTION S-6/3",
+    on: house,
+  },
+  {
+    id: "footing-corner-reinf",
+    title: "Typical corner reinf. detail",
+    cat: "foundation",
+    tpl: "footing-corner-reinf",
+    from: "2CONNECTION S-6/4",
+    on: (c) => house(c) && has(c, "footing"),
+  },
+  {
+    id: "anchor-bolt-interrupting",
+    title: "Anchor bolt interrupting",
+    cat: "foundation",
+    tpl: "anchor-bolt-interrupting",
+    from: "3225 S-6/4",
+    on: house,
+    text: () => [
+      ["^F1 FOOTING", "Footing per plan"],
+      ["^2X6 STUDS", "Studs per plan"],
+    ],
+  },
+  {
+    id: "nonbearing-wall-base",
+    title: "Non-load bearing wall base",
+    cat: "foundation",
+    tpl: "nonbearing-wall-base",
+    from: "3225 S-6/5",
+    on: house,
+  },
+  {
+    id: "wall-framing-keynotes",
+    title: "Wall framing details",
+    cat: "wall",
+    tpl: "wall-framing-keynotes",
+    from: "3225 S-7/1",
+    on: house,
+  },
+  {
+    id: "stud-wall-elevation-2story",
+    title: "Typical stud wall framing elevation and notes",
+    cat: "wall",
+    tpl: "stud-wall-elevation-2story",
+    from: "2CONNECTION S-8/2",
+    on: floorFramed,
+    text: () => [
+      ["^TYPICAL STUD WALL FRAMING ELEVATION", ""],
+      ["^SCALE:", ""],
+    ],
+  },
+  {
+    id: "wall-elevation-straps",
+    title: "Typical wall elevation",
+    cat: "wall",
+    tpl: "wall-elevation-straps",
+    from: "3225 S-7/2",
+    on: () => false,
+  },
+  {
+    id: "top-plate-splice-alt",
+    title: "Typical top plate splice",
+    cat: "wall",
+    tpl: "top-plate-splice-alt",
+    from: "3225 S-7/4",
+    on: (c) => house(c) && !c.calcTpl.has("top-plate-splice"),
+  },
+  {
+    id: "wsp-building-corner",
+    title: "Wood structural panels at building corner",
+    cat: "wall",
+    tpl: "wsp-building-corner",
+    from: "3225 S-7/5",
+    on: house,
+  },
+  {
+    id: "shear-wall-header",
+    title: "Exterior shear wall / header detail",
+    cat: "wall",
+    tpl: "shear-wall-header",
+    from: "3225 S-7/6",
+    on: (c) => house(c) && !c.calcTpl.has("opening-framing"),
+    text: () => [
+      ["^P\\.T\\. BOT\\. PLATE", "P.T. bot. plate w/ anchor bolts per plan"],
+      ['^@ 48" O\\.C\\., 7"', ""],
+    ],
+  },
+  {
+    id: "top-conn-nonbearing",
+    title: "Top conn. @ non bearing wall",
+    cat: "wall",
+    tpl: "top-conn-nonbearing",
+    from: "2CONNECTION S-8/9",
+    on: house,
+    text: () => [
+      ["^TOP CONN\\.", ""],
+      ["^SCALE:", ""],
+      ["^8$", ""],
+    ],
+  },
+  {
+    id: "exterior-wall-1hr",
+    title: "Typ. exterior wall (1-hr)",
+    cat: "wall",
+    tpl: "exterior-wall-1hr",
+    from: "3225 S-7/3",
+    on: () => false,
+    text: () => [['^7/8" STUCCO', '7/8" stucco over WRB\nover 15/32" ply.']],
+  },
+  {
+    id: "floor-roof-opening",
+    title: "Typ. floor / roof opening",
+    cat: "floor",
+    tpl: "floor-roof-opening",
+    from: "2CONNECTION S-7/12",
+    on: floorFramed,
+    text: () => [
+      ["#1", ""],
+      ["^TYP\\. FLOOR / ROOF OPENING", ""],
+      ["^SCALE:", ""],
+    ],
+  },
+  {
+    id: "floor-sheathing-nailing",
+    title: "Floor sheathing nailing",
+    cat: "floor",
+    tpl: "sheathing-nailing",
+    from: "3225 S-8/7",
+    on: floorFramed,
+    text: () => [["^2X8 RAFTERS", "Floor joists"]],
+  },
+  {
+    id: "stair-stringer",
+    title: "Stairs footing detail",
+    cat: "floor",
+    tpl: "stair-stringer",
+    from: "2CONNECTION S-6/8",
+    on: floorFramed,
+    text: () => [["^ELEV\\. 100", "Elev. see plan"]],
+  },
+  {
+    id: "rafter-cj-plate",
+    title: "Rafter / ceiling joist to top plate",
+    cat: "roof",
+    tpl: "rafter-cj-plate",
+    from: "3225 S-8/1",
+    on: (c) => has(c, "rafter") && !c.calcTitle.has("RAFTER AT TOP PLATE"),
+    text: () => [
+      ["^2x8 RAFTERS", "Rafters\nper plan"],
+      ["^2x6 C\\.J\\.", "C.J. per\nplan"],
+      ["^\\(2\\) 2x6 TOP PLATE", "Dbl. top\nplate"],
+    ],
+  },
+  {
+    id: "eave-shear-transfer",
+    title: "Shear transfer at eave",
+    cat: "roof",
+    tpl: "eave-shear-transfer",
+    from: "3225 S-8/2",
+    on: (c) => roofFramed(c) && !has(c, "transfer"),
+    text: () => [
+      ["^2x8 RAFTER", "Rafter per plan"],
+      ["^2X6 C\\.J\\.", "C.J. per plan"],
+      ['^7/8" STUCCO', "Ext. finish over shear wall\nsheathing per plan"],
+      ["^2X6 @ 16", "Studs per plan"],
+      ["^P\\.T 2X6 SOLE PLATE", "P.T. sill plate"],
+    ],
+  },
+  {
+    id: "gable-end-wall",
+    title: "Gable end wall to roof",
+    cat: "roof",
+    tpl: "gable-end-wall",
+    from: "3225 S-8/3",
+    on: (c) => has(c, "rafter"),
+    text: () => [
+      ["^2X8 RAFTER", "Rafter\nper plan"],
+      ["^2X6 STUDS", "Studs\nat gable end wall"],
+    ],
+  },
+  {
+    id: "cj-lap",
+    title: "Ceiling joist lap at bearing wall / C.J. to beam",
+    cat: "roof",
+    tpl: "cj-lap",
+    from: "3225 S-8/5",
+    on: (c) => has(c, "ceilingJoist"),
+    text: () => [
+      ["^2x6 C\\.J\\. @", "C.J. per plan"],
+      ["^2x6 C\\.J\\.$", "C.J. per plan"],
+      ["^\\(3\\) 8d TOE", "(3) 8d toe nails ea. C.J.\nto dbl. top pl."],
+      ["^BW 2x4", "Bearing wall per plan"],
+      ["^B1 4x10", "Beam per plan"],
+      ["^SIMPSON LUS26", "Simpson LUS hanger to match\nC.J. size, nails per mfr."],
+      ["^AT BW$", "At bearing wall"],
+      ["^AT B1$", "At beam"],
+    ],
+  },
+  {
+    id: "roof-sheathing-nailing",
+    title: "Roof sheathing nailing",
+    cat: "roof",
+    tpl: "sheathing-nailing",
+    from: "3225 S-8/7",
+    on: roofFramed,
+    text: () => [["^2X8 RAFTERS", "Rafters"]],
+  },
+];
+
+export interface CatalogItem {
+  /** stable key of project.detailSheets */
+  id: string;
+  detail: Detail;
+  /** general typical (not from the calculations) */
+  general: boolean;
+  /** source drawing of a general detail */
+  from?: string;
+  /** included on the sheets (project selection, else the default) */
+  on: boolean;
+  defaultOn: boolean;
+  /** sheet it goes on (project selection, else the default) */
+  cat: DetailCat;
+  defaultCat: DetailCat;
+}
+
+/** every detail available to the project: calculated ones first, then the general typicals */
+export function detailCatalog(p: Project, d: ProjectDesign): CatalogItem[] {
+  const calc = calcDetails(p, d);
+  const ctx: GeneralCtx = {
+    p,
+    kinds: new Set(p.members.map((m) => m.kind)),
+    calcTpl: new Set(calc.flatMap((x) => (x.tpl ? [x.tpl.id] : []))),
+    calcTitle: new Set(calc.map((x) => x.title)),
+  };
+  const sel = p.detailSheets ?? {};
+  const item = (id: string, detail: Detail, defaultOn: boolean, general: boolean, from?: string): CatalogItem => {
+    const defaultCat = detail.cat ?? "wall";
+    const cat = sel[id]?.cat ?? defaultCat;
+    return { id, detail: { ...detail, cat }, general, from, on: sel[id]?.on ?? defaultOn, defaultOn, cat, defaultCat };
+  };
+  return [
+    ...calc.map((x) => item(`${x.cat}:${x.tpl?.id ?? x.title}`, x, true, false)),
+    ...GENERAL_DETAILS.map((g) =>
+      item(
+        `g:${g.id}`,
+        {
+          title: up(g.title),
+          marks: [],
+          prims: [],
+          notes: [],
+          cat: g.cat,
+          tpl: { id: g.tpl, text: (g.text?.(ctx) ?? []).map(([k, v]) => [k, up(v)]) },
+        },
+        g.on(ctx),
+        true,
+        g.from,
+      ),
+    ),
+  ];
+}
+
+/** the details that go on the sheets: the project's selection from the catalogue */
+export function projectDetails(p: Project, d: ProjectDesign): Detail[] {
+  return detailCatalog(p, d)
+    .filter((x) => x.on)
+    .map((x) => x.detail);
 }

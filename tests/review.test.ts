@@ -541,3 +541,48 @@ describe("details cover the calculation report, one typical detail per type", ()
     expect(rafter.notes.some((n) => /R-1: .*; R-2: /.test(n.text))).toBe(true);
   });
 });
+
+import { GENERAL_DETAILS, detailCatalog } from "@/lib/details";
+import { deckExampleProject } from "@/engine/project";
+import TEMPLATES from "@/lib/detailTemplates.json";
+
+describe("details selection: calculated and general typical details", () => {
+  it("general typicals come from the engineer's drawings and are on by default for a house", () => {
+    for (const g of GENERAL_DETAILS) expect(Object.keys(TEMPLATES)).toContain(g.tpl);
+    const p = exampleProject();
+    const cat = detailCatalog(p, designProject(p));
+    const on = (id: string) => cat.find((x) => x.id === id)?.on;
+    expect(on("g:slab-on-grade")).toBe(true);
+    expect(on("g:wall-framing-keynotes")).toBe(true);
+    expect(on("g:exterior-wall-1hr")).toBe(false);
+    // the calculated chord splice and opening framing cover the general ones
+    expect(on("g:top-plate-splice-alt")).toBe(false);
+    expect(on("g:shear-wall-header")).toBe(false);
+    const slab = cat.find((x) => x.id === "g:slab-on-grade")!.detail;
+    expect(slab.tpl!.text[0][1]).toMatch(/F'C = 2,?500 PSI/);
+    expect(new Set(cat.map((x) => x.id)).size).toBe(cat.length);
+  });
+
+  it("the project selection leaves details out, adds general ones and moves them between sheets", () => {
+    const p0 = exampleProject();
+    const d = designProject(p0);
+    const calcId = detailCatalog(p0, d).find((x) => !x.general)!.id;
+    const p = {
+      ...p0,
+      detailSheets: {
+        [calcId]: { on: false },
+        "g:exterior-wall-1hr": { on: true, cat: "lateral" as const },
+      },
+    };
+    const ds = projectDetails(p, d);
+    const all = detailCatalog(p, d);
+    expect(ds.length).toBe(all.filter((x) => x.on).length);
+    expect(ds.find((x) => x.tpl?.id === "exterior-wall-1hr")?.cat).toBe("lateral");
+    expect(all.find((x) => x.id === calcId)!.on).toBe(false);
+  });
+
+  it("a deck gets no house typicals", () => {
+    const p = deckExampleProject();
+    expect(detailCatalog(p, designProject(p)).filter((x) => x.general && x.on)).toEqual([]);
+  });
+});

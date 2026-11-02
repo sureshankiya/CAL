@@ -1,5 +1,5 @@
 """
-Cut the engineer's library details out of their CONNECTION.dxf into src/lib/detailTemplates.json.
+Cut the engineer's library details out of their CONNECTION.dxf files and 3225 set into src/lib/detailTemplates.json.
 
 Each template is the drawing inside one detail cell (title strip excluded), flattened to plain
 geometry in the cell's own drawing units: line segments, hatch lines, filled triangles,
@@ -7,7 +7,7 @@ circles and text blocks (consecutive TEXT lines merged into paragraphs; keynotes
 new one). The app draws a template as-is (the details are N.T.S.) and replaces only the text
 blocks whose values come from the calculations.
 
-    python3 -I scripts/extract-detail-templates.py path/to/1CONNECTION.dxf path/to/2CONNECTION.dxf
+    python3 -I scripts/extract-detail-templates.py 1CONNECTION.dxf 2CONNECTION.dxf 3225_1.dxf
 """
 
 import json
@@ -40,6 +40,29 @@ CELLS = {
     "top-plate-splice": (1, (17688, 9697, 17836, 9824)),
     "bearing-wall-base": (1, (17986, 9697, 18136, 9752)),
     "post-base": (1, (18137, 9697, 18287, 9758)),
+    # general typicals (not from the calculations), offered in the details selection
+    "bar-bending": (1, (16262, 9972, 16408, 10100)),
+    "footing-corner-reinf": (1, (16410, 9972, 16560, 10105)),
+    "stair-stringer": (1, (15985, 9700, 16300, 9808)),
+    "floor-roof-opening": (1, (16826, 9702, 16958, 9842)),
+    "stud-wall-elevation-2story": (1, (17986, 9832, 18290, 10115)),
+    "top-conn-nonbearing": (1, (17837, 9688, 17985, 9836)),
+    # 3225_1.dxf (portfolio set, sheets S-6 to S-8): 268 wide cells, title under the drawing
+    "slab-on-grade": (2, (7739, 378, 8007, 546)),
+    "anchor-bolt-interrupting": (2, (7203, 198, 7471, 366)),
+    "nonbearing-wall-base": (2, (7471, 198, 7739, 366)),
+    "slab-joint": (2, (7203, 19, 7471, 187)),
+    "wall-framing-keynotes": (2, (8403, 347, 8939, 535)),
+    "wall-elevation-straps": (2, (8403, 183, 8939, 333)),
+    "top-plate-splice-alt": (2, (8939, 347, 9207, 535)),
+    "exterior-wall-1hr": (2, (8939, 183, 9207, 333)),
+    "wsp-building-corner": (2, (8403, 19, 8671, 170)),
+    "shear-wall-header": (2, (8671, 19, 8939, 170)),
+    "rafter-cj-plate": (2, (9603, 378, 9871, 545)),
+    "eave-shear-transfer": (2, (9871, 378, 10139, 545)),
+    "gable-end-wall": (2, (10139, 378, 10407, 545)),
+    "cj-lap": (2, (9871, 198, 10139, 366)),
+    "sheathing-nailing": (2, (9860, 19, 10150, 188)),
 }
 
 
@@ -48,6 +71,12 @@ CELLS = {
 ERASE = {
     "shear-wall-section": [(345, 165, 395, 184), (309, 157, 320, 178), (309, 97, 318, 108)],
 }
+
+
+# details drawn as one block (whole cell): exploded so the parts are tested one by one
+EXPLODE = {"wall-framing-keynotes"}
+# keynote lists set in separate number / text columns: each TEXT stays its own note
+NOMERGE = {"wall-framing-keynotes"}
 
 
 def box_of(a):
@@ -133,11 +162,11 @@ def explode(e, out, box):
         col, row = (ap - 1) % 3, (ap - 1) // 3
         y = ins.y - h if row == 0 else ins.y + (len(lines) - 1) * ls / 2 - h / 2 if row == 1 else ins.y + (len(lines) - 1) * ls
         out["blocks"].append(
-            dict(x=R(ins.x - x0), y=R(y - y0), h=R(h), rot=R(e.dxf.get("rotation", 0)), ha=col, ls=R(ls), lines=lines)
+            dict(x=R(ins.x - x0), y=R(y - y0), h=R(h), rot=R(e.get_rotation()), ha=col, ls=R(ls), lines=lines)
         )
 
 
-def merge_texts(texts):
+def merge_texts(texts, merge=True):
     """single-line TEXT entities of one height and column, one under the other -> paragraph blocks"""
     blocks = []
     for t in sorted(texts, key=lambda t: (-t["y"], t["x"])):
@@ -150,7 +179,7 @@ def merge_texts(texts):
                 and 0 < b["y"] - (len(b["lines"]) - 1) * b["ls"] - t["y"] <= 2.3 * t["h"]
                 and not re.match(r"^\d+-\s", t["s"])
             )
-        b = next((b for b in reversed(blocks) if follows(b)), None)
+        b = next((b for b in reversed(blocks) if follows(b)), None) if merge else None
         if b:
             if len(b["lines"]) == 1:
                 b["ls"] = R(b["y"] - t["y"])
@@ -160,19 +189,35 @@ def merge_texts(texts):
     return blocks
 
 
-def main(srcs, dst):
+def main(srcs, dst, only=None):
     docs = [ezdxf.readfile(s) for s in srcs]
     caches = [bbox.Cache() for _ in docs]
     out = {}
+    if only:  # re-cut the named templates, keep the others
+        with open(dst) as f:
+            out = json.load(f)
     for tid, (fi, anchor) in CELLS.items():
+        if only and tid not in only:
+            continue
         msp, cache = docs[fi].modelspace(), caches[fi]
         box = box_of(anchor)
         W, H = box[2] - box[0], box[3] - box[1]
         acc = dict(lines=[], hatch=[], tris=[], circles=[], texts=[], blocks=[])
-        for e in msp:
+        def entities():
+            for e in msp:
+                b = bbox.extents([e], fast=True, cache=cache)
+                if tid in EXPLODE and e.dxftype() == "INSERT" and b.has_data and (b.size.x > 0.9 * W or b.size.y > 0.9 * H):
+                    try:  # a whole detail drawn as one block: test its parts one by one
+                        yield from e.virtual_entities()
+                        continue
+                    except Exception:
+                        pass
+                yield e
+
+        for e in entities():
             if e.dxftype() in ("POINT", "ATTDEF", "VIEWPORT", "IMAGE"):
                 continue
-            b = bbox.extents([e], fast=True, cache=cache)
+            b = bbox.extents([e], fast=True)
             if not b.has_data:
                 continue
             cx, cy = (b.extmin.x + b.extmax.x) / 2, (b.extmin.y + b.extmax.y) / 2
@@ -185,7 +230,7 @@ def main(srcs, dst):
             ):
                 continue
             explode(e, acc, box)
-        blocks = acc["blocks"] + merge_texts(acc["texts"])
+        blocks = acc["blocks"] + merge_texts(acc["texts"], tid not in NOMERGE)
         out[tid] = dict(w=R(W), h=R(H), lines=acc["lines"], hatch=acc["hatch"], tris=acc["tris"], circles=acc["circles"], blocks=blocks)
         print(tid, {k: len(v) for k, v in out[tid].items() if isinstance(v, list)})
     with open(dst, "w") as f:
@@ -193,5 +238,9 @@ def main(srcs, dst):
 
 
 if __name__ == "__main__":
-    # extract-detail-templates.py 1CONNECTION.dxf 2CONNECTION.dxf [out.json]
-    main(sys.argv[1:3], sys.argv[3] if len(sys.argv) > 3 else "src/lib/detailTemplates.json")
+    # extract-detail-templates.py 1CONNECTION.dxf 2CONNECTION.dxf 3225_1.dxf [out.json [id,id,...]]
+    main(
+        sys.argv[1:4],
+        sys.argv[4] if len(sys.argv) > 4 else "src/lib/detailTemplates.json",
+        set(sys.argv[5].split(",")) if len(sys.argv) > 5 else None,
+    )

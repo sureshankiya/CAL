@@ -760,7 +760,7 @@ function titleStrip(w: Writer, d: Detail, num: number, scale: string, cx: number
   w.line(S, cx + 0.25, ly, bx - r, ly);
   w.circle(S, bx, ly, r);
   w.text(S, bx, ly, 0.13, String(num), { center: true, style: "HC-TITLE" });
-  wrap(`SCALE: ${scale}    AT: ${d.marks.join(", ")}`, Math.floor(avail / (ADV * 0.055)))
+  wrap(`SCALE: ${scale}${d.marks.length ? `    AT: ${d.marks.join(", ")}` : ""}`, Math.floor(avail / (ADV * 0.055)))
     .slice(0, 2)
     .forEach((l, i) => w.text(S, cx + 0.25, ly - 0.1 - i * 0.08, 0.055, l));
 }
@@ -813,10 +813,12 @@ function drawTemplate(w: Writer, tpl: NonNullable<Detail["tpl"]>, x: number, y: 
     const below = t.blocks.filter((o) => o !== b && o.y < b.y && Math.abs(o.x - b.x) < 40).map((o) => o.y + 1.2 * o.h);
     const room = Math.max(b.lines.length, Math.floor((b.y - Math.max(-Infinity, ...below)) / b.ls));
     let hgt = NOTE_H;
-    let lines = hit ? wrap(hit[1], Math.max(8, Math.floor(width / hgt))) : b.lines;
+    // "\n" in a calculated note starts a new line
+    const fill = (n: number) => hit![1].split("\n").flatMap((x) => wrap(x, n));
+    let lines = hit ? fill(Math.max(8, Math.floor(width / hgt))) : b.lines;
     if (hit && lines.length > room) {
       hgt = Math.max(MIN_TEXT, hgt * Math.sqrt(room / lines.length));
-      lines = wrap(hit[1], Math.max(8, Math.floor(width / hgt)));
+      lines = fill(Math.max(8, Math.floor(width / hgt)));
     }
     const f = hgt / base;
     const rad = (b.rot * Math.PI) / 180;
@@ -1079,21 +1081,33 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
     return true;
   };
   const sheets: Sheet[] = [];
+  const SMALL_GRIDS = [
+    [2, 2],
+    [3, 2],
+    [3, 3],
+    [4, 3],
+  ];
   for (const cat of Object.keys(DETAIL_SHEETS) as DetailCat[]) {
     const group = details.filter((d) => (d.cat ?? "wall") === cat);
     if (!group.length) continue;
     let placed: Sheet[] = [];
-    for (const [cols, rows] of [
-      [2, 2],
-      [3, 2],
-      [3, 3],
-      [4, 3],
-    ]) {
+    for (const [cols, rows] of SMALL_GRIDS) {
       placed = [];
       if (pack(placed, group, DETAIL_SHEETS[cat], cols, rows, 1)) break;
       placed = [];
     }
-    if (!placed.length) pack(placed, group, DETAIL_SHEETS[cat], GRID.cols, GRID.rows, Infinity);
+    if (!placed.length) {
+      pack(placed, group, DETAIL_SHEETS[cat], GRID.cols, GRID.rows, Infinity);
+      // the last sheet holds the overflow: give it the smallest grid that holds what is left
+      const rest = placed[placed.length - 1].items.map((x) => x.d);
+      for (const [cols, rows] of SMALL_GRIDS) {
+        const last: Sheet[] = [];
+        if (pack(last, rest, DETAIL_SHEETS[cat], cols, rows, 1)) {
+          placed[placed.length - 1] = last[0];
+          break;
+        }
+      }
+    }
     sheets.push(...placed);
   }
   if (!sheets.length) sheets.push(blank("DETAILS", GRID.cols, GRID.rows));

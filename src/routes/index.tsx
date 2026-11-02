@@ -12,6 +12,7 @@ import {
   MembersPanel,
   ProjectInfoPanel,
 } from "@/components/editors/ProjectPanels";
+import { DetailsPanel } from "@/components/editors/DetailsPanel";
 import { DrawingsPanel } from "@/components/drawings/DrawingsPanel";
 import { MarkdownExportDialog, MarkdownImportDialog } from "@/components/editors/MarkdownDialog";
 import { prepareDownloads, saveFile, saveMessage } from "@/lib/download";
@@ -196,7 +197,8 @@ function Index() {
       const [{ detailsDxf }, { projectDetails }] = await Promise.all([import("@/lib/dxf"), import("@/lib/details")]);
       const i = deferred.info;
       const details = projectDetails(deferred, design);
-      if (!details.length) return setMessage({ tone: "info", text: "No calculated items to detail yet." });
+      if (!details.length)
+        return setMessage({ tone: "info", text: "No details selected (see the Details sheets panel)." });
       const text = detailsDxf(
         details,
         {
@@ -412,7 +414,7 @@ function Index() {
             <button
               type="button"
               className={btn}
-              title="Details sheets (ARCH D, 4 x 4 details per sheet): one detail per designed condition, callouts from the calculations only"
+              title="Details sheets (ARCH D): the details ticked in the Details sheets panel, calculated and general typicals, grouped by sheet"
               onClick={exportDetails}
             >
               Export details sheets
@@ -461,6 +463,7 @@ function Index() {
           <LevelsPanel p={project} set={set} />
           <LateralPanel p={project} set={set} />
           <HardwarePanel p={project} set={set} />
+          <DetailsPanel p={deferred} set={set} design={design} />
           <MembersPanel
             p={project}
             design={design}

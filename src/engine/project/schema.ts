@@ -1164,6 +1164,18 @@ export const projectSchema = z.object({
   drawingIndex: z.array(z.object({ number: z.string(), title: z.string() })).optional(),
   /** S0 sheet: per-panel replacement of the standard note text (data/s0Template.ts), keyed by panel title */
   s0Notes: z.record(z.string()).optional(),
+  /**
+   * details sheets selection, keyed by detail id (calculated and general typical details): leave a
+   * detail out (on: false), add a general one (on: true), or move it to another sheet (cat)
+   */
+  detailSheets: z
+    .record(
+      z.object({
+        on: z.boolean().optional(),
+        cat: z.enum(["foundation", "lateral", "wall", "floor", "roof", "steel"]).optional(),
+      }),
+    )
+    .optional(),
   lateral: lateralSchema.optional(),
   drawings: z.array(drawingSchema).default([]),
   review: z.array(reviewItemSchema).default([]),
