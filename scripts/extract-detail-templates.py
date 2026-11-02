@@ -46,7 +46,7 @@ CELLS = {
 # leftovers to cut out of a template, in its own coordinates: values drawn as strokes (PDF imports)
 # that would otherwise show beside the calculated text
 ERASE = {
-    "shear-wall-section": [(345, 165, 395, 184)],
+    "shear-wall-section": [(345, 165, 395, 184), (309, 157, 320, 178), (309, 97, 318, 108)],
 }
 
 
@@ -180,7 +180,9 @@ def main(srcs, dst):
                 continue
             if b.size.x > 0.9 * W or b.size.y > 0.9 * H:  # sheet grid / cell borders
                 continue
-            if any(e0 < cx - box[0] < e1 and f0 < cy - box[1] < f1 for e0, f0, e1, f1 in ERASE.get(tid, [])):
+            if e.dxftype() not in ("TEXT", "MTEXT") and any(
+                e0 < cx - box[0] < e1 and f0 < cy - box[1] < f1 for e0, f0, e1, f1 in ERASE.get(tid, [])
+            ):
                 continue
             explode(e, acc, box)
         blocks = acc["blocks"] + merge_texts(acc["texts"])

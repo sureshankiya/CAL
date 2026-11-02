@@ -1,6 +1,6 @@
 import type { SheetEntry } from "@/components/report/package";
 import { generateNotes, type GeneralNotesSheet, type Project, type ProjectDesign } from "@/engine/project";
-import type { Detail, Prim } from "./details";
+import { DETAIL_SHEETS, type Detail, type DetailCat, type Prim } from "./details";
 import TEMPLATES from "./detailTemplates.json";
 import { layoutPackage } from "./exportLayout";
 
@@ -542,7 +542,13 @@ function titleBlock(w: Writer, ox: number, info: SheetInfo, sheetNo: string, tit
     w.text(B, xs[2], bottom + 0.2, 0.22, info.address || "-", { rot: 90 });
     w.text(B, xs[3], bottom + 0.2, 0.12, info.client ? `CLIENT: ${info.client}` : "", { rot: 90 });
   });
-  box(0.75, "SHEET TITLE", (top) => w.text(B, x0 + SH.tb / 2, top - 0.48, 0.16, title, { center: true }));
+  box(0.75, "SHEET TITLE", (top) => {
+    const th = title.length * 0.75 * 0.16 <= SH.tb - 0.2 ? 0.16 : 0.12;
+    const ls = wrap(title, Math.floor((SH.tb - 0.2) / (0.75 * th))).slice(0, 3);
+    ls.forEach((l, i) =>
+      w.text(B, x0 + SH.tb / 2, top - 0.45 - (i - (ls.length - 1) / 2) * 1.35 * th, th, l, { center: true }),
+    );
+  });
   box(1.15, "", (top) => {
     [
       ["DATE", info.date],
@@ -761,7 +767,8 @@ function titleStrip(w: Writer, d: Detail, num: number, scale: string, cx: number
 
 /** smallest plotted height for a calculated value written into a library detail, in. */
 const MIN_TEXT = 0.06;
-const MAX_TEXT = 0.11;
+/** one plotted height for every note on the detail sheets (library and generated details alike) */
+const NOTE_H = 0.075;
 /** cells for the large library details (columns, rows); others are sized from their note height */
 const SPANS: Record<string, [number, number]> = {
   "shear-wall-section": [2, 1],
@@ -796,15 +803,19 @@ function drawTemplate(w: Writer, tpl: NonNullable<Detail["tpl"]>, x: number, y: 
   for (const [bi, b] of t.blocks.entries()) {
     const hit = rules.find(([key]) => (typeof key === "number" ? key === bi : key.test(b.lines.join(" "))));
     if (hit && !hit[1]) continue;
-    const chars = Math.max(12, ...b.lines.map((l) => l.length));
-    let lines = hit ? wrap(hit[1], chars) : b.lines;
-    // a longer calculated note may use the space down to the next note under it, then gets smaller text
+    // every note plots at the one sheet note height; a calculated note keeps the library note's width and
+    // may use the space down to the next note under it, then gets smaller text (not under 1/16 in.)
+    const base = b.h * k;
+    const width = Math.max(12, ...b.lines.map((l) => l.length)) * base;
     const below = t.blocks.filter((o) => o !== b && o.y < b.y && Math.abs(o.x - b.x) < 40).map((o) => o.y + 1.2 * o.h);
     const room = Math.max(b.lines.length, Math.floor((b.y - Math.max(-Infinity, ...below)) / b.ls));
-    let f = lines.length > room ? Math.max(0.65, Math.sqrt(room / lines.length)) : 1;
-    // every note plots between 1/16 in. (legible) and 0.11 in. (large titles on the source sheet)
-    f = Math.min(Math.max(f, MIN_TEXT / (b.h * k)), MAX_TEXT / (b.h * k));
-    if (hit && f !== 1) lines = wrap(hit[1], Math.max(12, Math.floor(chars / f)));
+    let hgt = NOTE_H;
+    let lines = hit ? wrap(hit[1], Math.max(8, Math.floor(width / hgt))) : b.lines;
+    if (hit && lines.length > room) {
+      hgt = Math.max(MIN_TEXT, hgt * Math.sqrt(room / lines.length));
+      lines = wrap(hit[1], Math.max(8, Math.floor(width / hgt)));
+    }
+    const f = hgt / base;
     const rad = (b.rot * Math.PI) / 180;
     lines.forEach((l, i) => {
       const [px, py] = P(b.x + Math.sin(rad) * i * b.ls * f, b.y - Math.cos(rad) * i * b.ls * f);
@@ -831,10 +842,10 @@ function drawDetail(w: Writer, d: Detail, num: number, cx: number, cy: number, b
     return;
   }
   // drawing area in the middle, callouts left and right
-  const colW = bw * 0.24;
+  const colW = bw * 0.21;
   const ax = cx + colW + 0.1;
   const aw = bw - 2 * colW - 0.2;
-  const fh = 0.075;
+  const fh = NOTE_H;
   const foot = (d.foot ?? []).flatMap((f) => wrap(`* ${f}`, Math.floor((bw - 0.3) / (ADV * fh))));
   const ay = cy + band + 0.12 + foot.length * 1.5 * fh + 0.1;
   const ah = cy + bh - 0.15 - ay;
@@ -934,7 +945,7 @@ function drawDetail(w: Writer, d: Detail, num: number, cx: number, cy: number, b
         );
       let ang = (Math.atan2(u[1], u[0]) * 180) / Math.PI;
       if (ang > 90.1 || ang <= -89.9) ang += 180;
-      w.text(D, (A[0] + B2[0]) / 2 + n[0] * 0.07 * sg, (A[1] + B2[1]) / 2 + n[1] * 0.07 * sg, 0.075, p.text, {
+      w.text(D, (A[0] + B2[0]) / 2 + n[0] * 0.07 * sg, (A[1] + B2[1]) / 2 + n[1] * 0.07 * sg, NOTE_H, p.text, {
         rot: ((ang % 360) + 360) % 360,
         center: true,
         style: "HC-NOTE",
@@ -962,7 +973,7 @@ function drawDetail(w: Writer, d: Detail, num: number, cx: number, cy: number, b
     );
   const colTop = cy + bh - 0.15;
   const colBot = ay;
-  let h = 0.08;
+  let h = NOTE_H;
   const fit = (hh: number) =>
     sides.every(
       (sd) =>
@@ -1025,41 +1036,45 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
   const x1 = SH.w - SH.m - SH.tb - 0.25;
   const bw = (x1 - X0) / GRID.cols;
   const bh = (TOP - BOTTOM) / GRID.rows;
-  // place each detail in the first free block of cells, row by row; spanning details as 2 x 1, 1 x 2 or 2 x 2
-  const sheets: boolean[][][] = [];
-  const placed = details.map((d) => {
-    const [c, r] = spanOf(d, bw, bh);
-    for (let k = 0; ; k++) {
-      const used = (sheets[k] ??= Array.from({ length: GRID.rows }, () => Array<boolean>(GRID.cols).fill(false)));
-      for (let row = 0; row + r <= GRID.rows; row++)
-        for (let col = 0; col + c <= GRID.cols; col++) {
-          let free = true;
-          for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) free &&= !used[row + i][col + j];
-          if (!free) continue;
-          for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) used[row + i][col + j] = true;
-          return { d, k, row, col, c, r };
-        }
+  // one group of sheets per kind of detail, in the engineer's order; sheet numbers run on from sheetNo
+  const m = /^(.*?)(\d+)$/.exec(sheetNo);
+  const numberOf = (i: number) => (m ? `${m[1]}${Number(m[2]) + i}` : `${sheetNo}.${i + 1}`);
+  const sheets: Array<{
+    title: string;
+    used: boolean[][];
+    items: Array<{ d: Detail; row: number; col: number; c: number; r: number }>;
+  }> = [];
+  const cats = Object.keys(DETAIL_SHEETS) as DetailCat[];
+  for (const cat of cats) {
+    const group = details.filter((d) => (d.cat ?? "wall") === cat);
+    if (!group.length) continue;
+    const first = sheets.length;
+    for (const d of group) {
+      const [c, r] = spanOf(d, bw, bh);
+      let done = false;
+      for (let k = first; !done; k++) {
+        const sh = (sheets[k] ??= {
+          title: DETAIL_SHEETS[cat],
+          used: Array.from({ length: GRID.rows }, () => Array<boolean>(GRID.cols).fill(false)),
+          items: [],
+        });
+        for (let row = 0; row + r <= GRID.rows && !done; row++)
+          for (let col = 0; col + c <= GRID.cols && !done; col++) {
+            let free = true;
+            for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) free &&= !sh.used[row + i][col + j];
+            if (!free) continue;
+            for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) sh.used[row + i][col + j] = true;
+            sh.items.push({ d, row, col, c, r });
+            done = true;
+          }
+      }
     }
-  });
-  const n = Math.max(1, sheets.length);
-  for (let k = 0; k < n; k++) {
+  }
+  if (!sheets.length) sheets.push({ title: "DETAILS", used: [], items: [] });
+  sheets.forEach((sh, k) => {
     const ox = k * (SH.w + 2);
-    const no = k ? `${sheetNo}.${k}` : sheetNo;
-    titleBlock(w, ox, info, no, "DETAILS");
+    titleBlock(w, ox, info, numberOf(k), sh.title);
     const B = "S-ANNO-TTLB";
-    w.pline(
-      B,
-      [
-        [ox + X0, BOTTOM],
-        [ox + x1, BOTTOM],
-        [ox + x1, TOP],
-        [ox + X0, TOP],
-        [ox + X0, BOTTOM],
-      ],
-      0.025,
-    );
-    const here = placed.filter((p) => p.k === k);
-    // cell borders: around each placed detail, and the empty cells
     const cellBox = (col: number, row: number, c: number, r: number) => {
       const xa = ox + X0 + col * bw;
       const ya = TOP - (row + r) * bh;
@@ -1075,12 +1090,14 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
         0.025,
       );
     };
-    for (const p of here) cellBox(p.col, p.row, p.c, p.r);
+    for (const p of sh.items) cellBox(p.col, p.row, p.c, p.r);
     for (let row = 0; row < GRID.rows; row++)
-      for (let col = 0; col < GRID.cols; col++) if (!sheets[k]?.[row][col]) cellBox(col, row, 1, 1);
-    here.forEach((p, i) =>
+      for (let col = 0; col < GRID.cols; col++) if (!sh.used[row]?.[col]) cellBox(col, row, 1, 1);
+    // number the details in reading order
+    const order = [...sh.items].sort((a, b) => a.row - b.row || a.col - b.col);
+    order.forEach((p, i) =>
       drawDetail(w, p.d, i + 1, ox + X0 + p.col * bw, TOP - (p.row + p.r) * bh, p.c * bw, p.r * bh),
     );
-  }
+  });
   return dxfFile(w);
 }

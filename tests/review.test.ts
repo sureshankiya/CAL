@@ -491,7 +491,10 @@ describe("details sheets", () => {
       { project: "P", address: "", client: "", jobRef: "", date: "", revision: "0", preparedBy: "" },
       "SD-1",
     );
-    expect(dxf).toContain("SD-1.1"); // 28 details: two sheets of 16
+    // one group of sheets per kind of detail, titled as on the issued sets, numbered on from SD-1
+    expect(dxf).toContain("SD-2");
+    expect(dxf).toContain("FLOOR FRAMING TYP.");
+    expect(ds.every((x) => x.cat)).toBe(true);
     expect(dxf).toContain("\nCIRCLE\n");
     expect(dxf).toContain("HC-NOTE"); // slanted ROMANS callout style defined in the STYLE table
     expect(sill.foot ?? []).toEqual([]);

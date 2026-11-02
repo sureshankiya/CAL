@@ -36,7 +36,20 @@ export interface Detail {
    * from the calculations ("" removes the note)]
    */
   tpl?: { id: string; text: Array<[string, string]> };
+  /** sheet the detail belongs on */
+  cat?: DetailCat;
 }
+
+/** detail sheets in the engineer's order and wording (portfolio sets: S-7 TYP. FTG. CONNECTION DETAILS …) */
+export const DETAIL_SHEETS = {
+  foundation: "TYP. FTG. CONNECTION DETAILS",
+  lateral: "TYP. SHEAR WALL & HOLDOWN DETAILS",
+  wall: "TYPICAL WALL FRAMING DETAILS",
+  floor: "FLOOR FRAMING TYP. DETAILS",
+  roof: "ROOF FRAMING TYP. DETAILS",
+  steel: "STEEL CONNECTION DETAILS",
+} as const;
+export type DetailCat = keyof typeof DETAIL_SHEETS;
 
 const inch = (v: number) => `${fmtInFraction(v)}"`;
 const up = (s: string) => s.toUpperCase();
@@ -182,7 +195,7 @@ function wallAbove(
 /** sheathing / subfloor strip on top of y from x1 to x2 with nails at spacing */
 function deck(D: Draw, x1: number, x2: number, y: number, t = 0.75, nailAt?: number[]) {
   cut(D, x1, y, x2 - x1, t, "r");
-  for (const x of nailAt ?? []) D.line([x, y + t + 0.4], [x, y - 1.6]);
+  for (const x of nailAt ?? []) nail(D, [x, y + t + 0.3], [x, y - 1.6]);
 }
 
 /** member along a slope: bottom edge from a, run to x2, vertical depth dv, plumb ends; cut at the far end */
@@ -207,6 +220,45 @@ function boltSide(D: Draw, x1: number, x2: number, y: number, d: number) {
   D.line([x1, y - d / 2], [x2, y - d / 2]);
   D.line([x1, y + d / 2], [x2, y + d / 2]);
   for (const x of [x1, x2]) D.rect(x - (x === x1 ? 0.6 : 0), y - 1.2 * d, 0.6, 2.4 * d);
+}
+
+/** nail seen from the side: shank a → b, head at a */
+function nail(D: Draw, a: Pt, b: Pt) {
+  D.line(a, b);
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  const n: Pt = [-(b[1] - a[1]) / L, (b[0] - a[0]) / L];
+  D.line([a[0] - n[0] * 0.3, a[1] - n[1] * 0.3], [a[0] + n[0] * 0.3, a[1] + n[1] * 0.3]);
+}
+
+/** wood screw seen from the side: shank a → b with thread ticks, head at a */
+function screw(D: Draw, a: Pt, b: Pt) {
+  nail(D, a, b);
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  const u: Pt = [(b[0] - a[0]) / L, (b[1] - a[1]) / L];
+  const n: Pt = [-u[1], u[0]];
+  for (let s = L * 0.35; s < L - 0.2; s += 0.35) {
+    const p: Pt = [a[0] + u[0] * s, a[1] + u[1] * s];
+    D.line(
+      [p[0] - n[0] * 0.15, p[1] - n[1] * 0.15],
+      [p[0] + n[0] * 0.15 + u[0] * 0.15, p[1] + n[1] * 0.15 + u[1] * 0.15],
+    );
+  }
+}
+
+/** bolt seen end-on: washer and hex nut */
+function boltEnd(D: Draw, c: Pt, d: number) {
+  D.circle(c, Math.max(0.55, 1.3 * d));
+  const r = 0.85 * d;
+  const pts: Pt[] = Array.from({ length: 6 }, (_, i) => [
+    c[0] + r * Math.cos((i * Math.PI) / 3),
+    c[1] + r * Math.sin((i * Math.PI) / 3),
+  ]);
+  pts.forEach((p, i) => D.line(p, pts[(i + 1) % 6]));
+}
+
+/** fastener heads seen end-on (nails / screws in a plate or strap) */
+function heads(D: Draw, pts: Pt[]) {
+  for (const p of pts) D.circle(p, 0.22);
 }
 
 /* ------------------------------------------------------------------ foundations */
@@ -499,6 +551,7 @@ function holdown(r: R<"shearWall">): Detail | undefined {
   }
   const hd = r.holdown!.item;
   D.rect(-pw - 2.5, 4, 2.5, 14);
+  for (const y of [7, 10, 13, 16]) screw(D, [-pw - 2.5, y], [-pw + 1.5, y]);
   D.note(`${hd.manufacturer} ${hd.model} holdown${hd.fasteners ? ` w/ ${hd.fasteners}` : ""}`, [-pw - 2.5, 14]);
   const a = s.holdownAnchor;
   if (a) {
@@ -561,6 +614,22 @@ function shearWallElevation(r: R<"shearWall">): Detail {
   D.rect(L - pw, 1.5, pw, h - 4.5);
   D.studs(16, L - pw - 1, 1.5, h - 3, s.stud.spacing);
   for (let x = 48; x < L - 1; x += 48) D.line([x, 1.5], [x, h - 3], true);
+  // edge nailing at panel edges and plates, field nailing at intermediate studs
+  const en = r.sides[0].spacing;
+  for (let y = 3; y < h - 4; y += en) {
+    heads(D, [
+      [pw / 2, y],
+      [L - pw / 2, y],
+    ]);
+    for (let x = 48; x < L - 1; x += 48) heads(D, [[x, y]]);
+  }
+  for (let x = 4; x < L - 2; x += en)
+    heads(D, [
+      [x, 0.75],
+      [x, h - 1.5],
+    ]);
+  for (let x = 16; x < L - pw - 1; x += s.stud.spacing)
+    if (x % 48 !== 0) for (let y = 12; y < h - 6; y += 12) heads(D, [[x + 0.75, y]]);
   if (h > 100) D.line([0, 96], [L, 96], true);
   const side = r.sides[0];
   D.note(
@@ -610,20 +679,6 @@ function shearWallElevation(r: R<"shearWall">): Detail {
         : "Shear wall elevation",
     r.mark,
   );
-}
-
-function upliftPath(r: R<"uplift">): Detail {
-  const D = new Draw();
-  const n = r.rows.length;
-  r.rows.forEach((row, i) => {
-    const y = (n - 1 - i) * 30;
-    D.rect(0, y, 3.5, 24);
-    D.wood(-1, y + 24, 5.5, 3);
-    D.rect(3.5, y + 18, 1.5, 10);
-    D.note(`${row.label}: ${row.model} @ ${fmt(row.spacing, 0)}" o.c.`, [5, y + 23]);
-  });
-  D.conc(-8, -10, 20, 10);
-  return D.done(`Uplift load path - ${r.input.sourceMark}`, r.mark);
 }
 
 function shearPanel(r: R<"shearPanel">): Detail {
@@ -808,6 +863,7 @@ function rafterSeat(r: R<"rafter">): Detail {
     22,
     yb(22) + dv / 2,
   ]);
+  nail(D, [xs + 2.2, yb(xs + 2.2) + 2], [xs - 0.6, -1.3]);
   D.note(`Birdsmouth: ${inch(f.plateSeat)} min. bearing, ${inch(f.seatCut)} max. seat cut`, [(-wd + xs) / 2, 0]);
   D.note("Roof sheathing per plan", [8, yb(8) + dv + sh]);
   D.note("2x blocking between rafters", [-wd + 0.75, bt - 1]);
@@ -958,7 +1014,9 @@ function joistBearing(r: R<"joist"> | R<"ijoist">): Detail {
     D.line([x0, dd - 1.5], [44, dd - 1.5]);
   }
   deck(D, -wd - 0.5, 44, dd, 0.75);
-  D.line([x0 + 1, 0.2], [x0 + 3, 2.4]);
+  nail(D, [x0 + 3.2, 2.6], [x0 + 0.6, -1.4]);
+  nail(D, [x0 + 4.4, 2.2], [x0 + 1.8, -1.6]);
+  for (const x of [x0 + 0.75, 20, 36]) nail(D, [x, dd + 1.05], [x, dd - 1.6]);
   D.note(r.callout, [24, dd / 2]);
   D.note(`${inch(lb)} min. bearing`, [x0 + lb / 2, 0]);
   D.note(ij ? "Rim board per manufacturer" : "Rim joist / blocking", [-wd + rim / 2, dd * 0.6]);
@@ -1021,7 +1079,7 @@ function transfer(r: R<"transfer">, p: Project): Detail {
     other: "shear transfer",
   };
   const [ax, ay] = at[t.interface];
-  for (let k = -1; k <= 1; k++) D.line([ax + k * 1.2, ay + 1.6], [ax + k * 1.2, ay - 1.6]);
+  for (let k = -1; k <= 1; k++) nail(D, [ax + k * 1.2, ay + 1.8], [ax + k * 1.2 - 0.6, ay - 1.8]);
   D.note(`${where[t.interface]}: ${what}`, at[t.interface]);
   D.note("Rim joist / blocking", [0.75, jd * 0.7]);
   D.note("Floor joists per plan", [24, jd / 2]);
@@ -1048,6 +1106,7 @@ function wallSection(r: R<"wall">): Detail {
   if (w.sheathing === "both") D.rect(d, bp, 0.5, H - bp - tp);
   else D.line([d + 0.5, bp], [d + 0.5, H - tp]);
   if (w.sheathing === "none" && w.blocking) D.wood(0, H / 2 - 0.75, d, 1.5);
+  if (w.sheathing !== "none") for (let y = 12; y < H - 6; y += 12) nail(D, [-0.8, y], [1.6, y]);
   D.note(`${w.size} ${w.species} ${w.grade} studs @ ${fmt(w.spacing, 0)}" o.c.`, [d / 2, H / 2]);
   D.note(`(${w.topPlates}) ${w.size} top plates`, [d / 2, H - 1.5]);
   D.note(`(${w.bottomPlates}) ${w.size} bottom plate`, [d / 2, 0.75]);
@@ -1076,6 +1135,7 @@ function studPack(r: R<"wall">, i: number): Detail {
   for (let n = 0; n < k.studs; n++) D.rect(n * 1.5, 1.5 * w.bottomPlates, 1.5, H - tp - 1.5 * w.bottomPlates);
   for (const x of [-w.spacing, -2 * w.spacing, pw + w.spacing - 1.5, pw + 2 * w.spacing - 1.5])
     if (x > -L && x < L + pw - 1.5) D.rect(x, 1.5 * w.bottomPlates, 1.5, H - tp - 1.5 * w.bottomPlates);
+  for (let n = 1; n < k.studs; n++) for (let y = 8; y < H - 6; y += 10) D.circle([n * 1.5, y], 0.2);
   D.wood(-2, H, pw + 4, 11.25);
   D.line([pw / 2, H + 18], [pw / 2, H + 11.25]);
   D.line([pw / 2 - 0.8, H + 12.6], [pw / 2, H + 11.25]);
@@ -1134,7 +1194,7 @@ function postConnector(r: R<"connector">, base: boolean): Detail {
     cut(D, -2.75, -32, 5.5, 32, "b");
     cut(D, -18, 0, 36, 11.25, "lr");
     D.rect(-3.25, -7, 6.5, 18.5);
-    for (const y of [-4, -1.5, 3, 6]) D.circle([0, y], 0.3);
+    for (const y of [-4.5, -1.5, 3, 7]) boltEnd(D, [0, y], 0.5);
     D.note(`${it.manufacturer} ${it.model} post cap${it.fasteners ? ` w/ ${it.fasteners}` : ""}`, [3.25, -3]);
     D.note("Beam per plan", [10, 5.6]);
   }
@@ -1182,11 +1242,212 @@ function steelBeamBearing(r: R<"steelBeam">): Detail {
   } else if (brg.support === "post") {
     cut(D, -brg.lb, -26, Math.max(brg.lb, 5.5), 26, "b");
   } else wallBelow(D, -brg.lb, 0, Math.max(brg.lb, 5.5), { h: 22 });
+  for (const x of [-brg.lb * 0.7, -brg.lb * 0.3]) {
+    D.line([x, 1.6], [x, -3]);
+    D.rect(x - 0.45, 1.1, 0.9, 0.5);
+  }
+  D.note("Connect beam to support per plan (bolts / welds)", [-brg.lb * 0.3, -2]);
   D.note(`${b.shape} (${b.grade})`, [20, dep / 2]);
   D.note(`${inch(brg.lb)} min. bearing on ${brg.size ? `${brg.size} ` : ""}${brg.support}`, [-brg.lb / 2, 0]);
   D.note("Bearing plate / shims to full bearing", [0.5, 0.25]);
   D.dim([-brg.lb, dep + 0.5], [0, dep + 0.5], 3, inch(brg.lb));
   return D.done("Steel beam bearing", r.mark);
+}
+
+function postBearing(r: R<"post">): Detail {
+  const f = r.input;
+  const D = new Draw();
+  const pd = r.mat.d;
+  const on = f.bearing.on;
+  cut(D, -pd / 2, 0, pd, 34, "t");
+  if (on === "concrete") {
+    D.conc(-14, -16, 28, 16);
+    D.earth(-24, -14, 0);
+    D.earth(14, 24, 0);
+    D.line([-pd / 2 - 0.4, 0], [pd / 2 + 0.4, 0]);
+    D.line([-pd / 2 - 0.4, 0], [-pd / 2 - 0.4, 6]);
+    D.line([pd / 2 + 0.4, 0], [pd / 2 + 0.4, 6]);
+    heads(D, [
+      [-pd / 2 - 0.4, 2],
+      [-pd / 2 - 0.4, 4.5],
+      [pd / 2 + 0.4, 2],
+      [pd / 2 + 0.4, 4.5],
+    ]);
+    D.anchor(0, 0, -8, 0.625, "head");
+    D.note("Post base per plan (standoff for P.T. or naturally durable post)", [pd / 2 + 0.4, 3]);
+  } else if (on === "steel") {
+    cut(D, -16, -0.6, 32, 0.6, "lr");
+    cut(D, -16, -10, 32, 0.6, "lr");
+    D.line([-0.15, -0.6], [-0.15, -9.4]);
+    D.line([0.15, -0.6], [0.15, -9.4]);
+    for (const x of [-pd / 4, pd / 4]) D.line([x, 1.5], [x, -1.2]);
+    D.note("Steel beam / bearing plate per plan; bolt post to plate", [8, -0.3]);
+  } else {
+    const [, sd] = dressed(f.bearing.size ?? "4x10");
+    cut(D, -18, -sd, 36, sd, "lr");
+    nail(D, [-pd / 2 + 0.2, 3.2], [-pd / 2 - 1.8, -1.2]);
+    nail(D, [pd / 2 - 0.2, 3.2], [pd / 2 + 1.8, -1.2]);
+    D.note(`${f.bearing.size ?? "Beam"} ${f.bearing.species ?? ""} ${f.bearing.grade ?? ""} support`, [10, -sd / 2]);
+    D.note("Toenail post to support; connector per plan", [pd / 2 + 1, 1]);
+  }
+  D.note(`${r.mark}: ${r.callout}`, [0, 20]);
+  D.note(
+    r.endGrain.plateRequired
+      ? `End-grain bearing f_c = ${fmt(r.endGrain.fc, 0)} psi > 0.75 F_c*: provide 20 ga. min. steel bearing plate (NDS 3.10.1.3)`
+      : `End-grain bearing f_c = ${fmt(r.endGrain.fc, 0)} psi (no bearing plate required)`,
+    [0, 1],
+  );
+  return D.done("Post bearing", r.mark);
+}
+
+function beamBearing(r: R<"beam">): Detail {
+  const b = r.input;
+  const D = new Draw();
+  const m = b.material;
+  const dd = m.kind === "sawn" ? dressed(m.size)[1] : m.d;
+  const lb = Math.min(...b.bearing);
+  cut(D, -2.75, -30, 5.5, 30, "b");
+  cut(D, -2.75, 0, 40, dd, "r");
+  D.line([-2.75, 0], [-2.75, dd]);
+  // post cap (beyond, hidden) with bolts
+  for (const [a, c] of [
+    [
+      [-3.3, -6],
+      [3.3, -6],
+    ],
+    [
+      [3.3, -6],
+      [3.3, dd * 0.7],
+    ],
+    [
+      [-3.3, dd * 0.7],
+      [-3.3, -6],
+    ],
+  ] as Array<[Pt, Pt]>)
+    D.line(a, c, true);
+  boltEnd(D, [0, -3], 0.5);
+  boltEnd(D, [0, dd * 0.4], 0.5);
+  D.note(`${r.mark}: ${r.callout}`, [24, dd / 2]);
+  D.note(`${inch(lb)} min. bearing`, [-2.75 + lb / 2, 0]);
+  D.note("Post cap / connector per plan", [3.3, -4.5]);
+  D.note("Post per plan", [0, -20]);
+  D.dim([-2.75, dd], [-2.75 + lb, dd], 3, inch(lb));
+  return D.done("Beam bearing", r.mark);
+}
+
+function collector(r: R<"diaphragm">): Detail | undefined {
+  const cs = r.collectors.filter((c) => c.Fasd > 0);
+  if (!cs.length) return undefined;
+  const c = r.input.chord;
+  const D = new Draw();
+  cut(D, -40, 0, 38, 1.5, "l");
+  cut(D, 2, 0, 38, 1.5, "r");
+  cut(D, -40, 1.5, 70, 1.5, "lr");
+  D.rect(-24, 3.1, 48, 0.12);
+  const pts: Pt[] = [];
+  for (let x = -22; x <= 22; x += 2.5) if (Math.abs(x) > 2) pts.push([x, 2.25]);
+  heads(D, pts);
+  for (const x of [-32, -16, 0, 16]) cut(D, x, -24, 1.5, 24, "b");
+  const F = Math.max(...cs.map((x) => x.Fasd));
+  D.note(`(2) ${c.size} ${c.species} ${c.grade} top plates (collector / chord)`, [-30, 0.75]);
+  D.note(
+    `Collector force ${cs.map((x) => `line ${x.line}: ${fmt(x.Fasd, 0)} lb`).join("; ")} (ASD${cs.some((x) => x.omega > 1) ? ", incl. Ω0" : ""})`,
+    [0, 3.2],
+  );
+  D.note(`Strap / plate splice for ${fmt(F, 0)} lb min. over each top-plate splice, nailed each side`, [12, 2.25]);
+  D.note("Wall studs per plan", [-16, -12]);
+  return D.done("Collector / drag strap", r.mark);
+}
+
+function strapConnector(r: R<"connector">): Detail {
+  const it = r.item;
+  const D = new Draw();
+  cut(D, -2.75, -30, 5.5, 26, "b");
+  cut(D, -18, -4, 36, 11.25, "lr");
+  cut(D, -2.75, 7.25, 5.5, 26, "t");
+  D.rect(-0.75, -22, 1.5, 48);
+  const pts: Pt[] = [];
+  for (let y = -20; y < 24; y += 2) if (y < -5 || y > 8) pts.push([0, y]);
+  heads(D, pts);
+  D.note(`${it.manufacturer} ${it.model}${it.fasteners ? ` w/ ${it.fasteners}` : ""}`, [0.75, 18]);
+  D.note(`${r.input.sourceMark} at ${r.input.supportName}`, [0.75, -14]);
+  D.note("Center strap on the joint; fill all nail holes", [0, 1.6]);
+  return D.done("Strap tie", r.mark);
+}
+
+function angleConnector(r: R<"connector">): Detail {
+  const it = r.item;
+  const D = new Draw();
+  wallBelow(D, -2.75, 0, 5.5, { h: 20 });
+  D.wood(-2.75, 0, 5.5, 7.25);
+  D.line([2.75, 0.2], [5.2, 0.2]);
+  D.line([2.95, 0.2], [2.95, 4.2]);
+  heads(D, [
+    [3.8, 0.2],
+    [4.6, 0.2],
+    [2.95, 1.5],
+    [2.95, 3],
+  ]);
+  deck(D, -14, 22, 7.25, 0.75);
+  D.note(
+    `${it.manufacturer} ${it.model}${r.input.quantity > 1 ? ` (${r.input.quantity})` : ""}${it.fasteners ? ` w/ ${it.fasteners}` : ""}`,
+    [2.95, 2.5],
+  );
+  D.note(`${r.input.sourceMark} to ${r.input.supportName}`, [0, 6]);
+  D.note("Sheathing per plan", [12, 7.6]);
+  return D.done("Framing clip", r.mark);
+}
+
+function steelTrussJoint(r: R<"steelTruss">): Detail {
+  const D = new Draw();
+  cut(D, -30, 0, 60, 4, "lr");
+  D.line([-30, 0.4], [30, 0.4]);
+  for (const [s, ang] of [
+    [-1, 55],
+    [1, 55],
+  ] as Array<[number, number]>) {
+    const t = (ang * Math.PI) / 180;
+    const L = 26;
+    const x0 = s * 3;
+    D.line([x0, 4], [x0 + s * L * Math.cos(t), 4 + L * Math.sin(t)]);
+    D.line([x0 + s * 3, 4], [x0 + s * 3 + s * L * Math.cos(t), 4 + L * Math.sin(t)]);
+  }
+  D.rect(-10, -0.5, 20, 13);
+  for (const x of [-6, -2, 2, 6]) boltEnd(D, [x, 2], 0.375);
+  D.note(r.callout, [20, 2]);
+  D.note("Gusset plate, bolts and welds per the truss connection design", [8, 10]);
+  D.note("Member centroids meet at the panel point", [0, 4]);
+  return D.done("Steel truss joint", r.mark);
+}
+
+function upliftPath(r: R<"uplift">): Detail {
+  const D = new Draw();
+  const n = r.rows.length;
+  const H = 30;
+  const top = n * H;
+  const s = 5 / 12;
+  D.line([-14, top + 1.5 - s * 9], [26, top + 1.5 + s * 31]);
+  D.line([-14, top + 8.75 - s * 9], [26, top + 8.75 + s * 31]);
+  r.rows.forEach((row, i) => {
+    const y = top - i * H;
+    D.wood(-2.75, y - 1.5, 5.5, 1.5);
+    D.wood(-2.75, y - 3, 5.5, 1.5);
+    cut(D, -2.75, y - H + 1.5, 5.5, H - 4.5, "");
+    // connector across the joint at this level, fasteners shown
+    D.rect(2.75, y - 6, 0.25, 9);
+    heads(D, [
+      [2.9, y - 4.5],
+      [2.9, y - 2.2],
+      [2.9, y + 0.8],
+      [2.9, y + 2],
+    ]);
+    D.note(`${row.label}: ${row.model} @ ${fmt(row.spacing, 0)}" o.c.`, [3, y - 1.5]);
+  });
+  D.wood(-2.75, 0, 5.5, 1.5);
+  D.conc(-14, -14, 28, 14);
+  D.anchor(0, 1.5, -8, 0.625, "hook");
+  D.note("Anchorage to foundation per plan", [0, -4]);
+  return D.done(`Uplift load path - ${r.input.sourceMark}`, r.mark);
 }
 
 /* ------------------------------------------------------------------ the engineer's library */
@@ -1356,7 +1617,13 @@ function libSillAnchorage(r: R<"shearWall">): Detail | undefined {
     ["#2", `${s.sillSize} PT sill plate`],
     ["#5", inch(a.edge)],
     ["#6", `${r.sides[0].row.label} shear wall per plan`],
-    ["#9", `${inch(a.d)} dia. A.B.'s @ ${fmt(a.spacing, 0)}" o.c. w/ 3"x3"x0.229" plate washers. Provide`],
+    [
+      "#9",
+      `${inch(a.d)} dia. A.B.'s @ ${fmt(a.spacing, 0)}" o.c. w/ 3"x3"x0.229" plate washers. Provide minimum two bolts per sill plate & one bolt not less than 4" from ends of sill plate`,
+    ],
+    ["#10", ""],
+    ["#11", ""],
+    ["#12", ""],
     ["#13", `${inch(a.embed)} min.`],
     ["#14", ""],
   ]);
@@ -1403,10 +1670,11 @@ function libChordSplice(r: R<"diaphragm">): Detail | undefined {
   const c = r.input.chord;
   if (c.splice.type !== "nails") return undefined;
   return lib("top-plate-splice", "Top plate (chord) splice", r.mark, [
-    ["#1", `w/ ${c.splice.nails}-${nailDef(c.splice.nail).label}`],
-    ["#2", "each side, equally spaced &"],
-    ["#4", `(2) ${c.size} ${c.species} ${c.grade}`],
-    ["#5", "top plates (chord)"],
+    ["#1", `w/ ${c.splice.nails}-${nailDef(c.splice.nail).label} each side, equally spaced & staggered`],
+    ["#2", ""],
+    ["#3", ""],
+    ["#4", `(2) ${c.size} top plates (chord)`],
+    ["#5", ""],
     ["#11", ""],
   ]);
 }
@@ -1454,104 +1722,122 @@ function libOpening(r: R<"wall">, i: number): Detail {
 
 export function projectDetails(p: Project, d: ProjectDesign): Detail[] {
   const out: Detail[] = [];
-  const add = (x: Detail | undefined) => x && out.push(x);
+  const add = (x: Detail | undefined, cat: DetailCat) => x && out.push({ ...x, cat });
+  const srcKind = (mark: string) => [...d.outcomes.values()].find((o) => o.result?.mark === mark)?.result?.kind;
   for (const o of d.outcomes.values()) {
     const r = o.result;
     if (!r) continue;
     switch (r.kind) {
       case "footing":
-        add(libFooting(r) ?? footing(r));
+        add(libFooting(r) ?? footing(r), "foundation");
         break;
       case "holdownFooting":
-        add(holdownFooting(r));
+        add(holdownFooting(r), "foundation");
         break;
       case "tieIn":
-        add(libTieIn(r));
+        add(libTieIn(r), "foundation");
         break;
       case "retainingWall":
-        add(retaining(r));
+        add(retaining(r), "foundation");
         break;
       case "masonryWall":
-        add(masonryWall(r));
+        add(masonryWall(r), "foundation");
         break;
       case "basePlate":
-        add(basePlate(r));
+        add(basePlate(r), "steel");
         break;
       case "shearWall":
-        add(libHoldownToExisting(r) ?? libHoldownSection(r) ?? holdown(r));
-        add(libSillToExisting(r) ?? libSillAnchorage(r) ?? sillAnchor(r));
-        add(libShearWallSection(r) ?? shearWallElevation(r));
+        add(libHoldownToExisting(r) ?? libHoldownSection(r) ?? holdown(r), "lateral");
+        add(libSillToExisting(r) ?? libSillAnchorage(r) ?? sillAnchor(r), "lateral");
+        add(libShearWallSection(r) ?? shearWallElevation(r), "lateral");
         break;
       case "shearPanel":
-        add(shearPanel(r));
+        add(shearPanel(r), "lateral");
         break;
       case "transfer":
-        add(libTransferClip(r, p) ?? transfer(r, p));
+        add(libTransferClip(r, p) ?? transfer(r, p), "lateral");
         break;
-      case "diaphragm":
-        add(libPanelEdges(r) ?? diaphragm(r, p));
-        add(libChordSplice(r));
+      case "diaphragm": {
+        const cat = r.input.level === "roof" ? "roof" : "floor";
+        add(libPanelEdges(r) ?? diaphragm(r, p), cat);
+        add(libChordSplice(r), cat);
+        add(collector(r), cat);
         break;
+      }
       case "uplift":
-        add(upliftPath(r));
+        add(upliftPath(r), "lateral");
         break;
       case "wall":
-        add(wallSection(r));
-        r.input.openings.forEach((_, i) => add(libOpening(r, i)));
-        r.input.packs.forEach((_, i) => add(studPack(r, i)));
+        add(wallSection(r), "wall");
+        r.input.openings.forEach((_, i) => add(libOpening(r, i), "wall"));
+        r.input.packs.forEach((_, i) => add(studPack(r, i), "wall"));
         break;
       case "cfsWall":
-        add(cfsWall(r));
+        add(cfsWall(r), "wall");
         break;
-      case "connector":
-        if (r.item.kind === "hanger") add(libIJoistHanger(r, d) ?? hanger(r, p, d));
-        else if (r.item.kind === "post-cap") add(postConnector(r, false));
-        else if (r.item.kind === "post-base") add(libPostBase(r));
-        else if (r.item.kind === "tie") add(libRoofTie(r, d));
+      case "connector": {
+        const roof = ["rafter", "ceilingJoist", "truss", "woodTruss"].includes(srcKind(r.input.sourceMark) ?? "");
+        const k = r.item.kind;
+        if (k === "hanger") add(libIJoistHanger(r, d) ?? hanger(r, p, d), roof ? "roof" : "floor");
+        else if (k === "post-cap") add(postConnector(r, false), "floor");
+        else if (k === "post-base") add(libPostBase(r), "foundation");
+        else if (k === "tie") add(libRoofTie(r, d), "roof");
+        else if (k === "strap" || k === "holdown") add(strapConnector(r), "lateral");
+        else if (k === "angle") add(angleConnector(r), roof ? "roof" : "floor");
         break;
+      }
       case "rafter":
-        add(rafterSeat(r));
-        add(ridge(r));
+        add(rafterSeat(r), "roof");
+        add(ridge(r), "roof");
         break;
       case "ceilingJoist":
-        add(heel(r));
+        add(heel(r), "roof");
         break;
       case "truss":
-        add(trussBearing(r));
+        add(trussBearing(r), "roof");
         break;
       case "woodTruss":
-        add(trussJoint(r));
+        add(trussJoint(r), "roof");
         break;
       case "joist":
-        add(joistBearing(r));
-        add(libSister(r) ?? sister(r));
-        add(notches(r));
+        add(joistBearing(r), "floor");
+        add(libSister(r) ?? sister(r), "floor");
+        add(notches(r), "floor");
         break;
       case "ijoist":
-        add(joistBearing(r));
+        add(joistBearing(r), "floor");
         break;
-      case "beam":
-        add(plies(r));
-        add(notches(r));
+      case "beam": {
+        const cat = r.input.role === "ridge" ? "roof" : "floor";
+        add(beamBearing(r), cat);
+        add(plies(r), cat);
+        add(notches(r), cat);
+        break;
+      }
+      case "post":
+        add(postBearing(r), "floor");
         break;
       case "ledger":
-        add(libLedger(r) ?? ledger(r));
+        add(libLedger(r) ?? ledger(r), "floor");
         break;
       case "guardPost":
-        add(guardPost(r));
+        add(guardPost(r), "floor");
         break;
       case "steelBeam":
-        add(steelBeamBearing(r));
+        add(steelBeamBearing(r), "steel");
         break;
       case "steelColumn":
-        add(steelColumnCap(r));
+        add(steelColumnCap(r), "steel");
+        break;
+      case "steelTruss":
+        add(steelTrussJoint(r), "steel");
         break;
     }
   }
   // identical details (same drawing and callouts) are drawn once, tagged with every mark
   const merged = new Map<string, Detail>();
   for (const x of out) {
-    const key = JSON.stringify([x.title, x.prims, x.notes, x.tpl]);
+    const key = JSON.stringify([x.cat, x.title, x.prims, x.notes, x.tpl]);
     const m = merged.get(key);
     if (m) m.marks.push(...x.marks.filter((k) => !m.marks.includes(k)));
     else merged.set(key, { ...x, marks: [...x.marks] });
