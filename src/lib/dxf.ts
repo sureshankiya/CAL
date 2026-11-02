@@ -767,8 +767,11 @@ function titleStrip(w: Writer, d: Detail, num: number, scale: string, cx: number
 
 /** smallest plotted height for a calculated value written into a library detail, in. */
 const MIN_TEXT = 0.06;
-/** one plotted height for every note on the detail sheets (library and generated details alike) */
-const NOTE_H = 0.075;
+/**
+ * one plotted height for every note on a detail sheet (library and generated details alike): 0.075 in.
+ * in the 4 x 4 grid, up to 1.6 x that on sheets with larger boxes; set per sheet by detailsDxf
+ */
+let NOTE_H = 0.075;
 /** cells for the large library details (columns, rows); others are sized from their note height */
 const SPANS: Record<string, [number, number]> = {
   "shear-wall-section": [2, 1],
@@ -1098,6 +1101,8 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
     const ox = k * (SH.w + 2);
     const bw = (x1 - X0) / sh.cols;
     const bh = (TOP - BOTTOM) / sh.rows;
+    const base = ((x1 - X0) / GRID.cols) * ((TOP - BOTTOM) / GRID.rows);
+    NOTE_H = 0.075 * Math.min(1.6, Math.max(1, Math.sqrt((bw * bh) / base)));
     titleBlock(w, ox, info, numberOf(k), sh.title);
     const cellBox = (col: number, row: number, c: number, r: number) => {
       const xa = ox + X0 + col * bw;
@@ -1120,5 +1125,6 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
       drawDetail(w, p.d, i + 1, ox + X0 + p.col * bw, TOP - (p.row + p.r) * bh, p.c * bw, p.r * bh),
     );
   });
+  NOTE_H = 0.075;
   return dxfFile(w);
 }
