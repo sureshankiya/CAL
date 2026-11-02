@@ -10,8 +10,10 @@ import { DEFLECTION_PRESETS } from "@/engine/loads/deflection";
 import { LIVE_LOADS, liveLoad } from "@/engine/loads/live";
 import { snowLoads } from "@/engine/loads/snow";
 import { hardwareLabel } from "@/engine/data/hardware";
+import { steelGrade } from "@/engine/data/steel";
 import { fmtInFraction } from "@/engine/core/fmt";
 import { issuedNoteLine } from "@/engine/project/drawingData";
+import { STEEL_TRUSS_PATTERNS } from "@/engine/members/steelTruss";
 import { generateNotes, hardwareSchedule, type AnyResult, type Project, type ProjectDesign } from "@/engine/project";
 import {
   B,
@@ -41,6 +43,8 @@ export function spansText(r: AnyResult): string {
       return fmtFtIn(r.input.span);
     case "shearWall":
       return `${fmtFtIn(r.input.b)} × ${fmtFtIn(r.input.h)}`;
+    case "shearPanel":
+      return `${r.input.count} × ${fmtFtIn((r.item.panel?.width ?? 0) / 12)} × ${fmtFtIn(r.input.h)}`;
     case "footing":
       return r.input.type === "strip" ? "continuous" : `${fmtFtIn(r.input.B)} × ${fmtFtIn(r.input.L ?? r.input.B)}`;
     case "connector":
@@ -60,6 +64,7 @@ export function spansText(r: AnyResult): string {
     case "tieIn":
       return "—";
     case "woodTruss":
+    case "steelTruss":
       return fmtFtIn(r.input.span);
     case "retainingWall":
       return `${fmtFtIn(r.input.Hr)} retained`;
@@ -228,30 +233,81 @@ export function SummarySheet({
   );
 }
 
+/** Material entries (category, description) for the criteria sheet. */
+function materialsOf(r: AnyResult, c: { fc: number; fy: number }): [string, string][] {
+  const concrete = (rebar = true): [string, string] => [
+    "Concrete",
+    `f'c = ${c.fc} psi${rebar ? `; reinforcing ASTM A615 Grade ${c.fy / 1000}` : ""}`,
+  ];
+  if ("design" in r) return [["Wood", r.design.mat.speciesLabel]];
+  switch (r.kind) {
+    case "wall":
+      return [["Wood", r.typical.mat.speciesLabel]];
+    case "post":
+      return [["Wood", r.mat.speciesLabel]];
+    case "shearWall":
+      return [
+        ["Wood", r.post.speciesLabel],
+        ["Sheathing", "Wood structural panels per the shear wall schedule"],
+      ];
+    case "diaphragm":
+      return [["Sheathing", "Wood structural panels per the diaphragm schedule"]];
+    case "ledger":
+      return [["Wood", `${r.input.ledger.species} ${r.input.ledger.grade}`]];
+    case "footing":
+      return [concrete(!!r.input.rebar)];
+    case "holdownFooting":
+    case "tieIn":
+      return [concrete()];
+    case "retainingWall":
+      return r.input.stem.material === "cmu"
+        ? [concrete(), ["Masonry", "Concrete masonry units, ASTM C90; grout ASTM C476"]]
+        : [concrete()];
+    case "masonryWall":
+      return r.input.material === "cmu"
+        ? [["Masonry", `Concrete masonry units, ASTM C90; f'm = ${r.mat.fm ?? "—"} psi`]]
+        : [concrete()];
+    case "steelBeam":
+    case "steelColumn":
+      return [["Structural steel", `${r.shape.name}: ${r.gradeLabel}`]];
+    case "basePlate":
+      return [
+        ["Structural steel", `Base plate: ${steelGrade(r.input.plate.grade).label}, F_y = ${fmt(r.FyPlate, 0)} ksi`],
+        ["Anchor rods", r.rodSteel.label],
+      ];
+    case "steelTruss":
+      return Object.values(r.mats).map((x): [string, string] => [
+        "Structural steel",
+        `${x!.shape.name}: ${x!.gradeLabel}`,
+      ]);
+    case "cfsWall":
+      return [["Cold-formed steel", `${r.input.designation}, F_y = ${r.input.Fy} ksi (AISI S100)`]];
+    case "connector":
+      return [["Connectors", `${r.item.manufacturer} connectors`]];
+    case "transfer":
+    case "uplift":
+      return [["Connectors", "Nails / connectors per the shear transfer and uplift schedules"]];
+    case "truss":
+      return [["Wood", "Prefabricated wood trusses (by manufacturer)"]];
+    default:
+      return [["Wood", "Wood members per the member sheets"]];
+  }
+}
+
 export function CriteriaSheet({ m, design }: { m: SheetMeta; design: ProjectDesign }) {
   const p = m.project;
   const cr = p.criteria;
   const ft = footers(m);
-  const used = new Set<string>();
+  const used = new Map<string, [string, string]>();
   for (const o of design.outcomes.values())
-    if (o.result)
-      used.add(
-        "design" in o.result
-          ? o.result.design.mat.speciesLabel
-          : o.result.kind === "wall"
-            ? o.result.typical.mat.speciesLabel
-            : o.result.kind === "post"
-              ? o.result.mat.speciesLabel
-              : o.result.kind === "shearWall"
-                ? o.result.post.speciesLabel
-                : o.result.kind === "footing"
-                  ? `Concrete f'c = ${cr.concrete.fc} psi${o.result.input.rebar ? `, reinforcing f_y = ${cr.concrete.fy} psi` : ""}`
-                  : o.result.kind === "connector"
-                    ? `${o.result.item.manufacturer} connectors`
-                    : "Prefabricated wood trusses (by manufacturer)",
-      );
+    if (o.result) for (const [cat, text] of materialsOf(o.result, cr.concrete)) used.set(`${cat}|${text}`, [cat, text]);
   const presets = new Set(p.members.flatMap((x) => ("deflection" in x ? [x.deflection.preset] : [])));
-  const combos = asdCombinations({ includeWind: true, includeSeismic: true, SDS: cr.seismic.SDS });
+  const combos = asdCombinations({
+    includeWind: true,
+    includeSeismic: true,
+    SDS: cr.seismic.SDS,
+    asce7: m.cycle.asce7,
+  });
   return (
     <Sheet f={titleFields(m)} footerLeft={ft.left} footerCenter={ft.center} first={m.first} id="sheet-criteria">
       <SheetTitle
@@ -385,9 +441,11 @@ export function CriteriaSheet({ m, design }: { m: SheetMeta; design: ProjectDesi
         }
       />
       <SectionHead title="Materials used in this package" />
-      {[...used].map((u) => (
-        <TR key={u} desc="Wood member" expr={<>{u}</>} />
-      ))}
+      {[...used.entries()]
+        .sort((a, b) => a[1][0].localeCompare(b[1][0]))
+        .map(([k, [cat, text]]) => (
+          <TR key={k} desc={cat} expr={<>{text}</>} />
+        ))}
       <SectionHead title="Load combinations — ASCE 7 §2.4.1 and §2.4.5 (ASD)" />
       <DataTable
         head={["Ref.", "Combination", "C_D (NDS Table 2.3.2)"]}
@@ -623,10 +681,12 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
   const framing = of("joist", "rafter", "ceilingJoist", "ijoist");
   const trusses = of("truss");
   const wts = of("woodTruss");
+  const strs = of("steelTruss");
   const beams = of("beam");
   const walls = of("wall");
   const posts = of("post");
   const sws = of("shearWall");
+  const spn = of("shearPanel");
   const cns = of("connector");
   const ftgs = of("footing");
   const sbs = of("steelBeam");
@@ -645,6 +705,7 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
   const usedHw = new Set<string>([
     ...cns.map((c) => c.item.id),
     ...sws.flatMap((x) => (x.holdown ? [x.holdown.item.id] : [])),
+    ...spn.map((x) => x.item.id),
     ...sws.flatMap((x) => (x.ftao?.strap ? [x.ftao.strap.item.id] : [])),
     ...dias.flatMap((x) =>
       x.input.chord.splice.type === "strap" && x.input.chord.splice.strapId ? [x.input.chord.splice.strapId] : [],
@@ -736,6 +797,41 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
                 ? "nailed gussets"
                 : "bolted gussets",
             r.reactions.map((x) => `${f0(x.maxDown)}${x.minNet < 0 ? ` / ${f0(-x.minNet)} up` : ""}`).join("; "),
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {strs.length ? (
+        <DataTable
+          caption="Steel truss schedule"
+          head={[
+            "Mark",
+            "Pattern",
+            "Span / rise",
+            "Spacing",
+            "Top chord",
+            "Bottom chord",
+            "Webs",
+            "Chord bracing (top / bottom)",
+            "Max down / uplift (lb)",
+            "Gov. D/C",
+            "Result",
+          ]}
+          small
+          rows={strs.map((r) => [
+            r.mark,
+            `${STEEL_TRUSS_PATTERNS[r.input.pattern].label}, ${r.panels} panels`,
+            `${fmtFtIn(r.input.span)} / ${fmtFtIn(r.input.rise)}`,
+            `${f2(r.input.spacing)} ft o.c.`,
+            `${r.input.sections.TC.shape} ${r.input.sections.TC.grade}`,
+            `${r.input.sections.BC.shape} ${r.input.sections.BC.grade}`,
+            (["EV", "V", "D"] as const)
+              .filter((g) => r.input.sections[g])
+              .map((g) => `${g}: ${r.input.sections[g]!.shape}`)
+              .join("; "),
+            `${r.input.topBracing ? fmtFtIn(r.input.topBracing) : "panel pts"} / ${r.input.bottomBracing ? fmtFtIn(r.input.bottomBracing) : "panel pts"}`,
+            r.reactions.map((x) => `${f0(x.maxDown)}${x.minNet < 0 ? ` / ${f0(-x.minNet)} up` : ""}`).join("; "),
+            f3(r.governing.ratio),
             pf(r),
           ])}
         />
@@ -850,6 +946,25 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
             `${f0(Math.max(r.vS, r.vW))} / ${f0(r.vS >= r.vW ? r.vAllowS : r.vAllowW)}`,
             r.holdown ? r.holdown.item.model : "—",
             `${r.input.sill.type === "cast-in" ? `${fmtInFraction(r.input.sill.d)}" A.B.` : (r.input.sill.label ?? "PIA")} @ ${f0(r.input.sill.spacing)}"`,
+            pf(r),
+          ])}
+        />
+      ) : null}
+      {spn.length ? (
+        <DataTable
+          caption="Portal frame / prefabricated shear panel schedule"
+          head={["Mark", "Line", "Product", "Qty", "Size (W × H)", "V (lb) / allow.", "Drift (in) / allow.", "Result"]}
+          small
+          rows={spn.map((r) => [
+            r.mark,
+            r.demand.lineName,
+            `${r.item.manufacturer} ${r.item.model}`,
+            String(r.input.count),
+            `${fmtFtIn((r.item.panel?.width ?? 0) / 12)} × ${fmtFtIn((r.item.panel?.height ?? 0) / 12)}`,
+            r.Vs / (r.item.panel?.Vs || 1) >= r.Vw / (r.item.panel?.Vw || 1)
+              ? `${f0(r.Vs)} / ${f0(r.item.panel?.Vs ?? 0)} (E)`
+              : `${f0(r.Vw)} / ${f0(r.item.panel?.Vw ?? 0)} (W)`,
+            r.drift.dxe > 0 ? `${f2(r.drift.dx)} / ${f2(r.drift.allow)}` : "—",
             pf(r),
           ])}
         />

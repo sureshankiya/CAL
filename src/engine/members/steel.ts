@@ -236,7 +236,7 @@ export function designSteelBeam(ctx: DesignContext, b: SteelBeamInput): SteelBea
   };
   const total = memberLength(g);
   const { loads, lines } = areaWallLoads(ctx, b.area, b.walls, total);
-  const ex = extraToBeamLoads(b.extra, total);
+  const ex = extraToBeamLoads(b.extra, total, ctx);
   loads.push(...ex.loads);
   lines.push(...ex.lines);
   if (b.selfWeight) {

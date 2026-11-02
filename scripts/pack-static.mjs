@@ -18,7 +18,9 @@ const workerB64 = readFileSync(`${dir}/${worker}`).toString("base64");
 
 const out = process.argv[2] ?? "dist-artifact";
 mkdirSync(out, { recursive: true });
-const page = `<title>HouseCalc</title>
+// charset first (within the first 1,024 bytes) so the file also reads as UTF-8 when opened from disk
+const page = `<meta charset="utf-8">
+<title>HouseCalc</title>
 <style>${css.replace(/<\/style/gi, "<\\/style")}</style>
 <div id="root"></div>
 <script>(function(){var b=atob("${workerB64}"),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);window.__HC_PDF_WORKER__=URL.createObjectURL(new Blob([u],{type:"text/javascript"}));})();</script>

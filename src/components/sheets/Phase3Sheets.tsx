@@ -76,7 +76,7 @@ export function LoadPath({ received, connections }: { received: string[]; connec
   );
 }
 
-function SteelBasis({ m, method, tables }: { m: SheetMeta; method: "LRFD" | "ASD"; tables: string[] }) {
+export function SteelBasis({ m, method, tables }: { m: SheetMeta; method: "LRFD" | "ASD"; tables: string[] }) {
   return (
     <DesignBasis
       m={m}
@@ -96,7 +96,7 @@ function SteelBasis({ m, method, tables }: { m: SheetMeta; method: "LRFD" | "ASD
   );
 }
 
-function ClassRows({
+export function ClassRows({
   classes,
 }: {
   classes: Array<{
