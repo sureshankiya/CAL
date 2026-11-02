@@ -1030,36 +1030,40 @@ function spanOf(d: Detail, bw: number, bh: number): [number, number] {
   return [Math.max(1, cols), Math.max(1, rows)];
 }
 
-/** Details sheets: 4 x 4 grid of detail boxes per sheet, title block as on the S0 sheet. */
+/**
+ * Details sheets, title block as on the S0 sheet: one group of sheets per kind of detail, in the
+ * engineer's order. Each group uses the smallest grid that holds it on one sheet (2 x 2 up to 4 x 3:
+ * larger boxes, no empty sheet); a larger group fills 4 x 4 sheets.
+ */
 export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string): string {
   const w = new Writer();
   const x1 = SH.w - SH.m - SH.tb - 0.25;
-  const bw = (x1 - X0) / GRID.cols;
-  const bh = (TOP - BOTTOM) / GRID.rows;
-  // one group of sheets per kind of detail, in the engineer's order; sheet numbers run on from sheetNo
+  // sheet numbers run on from sheetNo: SD-1, SD-2 …
   const m = /^(.*?)(\d+)$/.exec(sheetNo);
   const numberOf = (i: number) => (m ? `${m[1]}${Number(m[2]) + i}` : `${sheetNo}.${i + 1}`);
-  const sheets: Array<{
-    title: string;
-    used: boolean[][];
-    items: Array<{ d: Detail; row: number; col: number; c: number; r: number }>;
-  }> = [];
-  const cats = Object.keys(DETAIL_SHEETS) as DetailCat[];
-  for (const cat of cats) {
-    const group = details.filter((d) => (d.cat ?? "wall") === cat);
-    if (!group.length) continue;
-    const first = sheets.length;
+  type Item = { d: Detail; row: number; col: number; c: number; r: number };
+  type Sheet = { title: string; cols: number; rows: number; used: boolean[][]; items: Item[] };
+  const blank = (title: string, cols: number, rows: number): Sheet => ({
+    title,
+    cols,
+    rows,
+    used: Array.from({ length: rows }, () => Array<boolean>(cols).fill(false)),
+    items: [],
+  });
+  /** packs the group row by row; spanning details take 2 cells; false when it needs more than maxSheets */
+  const pack = (list: Sheet[], group: Detail[], title: string, cols: number, rows: number, maxSheets: number) => {
+    const cw = (x1 - X0) / cols;
+    const ch = (TOP - BOTTOM) / rows;
     for (const d of group) {
-      const [c, r] = spanOf(d, bw, bh);
+      const [c0, r0] = spanOf(d, cw, ch);
+      const c = Math.min(c0, cols);
+      const r = Math.min(r0, rows);
       let done = false;
-      for (let k = first; !done; k++) {
-        const sh = (sheets[k] ??= {
-          title: DETAIL_SHEETS[cat],
-          used: Array.from({ length: GRID.rows }, () => Array<boolean>(GRID.cols).fill(false)),
-          items: [],
-        });
-        for (let row = 0; row + r <= GRID.rows && !done; row++)
-          for (let col = 0; col + c <= GRID.cols && !done; col++) {
+      for (let k = 0; !done; k++) {
+        if (k >= maxSheets) return false;
+        const sh = (list[k] ??= blank(title, cols, rows));
+        for (let row = 0; row + r <= rows && !done; row++)
+          for (let col = 0; col + c <= cols && !done; col++) {
             let free = true;
             for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) free &&= !sh.used[row + i][col + j];
             if (!free) continue;
@@ -1069,30 +1073,47 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
           }
       }
     }
+    return true;
+  };
+  const sheets: Sheet[] = [];
+  for (const cat of Object.keys(DETAIL_SHEETS) as DetailCat[]) {
+    const group = details.filter((d) => (d.cat ?? "wall") === cat);
+    if (!group.length) continue;
+    let placed: Sheet[] = [];
+    for (const [cols, rows] of [
+      [2, 2],
+      [3, 2],
+      [3, 3],
+      [4, 3],
+    ]) {
+      placed = [];
+      if (pack(placed, group, DETAIL_SHEETS[cat], cols, rows, 1)) break;
+      placed = [];
+    }
+    if (!placed.length) pack(placed, group, DETAIL_SHEETS[cat], GRID.cols, GRID.rows, Infinity);
+    sheets.push(...placed);
   }
-  if (!sheets.length) sheets.push({ title: "DETAILS", used: [], items: [] });
+  if (!sheets.length) sheets.push(blank("DETAILS", GRID.cols, GRID.rows));
   sheets.forEach((sh, k) => {
     const ox = k * (SH.w + 2);
+    const bw = (x1 - X0) / sh.cols;
+    const bh = (TOP - BOTTOM) / sh.rows;
     titleBlock(w, ox, info, numberOf(k), sh.title);
-    const B = "S-ANNO-TTLB";
     const cellBox = (col: number, row: number, c: number, r: number) => {
       const xa = ox + X0 + col * bw;
       const ya = TOP - (row + r) * bh;
-      w.pline(
-        B,
-        [
-          [xa, ya],
-          [xa + c * bw, ya],
-          [xa + c * bw, ya + r * bh],
-          [xa, ya + r * bh],
-          [xa, ya],
-        ],
-        0.025,
-      );
+      const pts: Array<[number, number]> = [
+        [xa, ya],
+        [xa + c * bw, ya],
+        [xa + c * bw, ya + r * bh],
+        [xa, ya + r * bh],
+        [xa, ya],
+      ];
+      w.pline("S-ANNO-TTLB", pts, 0.025);
     };
     for (const p of sh.items) cellBox(p.col, p.row, p.c, p.r);
-    for (let row = 0; row < GRID.rows; row++)
-      for (let col = 0; col < GRID.cols; col++) if (!sh.used[row]?.[col]) cellBox(col, row, 1, 1);
+    for (let row = 0; row < sh.rows; row++)
+      for (let col = 0; col < sh.cols; col++) if (!sh.used[row]?.[col]) cellBox(col, row, 1, 1);
     // number the details in reading order
     const order = [...sh.items].sort((a, b) => a.row - b.row || a.col - b.col);
     order.forEach((p, i) =>
