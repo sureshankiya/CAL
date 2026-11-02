@@ -30,18 +30,15 @@ export interface Detail {
   notes: Array<{ text: string; at: Pt }>;
   /** "*" footnotes under the drawing */
   foot?: string[];
+  /**
+   * one of the engineer's library details (detailTemplates.json) drawn as issued, N.T.S.; each
+   * pair is [pattern matching a note's text, replacement from the calculations]
+   */
+  tpl?: { id: string; text: Array<[string, string]> };
 }
 
 const inch = (v: number) => `${fmtInFraction(v)}"`;
 const up = (s: string) => s.toUpperCase();
-const SMALL = new Set(["at", "of", "to", "and", "on", "w/", "with", "per", "-"]);
-/** detail titles as on the issued sheets: "Continuous Footing", "Rafters at Ridge Beam" */
-const titleCase = (s: string) =>
-  s
-    .split(" ")
-    .map((x, i) => (i && SMALL.has(x.toLowerCase()) ? x.toLowerCase() : x.charAt(0).toUpperCase() + x.slice(1)))
-    .join(" ");
-
 /** dressed size of a nominal sawn size "2x10" → [1.5, 9.25] */
 export function dressed(size: string): [number, number] {
   const m = /(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)/i.exec(size);
@@ -95,7 +92,7 @@ class Draw {
     this.foot.push(up(text));
   }
   done(title: string, mark: string): Detail {
-    return { title: titleCase(title), marks: [mark], prims: this.prims, notes: this.notes, foot: this.foot };
+    return { title: up(title), marks: [mark], prims: this.prims, notes: this.notes, foot: this.foot };
   }
 }
 
@@ -240,28 +237,6 @@ function holdownFooting(r: R<"holdownFooting">): Detail {
     qa: f.qa,
     what: `${fmtFtIn(f.Lf)} long x ${fmtFtIn(f.B)} wide x ${inch(f.h)} footing under shear wall ${f.wall.mark}`,
   }).done("Holdown footing", r.mark);
-}
-
-function tieIn(r: R<"tieIn">): Detail {
-  const t = r.input;
-  const D = new Draw();
-  const H = Math.max(t.ha, 12);
-  D.conc(-24, -H, 24, H);
-  D.conc(0, -H, 24, H);
-  D.line([0, -H - 3], [0, 3], true);
-  const y = -H + t.ca1;
-  D.line([-t.hef, y], [Math.min(t.hef, 20), y]);
-  D.note(`Existing concrete, f'c = ${fmt(t.existing.fc, 0)} psi${t.existing.verified ? "" : " (assumed)"}`, [-20, -2]);
-  D.note("New concrete", [20, -2]);
-  D.note(t.joint, [0, -H]);
-  D.note(
-    `${t.anchor.size} ${t.anchor.kind === "rod" ? "threaded rod" : "dowels"} (${t.anchor.steelLabel}) @ ${fmt(t.spacing, 0)}" o.c., ${inch(t.hef)} embed. into existing, ${t.product.name}${t.product.report ? ` (${t.product.report})` : ""}`,
-    [-t.hef / 2, y],
-  );
-  if (r.sf && t.shearFriction?.roughened) D.note('Roughen existing surface to 1/4" amplitude', [0, -H / 2]);
-  D.dim([-t.hef, y], [0, y], -3, inch(t.hef));
-  D.dim([0, -H], [0, y], 3, inch(t.ca1));
-  return D.done("Tie-in to existing concrete", r.mark);
 }
 
 function retaining(r: R<"retainingWall">): Detail {
@@ -717,31 +692,6 @@ function postConnector(r: R<"connector">, base: boolean): Detail {
   return D.done(base ? "Post base" : "Beam on post", r.mark);
 }
 
-function tieConnector(r: R<"connector">, d: ProjectDesign): Detail {
-  const D = new Draw();
-  const src = [...d.outcomes.values()].find((o) => o.result?.mark === r.input.sourceMark)?.result;
-  const raf = src?.kind === "rafter" ? src.input : undefined;
-  const slope = raf ? raf.rise / 12 : 5 / 12;
-  const dd = raf ? dressed(raf.size)[1] : 7.25;
-  D.wood(-5.5, 0, 5.5, 1.5);
-  D.wood(-5.5, 1.5, 5.5, 1.5);
-  D.rect(-5.5, -30, 5.5, 30);
-  const L = 36;
-  const yb = 3 - (raf?.seatCut ?? 1.5);
-  D.line([-L, yb + 3 - (L - 0) * slope + 0], [12, yb + 3 + 12 * slope]);
-  D.line(
-    [-L, yb + 3 - L * slope + dd / Math.cos(Math.atan(slope))],
-    [12, yb + 3 + 12 * slope + dd / Math.cos(Math.atan(slope))],
-  );
-  D.rect(0, 0, 1.5, 8);
-  D.note(
-    `${r.item.manufacturer} ${r.item.model}${r.input.quantity > 1 ? ` (${r.input.quantity})` : ""} at each ${r.input.sourceMark}${r.item.fasteners ? ` w/ ${r.item.fasteners}` : ""}`,
-    [1.5, 4],
-  );
-  if (src) D.note(`${src.mark} ${src.callout}`, [-L / 2, yb + 3 - (L / 2) * slope + dd]);
-  return D.done("Roof framing tie-down", r.mark);
-}
-
 function rafterSeat(r: R<"rafter">): Detail {
   const f = r.input;
   const D = new Draw();
@@ -995,6 +945,118 @@ function steelColumnCap(r: R<"steelColumn">): Detail | undefined {
   return D.done("Steel column cap", r.mark);
 }
 
+/* ------------------------------------------------------------------ the engineer's library */
+
+const lib = (id: string, title: string, mark: string, text: Array<[string, string]>): Detail => ({
+  title: up(title),
+  marks: [mark],
+  prims: [],
+  notes: [],
+  tpl: { id, text: text.map(([k, v]) => [k, up(v)]) },
+});
+
+/** EXTERIOR BEARING FOOTING: strip footing without a stem wall */
+function libFooting(r: R<"footing">): Detail | undefined {
+  const f = r.input;
+  if (f.type !== "strip" || f.stem) return undefined;
+  const L = f.longitudinal;
+  const bars = [
+    L?.bottom ? `${L.bottom}-${L.size} cont. bottom` : "",
+    L?.top ? `${L.top}-${L.size} cont. top` : "",
+    f.rebar?.spacing ? `${f.rebar.size} @ ${fmt(f.rebar.spacing, 0)}" o.c. transv.` : "",
+  ].filter(Boolean);
+  return lib("ext-bearing-footing", "Continuous footing", r.mark, [
+    ["^7- ", `7- ${bars.length ? bars.join(", ") : "plain concrete, no reinforcement required"}`],
+    ['^12"$', inch(f.B * 12)],
+    ['^18"$', inch(f.depth)],
+    ['^3" CLR', `${inch(f.cover)} clr. (typ)`],
+  ]);
+}
+
+function libTieIn(r: R<"tieIn">): Detail {
+  const t = r.input;
+  return lib("tie-in", "(E) conc. fdns. to (N) conc. fdns.", r.mark, [
+    [
+      "DOWELS @",
+      `${t.anchor.size} ${t.anchor.kind === "rod" ? "threaded rods" : "dowels"} @ ${fmt(t.spacing, 0)}" o.c. with ${inch(t.hef)} min. embedment into (E) conc. w/ ${t.product.name}${t.product.report ? ` (${t.product.report})` : ""}`,
+    ],
+  ]);
+}
+
+const drillNote = (embed: number, label?: string) =>
+  `For drilling bolts in to (E) fdn. drill and epoxy ${inch(embed)} into (E) conc. fdn.${label ? ` and use ${label}` : ""}`;
+
+/** shear wall on an existing foundation: post-installed sill anchors */
+function libSillToExisting(r: R<"shearWall">): Detail | undefined {
+  const s = r.input;
+  const a = s.sill;
+  if (a.type !== "post-installed") return undefined;
+  return lib("shear-wall-to-existing", "Shear wall to (E) conc. fdn.", r.mark, [
+    ["^FOR DRILLING", drillNote(a.embed, a.label)],
+    [
+      "^ANCHOR PER S\\.W\\.",
+      `${inch(a.d)} dia. adhesive anchors @ ${fmt(a.spacing, 0)}" o.c., ${inch(a.embed)} embed${a.label ? ` w/ ${a.label}` : ""} & special inspection`,
+    ],
+    ['^1\\.75" MIN\\. EDGE', `${inch(a.edge)} min. edge dist.`],
+    ["^2x PTDF$", `${s.sillSize} PTDF`],
+    ["^2x STUD$", `${s.stud.size} stud`],
+  ]);
+}
+
+/** holdown anchored into an existing foundation */
+function libHoldownToExisting(r: R<"shearWall">): Detail | undefined {
+  const s = r.input;
+  if (s.sill.type !== "post-installed" || !r.holdown) return undefined;
+  const hd = r.holdown.item;
+  const a = s.holdownAnchor;
+  const who = /simpson/i.test(hd.manufacturer) ? "Simpson" : hd.manufacturer;
+  return lib("hdu-to-existing", "Holdown to (E) fdn.", r.mark, [
+    ["^SIMP ", `${who} ${hd.model}`],
+    ["^DBL STUD", `(${s.endPost.plies}) ${s.endPost.size} end post`],
+    ["^2x STUDS @", `${s.stud.size} studs @ ${fmt(s.stud.spacing, 0)}" oc`],
+    ...(a
+      ? ([
+          ['^5/8"Ø H\\.D\\.G\\.', `${inch(a.d)} dia. H.D.G. all-thrd (${a.steel}), ${inch(a.hef)} embed.`],
+          ['^10"$', inch(a.hef)],
+          ["^FOR DRILLING", drillNote(a.hef, s.sill.label)],
+        ] as Array<[string, string]>)
+      : ([['^5/8"Ø H\\.D\\.G\\.', `H.D.G. all-thrd anchor per ${hd.model} installation`]] as Array<[string, string]>)),
+  ]);
+}
+
+function libRoofTie(r: R<"connector">, d: ProjectDesign): Detail {
+  const src = [...d.outcomes.values()].find((o) => o.result?.mark === r.input.sourceMark)?.result;
+  const what = src?.kind === "truss" || src?.kind === "woodTruss" ? "truss" : "rafter";
+  return lib("roof-tie", "Roof framing tie-down", r.mark, [
+    [
+      "^H2\\.5A",
+      `${r.item.model}${r.input.quantity > 1 ? ` (${r.input.quantity})` : ""} ea. ${what} (${r.input.sourceMark})`,
+    ],
+  ]);
+}
+
+/** roof / floor sheathing to the top plate through blocking with framing clips */
+function libTransferClip(r: R<"transfer">, p: Project): Detail | undefined {
+  const t = r.input;
+  if (t.connector.type !== "clip" || t.interface !== "diaphragm-to-wall") return undefined;
+  const id = t.connector.hardwareId;
+  return lib("shear-transfer-clip", "Shear transfer", r.mark, [
+    ["^A35 @", `${p.hardware.find((h) => h.id === id)?.model ?? "Clip"} @ ${fmt(t.spacing, 0)}" o.c.`],
+  ]);
+}
+
+function libLedger(r: R<"ledger">): Detail | undefined {
+  const g = r.input;
+  if (g.support.kind !== "wood") return undefined;
+  const f = g.fastener;
+  return lib("ledger-lag", "Ledger connection", r.mark, [
+    [
+      "^2-ROWS",
+      `${g.ledger.size} ${g.ledger.species} ${g.ledger.grade} ledger w/ ${inch(f.D)} dia. ${f.type === "lag" ? "lag screws" : "thru-bolts"} @ ${fmt(f.spacing, 0)}" o.c. stagg'd`,
+    ],
+  ]);
+}
+
 /* ------------------------------------------------------------------ assemble */
 
 export function projectDetails(p: Project, d: ProjectDesign): Detail[] {
@@ -1005,13 +1067,13 @@ export function projectDetails(p: Project, d: ProjectDesign): Detail[] {
     if (!r) continue;
     switch (r.kind) {
       case "footing":
-        add(footing(r));
+        add(libFooting(r) ?? footing(r));
         break;
       case "holdownFooting":
         add(holdownFooting(r));
         break;
       case "tieIn":
-        add(tieIn(r));
+        add(libTieIn(r));
         break;
       case "retainingWall":
         add(retaining(r));
@@ -1023,15 +1085,15 @@ export function projectDetails(p: Project, d: ProjectDesign): Detail[] {
         add(basePlate(r));
         break;
       case "shearWall":
-        add(holdown(r));
-        add(sillAnchor(r));
+        add(libHoldownToExisting(r) ?? holdown(r));
+        add(libSillToExisting(r) ?? sillAnchor(r));
         add(shearWallElevation(r));
         break;
       case "shearPanel":
         add(shearPanel(r));
         break;
       case "transfer":
-        add(transfer(r, p));
+        add(libTransferClip(r, p) ?? transfer(r, p));
         break;
       case "diaphragm":
         add(diaphragm(r, p));
@@ -1051,7 +1113,7 @@ export function projectDetails(p: Project, d: ProjectDesign): Detail[] {
         if (r.item.kind === "hanger") add(hanger(r, p, d));
         else if (r.item.kind === "post-cap") add(postConnector(r, false));
         else if (r.item.kind === "post-base") add(postConnector(r, true));
-        else if (r.item.kind === "tie") add(tieConnector(r, d));
+        else if (r.item.kind === "tie") add(libRoofTie(r, d));
         break;
       case "rafter":
         add(rafterSeat(r));
@@ -1079,7 +1141,7 @@ export function projectDetails(p: Project, d: ProjectDesign): Detail[] {
         add(notches(r));
         break;
       case "ledger":
-        add(ledger(r));
+        add(libLedger(r) ?? ledger(r));
         break;
       case "guardPost":
         add(guardPost(r));
@@ -1095,7 +1157,7 @@ export function projectDetails(p: Project, d: ProjectDesign): Detail[] {
   // identical details (same drawing and callouts) are drawn once, tagged with every mark
   const merged = new Map<string, Detail>();
   for (const x of out) {
-    const key = JSON.stringify([x.title, x.prims, x.notes]);
+    const key = JSON.stringify([x.title, x.prims, x.notes, x.tpl]);
     const m = merged.get(key);
     if (m) m.marks.push(...x.marks.filter((k) => !m.marks.includes(k)));
     else merged.set(key, { ...x, marks: [...x.marks] });

@@ -1,6 +1,7 @@
 import type { SheetEntry } from "@/components/report/package";
 import { generateNotes, type GeneralNotesSheet, type Project, type ProjectDesign } from "@/engine/project";
 import type { Detail, Prim } from "./details";
+import TEMPLATES from "./detailTemplates.json";
 import { layoutPackage } from "./exportLayout";
 
 /**
@@ -93,7 +94,7 @@ class Writer {
     y: number,
     h: number,
     s: string,
-    o: { rot?: number; center?: boolean; right?: boolean; style?: string } = {},
+    o: { rot?: number; center?: boolean; right?: boolean; ha?: number; style?: string } = {},
   ) {
     const at = [x.toFixed(4), y.toFixed(4)];
     // width factor 0.85: wrapping assumes 0.9 h per character, which holds for txt.shx and romans.shx
@@ -118,7 +119,7 @@ class Writer {
     if (o.rot) this.out.push("50", o.rot.toFixed(1));
     if (o.style) this.out.push("7", o.style);
     if (o.center) this.out.push("72", "1", "73", "2", "11", at[0], "21", at[1], "31", "0");
-    else if (o.right) this.out.push("72", "2", "11", at[0], "21", at[1], "31", "0");
+    else if (o.right || o.ha) this.out.push("72", o.right ? "2" : String(o.ha), "11", at[0], "21", at[1], "31", "0");
   }
   /** filled quadrilateral (rebar dots, arrowheads) */
   solid(layer: string, p: Array<[number, number]>) {
@@ -599,7 +600,7 @@ const LAYERS: Array<[string, number, string]> = [
 ];
 const STYLES: Array<[string, string, number]> = [
   ["STANDARD", "txt", 0],
-  ["HC-NOTE", "romans.shx", 15],
+  ["HC-NOTE", "romanc.shx", 0],
   ["HC-TITLE", "arial.ttf", 0],
 ];
 const table = (name: string, rows: string[][]) => [
@@ -739,6 +740,65 @@ function extent(ps: Prim[]): [number, number, number, number] {
   return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
 }
 
+/** the engineer's title format: title over a line running to the numbered circle; scale and marks under the line */
+function titleStrip(w: Writer, d: Detail, num: number, scale: string, cx: number, cy: number, bw: number) {
+  const S = "S-ANNO-SYMB";
+  const r = 0.15;
+  const bx = cx + bw - 0.4;
+  const ly = cy + 0.3;
+  const avail = bx - r - cx - 0.45;
+  let th = 0.16;
+  let ls = wrap(d.title, Math.floor(avail / (0.75 * th)));
+  while (ls.length > 2 && th > 0.09) ls = wrap(d.title, Math.floor(avail / (0.75 * (th -= 0.01))));
+  ls.forEach((l, i) => w.text(S, cx + 0.25, ly + 0.05 + (ls.length - 1 - i) * 1.4 * th, th, l, { style: "HC-TITLE" }));
+  w.line(S, cx + 0.25, ly, bx - r, ly);
+  w.circle(S, bx, ly, r);
+  w.text(S, bx, ly, 0.13, String(num), { center: true, style: "HC-TITLE" });
+  wrap(`SCALE: ${scale}    AT: ${d.marks.join(", ")}`, Math.floor(avail / (ADV * 0.055)))
+    .slice(0, 2)
+    .forEach((l, i) => w.text(S, cx + 0.25, ly - 0.1 - i * 0.08, 0.055, l));
+}
+
+interface Template {
+  w: number;
+  h: number;
+  lines: number[][];
+  hatch: number[][];
+  tris: number[][];
+  circles: number[][];
+  blocks: Array<{ x: number; y: number; h: number; rot: number; ha: number; ls: number; lines: string[] }>;
+}
+
+/** one of the engineer's library details, fitted to the area, with the calculated notes swapped in */
+function drawTemplate(w: Writer, tpl: NonNullable<Detail["tpl"]>, x: number, y: number, aw: number, ah: number) {
+  const t = (TEMPLATES as unknown as Record<string, Template>)[tpl.id];
+  if (!t) throw new Error(`Detail template ${tpl.id} is missing`);
+  const k = Math.min(aw / t.w, ah / t.h);
+  const ox = x + (aw - t.w * k) / 2;
+  const oy = y + (ah - t.h * k) / 2;
+  const P = (px: number, py: number): [number, number] => [ox + px * k, oy + py * k];
+  for (const [a, b, c, d] of t.lines) w.line("S-DETL", ...P(a, b), ...P(c, d));
+  for (const [a, b, c, d] of t.hatch) w.line("S-DETL-HATC", ...P(a, b), ...P(c, d));
+  for (const q of t.tris) w.solid("S-DETL", [P(q[0], q[1]), P(q[2], q[3]), P(q[4], q[5])]);
+  for (const [cx, cy, r] of t.circles) w.circle("S-DETL", ...P(cx, cy), r * k);
+  const rules = tpl.text.map(([re, v]) => [new RegExp(re, "i"), v] as const);
+  for (const b of t.blocks) {
+    const hit = rules.find(([re]) => re.test(b.lines.join(" ")));
+    const chars = Math.max(12, ...b.lines.map((l) => l.length));
+    let lines = hit ? wrap(hit[1], chars) : b.lines;
+    // a longer calculated note may use the space down to the next note under it, then gets smaller text
+    const below = t.blocks.filter((o) => o !== b && o.y < b.y && Math.abs(o.x - b.x) < 40).map((o) => o.y + 1.2 * o.h);
+    const room = Math.max(b.lines.length, Math.floor((b.y - Math.max(-Infinity, ...below)) / b.ls));
+    const f = lines.length > room ? Math.max(0.65, Math.sqrt(room / lines.length)) : 1;
+    if (f < 1) lines = wrap(hit![1], Math.floor(chars / f));
+    const rad = (b.rot * Math.PI) / 180;
+    lines.forEach((l, i) => {
+      const [px, py] = P(b.x + Math.sin(rad) * i * b.ls * f, b.y - Math.cos(rad) * i * b.ls * f);
+      w.text("S-ANNO-TEXT", px, py, b.h * k * f, l, { rot: b.rot, ha: b.ha, style: "HC-NOTE" });
+    });
+  }
+}
+
 /**
  * One detail in the cell with lower-left (cx, cy), drawn like the engineer's issued detail sheets:
  * plain concrete outline with solid bar dots, soil-block patches at grade, slanted capital
@@ -750,18 +810,12 @@ function drawDetail(w: Writer, d: Detail, num: number, cx: number, cy: number, b
   const T = "S-ANNO-TEXT";
   const S = "S-ANNO-SYMB";
   const NOTE = { style: "HC-NOTE" };
-  // title band: circled number, large title; marks and scale at the right
   const band = GRID.band;
-  w.line(S, cx, cy + band, cx + bw, cy + band);
-  const bx = cx + 0.38;
-  const by = cy + band / 2;
-  w.circle(S, bx, by, 0.2);
-  w.text(S, bx, by, 0.14, String(num), { center: true, style: "HC-TITLE" });
-  const marks = `AT: ${d.marks.join(", ")}`;
-  const side = 2.0;
-  const tw = bw - 0.75 - side;
-  const th = Math.min(0.24, tw / (0.62 * Math.max(1, d.title.length)));
-  w.text(S, cx + 0.7, by - th / 2, th, d.title, { style: "HC-TITLE" });
+  if (d.tpl) {
+    titleStrip(w, d, num, "N.T.S.", cx, cy, bw);
+    drawTemplate(w, d.tpl, cx + 0.1, cy + band, bw - 0.2, bh - band - 0.1);
+    return;
+  }
   // drawing area in the middle, callouts left and right
   const colW = bw * 0.27;
   const ax = cx + colW + 0.1;
@@ -777,10 +831,7 @@ function drawDetail(w: Writer, d: Detail, num: number, cx: number, cy: number, b
     SCALES.find(([s]) => ((x1 - x0 + 2 * pad) * s) / 12 <= aw && ((y1 - y0 + 2 * pad) * s) / 12 <= ah) ??
     SCALES[SCALES.length - 1];
   const k = spf / 12;
-  wrap(marks, Math.floor(side / (ADV * 0.075)))
-    .slice(0, 3)
-    .forEach((l, i) => w.text(S, cx + bw - 0.1, cy + band - 0.2 - i * 0.12, 0.075, l, { right: true }));
-  w.text(S, cx + bw - 0.1, cy + 0.12, 0.075, `SCALE: ${label}`, { right: true });
+  titleStrip(w, d, num, label, cx, cy, bw);
   const ox = ax + aw / 2 - ((x0 + x1) / 2) * k;
   const oy = ay + ah / 2 - ((y0 + y1) / 2) * k;
   const P = (x: number, y: number): [number, number] => [ox + x * k, oy + y * k];
@@ -790,20 +841,43 @@ function drawDetail(w: Writer, d: Detail, num: number, cx: number, cy: number, b
     w.rect(layer, a[0], a[1], b[0], b[1]);
     return [a, b] as const;
   };
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   for (const p of d.prims) {
     if (p.t === "line") seg(p.hidden ? "S-DETL-HIDN" : O, P(...p.a), P(...p.b));
-    else if (p.t === "rect" || p.t === "conc") box(p.x, p.y, p.w, p.h);
-    else if (p.t === "wood") {
+    else if (p.t === "rect") box(p.x, p.y, p.w, p.h);
+    else if (p.t === "conc") {
+      // stippled concrete as on the engineer's details
+      const [a, b] = box(p.x, p.y, p.w, p.h);
+      const sp = 0.07;
+      for (let x = a[0] + sp / 2; x < b[0] - 0.02; x += sp)
+        for (let y = a[1] + sp / 2; y < b[1] - 0.02; y += sp) {
+          const px = Math.min(b[0] - 0.03, x + (rnd() - 0.5) * sp * 0.7);
+          const py = Math.min(b[1] - 0.03, y + (rnd() - 0.5) * sp * 0.7);
+          if (rnd() < 0.3) {
+            const z = 0.02;
+            w.line(HT, px, py, px + z, py);
+            w.line(HT, px + z, py, px + z / 2, py + z * 0.87);
+            w.line(HT, px + z / 2, py + z * 0.87, px, py);
+          } else w.line(HT, px, py, px + 0.004, py);
+        }
+    } else if (p.t === "wood") {
       const [a, b] = box(p.x, p.y, p.w, p.h);
       seg(O, a, b);
       seg(O, [a[0], b[1]], [b[0], a[1]]);
     } else if (p.t === "earth") {
-      // soil-block patches below grade: vertical strokes, then horizontal strokes
+      // grade line with a cross-hatched band of earth below it
       const [a, b] = [P(p.x1, p.y), P(p.x2, p.y)];
-      for (let x = a[0] + 0.03; x + 0.2 <= b[0]; x += 0.42) {
-        for (let j = 0; j < 4; j++) w.line(HT, x + j * 0.025, a[1] - 0.005, x + j * 0.025, a[1] - 0.06);
-        for (let j = 0; j < 3; j++) w.line(HT, x + 0.1, a[1] - 0.012 - j * 0.02, x + 0.19, a[1] - 0.012 - j * 0.02);
-        w.line(HT, x - 0.02, a[1], x + 0.21, a[1]);
+      seg(O, a, b);
+      const dep = 0.1;
+      for (let x = a[0] - dep; x < b[0]; x += 0.035) {
+        // 45° down-right from (x, grade) and down-left from (x + dep, grade), clipped to [a, b]
+        const s0 = Math.max(0, a[0] - x);
+        const s1 = Math.min(dep, b[0] - x);
+        if (s1 > s0) w.line(HT, x + s0, a[1] - s0, x + s1, a[1] - s1);
+        const u0 = Math.max(0, x + dep - b[0]);
+        const u1 = Math.min(dep, x + dep - a[0]);
+        if (u1 > u0) w.line(HT, x + dep - u0, a[1] - u0, x + dep - u1, a[1] - u1);
       }
     } else if (p.t === "circle") {
       const c = P(...p.c);

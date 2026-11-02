@@ -411,7 +411,7 @@ describe("DXF export of schedules and notes", () => {
   });
 });
 
-import { generalNotesSheet, lapSpliceTable, type S0Panel } from "@/engine/project";
+import { generalNotesSheet, lapSpliceTable, sanMiguelProject, type S0Panel } from "@/engine/project";
 import { generalNotesDxf } from "@/lib/dxf";
 
 describe("S0 general notes sheet", () => {
@@ -475,11 +475,11 @@ describe("details sheets", () => {
   it("one detail per designed condition, identical ones merged, callouts from the calculations", () => {
     const p = exampleProject();
     const ds = projectDetails(p, designProject(p));
-    const sill = ds.find((x) => x.title === "Shear Wall Sill Anchorage")!;
+    const sill = ds.find((x) => x.title === "SHEAR WALL SILL ANCHORAGE")!;
     expect(sill.marks).toEqual(["1SW-1", "1SW-2", "1SW-3", "1SW-4", "1SW-5"]);
     expect(sill.notes.some((n) => /5\/8" DIA\. ANCHOR BOLT @ 48" O\.C\./.test(n.text))).toBe(true);
     // no detail for an item without a calculation: the example has no retaining wall
-    expect(ds.some((x) => x.title.startsWith("Retaining"))).toBe(false);
+    expect(ds.some((x) => x.title.startsWith("RETAINING"))).toBe(false);
     const dxf = detailsDxf(
       ds,
       { project: "P", address: "", client: "", jobRef: "", date: "", revision: "0", preparedBy: "" },
@@ -489,9 +489,28 @@ describe("details sheets", () => {
     expect(dxf).toContain("\nCIRCLE\n");
     expect(dxf).toContain("HC-NOTE"); // slanted ROMANS callout style defined in the STYLE table
     expect(sill.foot ?? []).toEqual([]);
-    expect(ds.find((x) => x.title === "Continuous Footing")!.foot![0]).toMatch(
+    expect(ds.find((x) => x.title === "CONTINUOUS FOOTING" && !x.tpl)!.foot![0]).toMatch(
       /^BOTTOM OF FOOTING .* MIN\. BELOW LOWEST ADJACENT GRADE$/,
     );
     expect(dxf.trim().endsWith("0\nEOF")).toBe(true);
+  });
+});
+
+describe("details from the engineer's library (CONNECTION.dxf)", () => {
+  it("draws the library detail where it matches and swaps in the calculated values", () => {
+    const p = sanMiguelProject();
+    const ds = projectDetails(p, designProject(p));
+    const f1 = ds.find((x) => x.marks.includes("F1"))!;
+    expect(f1.tpl?.id).toBe("ext-bearing-footing");
+    const roofTie = ds.find((x) => x.tpl?.id === "roof-tie")!;
+    expect(roofTie.marks).toEqual(["CN-1", "CN-2"]);
+    const dxf = detailsDxf(
+      ds,
+      { project: "P", address: "", client: "", jobRef: "", date: "", revision: "0", preparedBy: "" },
+      "SD-1",
+    );
+    expect(dxf).toContain("CONT. BOTTOM"); // keynote 7 rewritten from the footing's bars
+    expect(dxf).not.toContain("1-#5 REBAR CONTINUOUS"); // the library's sample value is gone
+    expect(dxf).toContain("SCALE: N.T.S.");
   });
 });
