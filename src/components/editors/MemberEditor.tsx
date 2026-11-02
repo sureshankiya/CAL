@@ -43,6 +43,7 @@ import {
 import { C_SHAPES, HSS_NAMES, ROUND_NAMES, STEEL_GRADES, W_SHAPES, steelShape } from "@/engine/data/steel";
 import { buildTruss, type CustomLayout, type MemberGroup } from "@/engine/analysis/trussGeometry";
 import { customLayoutError } from "@/engine/members/woodTruss";
+import { minJacks, minKings } from "@/engine/members/wall";
 import { STEEL_TRUSS_GROUPS, STEEL_TRUSS_PATTERNS } from "@/engine/members/steelTruss";
 import { DIAPHRAGM_ROWS } from "@/engine/data/diaphragm";
 import { SHEATHING, edgeSpacings, panel1532Shear } from "@/engine/data/sdpws";
@@ -1646,36 +1647,113 @@ function WallEditor({ p, m, upd }: { p: Project; m: WallSpec; upd: Upd<WallSpec>
         </AddButton>
         <Hint>Each point load (header, beam, post) must have a stud pack within 1 ft.</Hint>
       </Section>
-      <Section title={`Openings — king studs (${m.openings.length})`}>
-        {m.openings.map((o, i) => (
-          <Grid key={i} cols={4}>
-            <Field label="Label">
-              <TextInput value={o.label} onChange={(v) => setOpening(i, { label: v })} />
-            </Field>
-            <Field label="From x (ft)">
-              <NumberInput value={o.x1} min={0} onChange={(v) => setOpening(i, { x1: v ?? 0 })} />
-            </Field>
-            <Field label="To x (ft)">
-              <NumberInput value={o.x2} min={0} onChange={(v) => setOpening(i, { x2: v ?? 0 })} />
-            </Field>
-            <Field label="Kings each side">
-              <NumberInput
-                value={o.kings}
-                min={1}
-                max={4}
-                step="1"
-                onChange={(v) => setOpening(i, { kings: v ?? 1 })}
-              />
-            </Field>
-          </Grid>
-        ))}
+      <Section title={`Openings — doors and windows (${m.openings.length})`}>
+        {m.openings.map((o, i) => {
+          const Lo = o.x2 - o.x1;
+          return (
+            <div key={i} className="space-y-1 border-b border-border pb-2">
+              <Grid cols={4}>
+                <Field label="Label">
+                  <TextInput value={o.label} onChange={(v) => setOpening(i, { label: v })} />
+                </Field>
+                <Field label="Type">
+                  <Select
+                    value={o.type ?? "window"}
+                    options={[
+                      { value: "window", label: "Window" },
+                      { value: "door", label: "Door" },
+                    ]}
+                    onChange={(v) => setOpening(i, { type: v, sill: v === "door" ? undefined : (o.sill ?? 3) })}
+                  />
+                </Field>
+                <Field label="From x (ft)">
+                  <NumberInput value={o.x1} min={0} onChange={(v) => setOpening(i, { x1: v ?? 0 })} />
+                </Field>
+                <Field label="To x (ft)">
+                  <NumberInput value={o.x2} min={0} onChange={(v) => setOpening(i, { x2: v ?? 0 })} />
+                </Field>
+              </Grid>
+              <Grid cols={4}>
+                <Field label="Head height (ft)">
+                  <NumberInput
+                    value={o.head ?? 0}
+                    min={0}
+                    onChange={(v) => setOpening(i, { head: v ? v : undefined })}
+                  />
+                </Field>
+                {o.type === "door" ? (
+                  <span />
+                ) : (
+                  <Field label="Sill height (ft)">
+                    <NumberInput value={o.sill ?? 0} min={0} onChange={(v) => setOpening(i, { sill: v ?? 0 })} />
+                  </Field>
+                )}
+                <Field label="Jack studs each side">
+                  <NumberInput
+                    value={o.jacks ?? 0}
+                    min={0}
+                    max={4}
+                    step="1"
+                    onChange={(v) => setOpening(i, { jacks: v ? v : undefined })}
+                  />
+                </Field>
+                <Field label="King studs each side">
+                  <NumberInput
+                    value={o.kings}
+                    min={1}
+                    max={6}
+                    step="1"
+                    onChange={(v) => setOpening(i, { kings: v ?? 1 })}
+                  />
+                </Field>
+              </Grid>
+              <Grid>
+                <Field label="Header">
+                  <TextInput value={o.header ?? ""} onChange={(v) => setOpening(i, { header: v || undefined })} />
+                </Field>
+                <SmallButton
+                  tone="danger"
+                  title="Remove"
+                  onClick={() => upd({ openings: m.openings.filter((_, j) => j !== i) })}
+                >
+                  ✕
+                </SmallButton>
+              </Grid>
+              {Lo > 0 ? (
+                <Hint>
+                  General notes for {Lo} ft: {minJacks(Lo)} jack and {minKings(Lo) ?? "per plan"} king stud(s) each
+                  side.
+                  {o.jacks ? "" : " Jack studs 0: header loads not carried to the jambs (enter them as point loads)."}
+                </Hint>
+              ) : null}
+            </div>
+          );
+        })}
         <AddButton
           onClick={() =>
-            upd({ openings: [...m.openings, { label: `Opening ${m.openings.length + 1}`, x1: 2, x2: 5, kings: 1 }] })
+            upd({
+              openings: [
+                ...m.openings,
+                {
+                  label: `W${m.openings.length + 1}`,
+                  type: "window",
+                  x1: 2,
+                  x2: 5,
+                  head: 6.875,
+                  sill: 3,
+                  jacks: minJacks(3),
+                  kings: minKings(3)!,
+                },
+              ],
+            })
           }
         >
           + Add opening
         </AddButton>
+        <Hint>
+          With jack studs set, the loads over the opening (line loads, wall above the head, point loads within the
+          opening) go through the header to the jambs and the jack studs are checked over the head height.
+        </Hint>
       </Section>
     </>
   );

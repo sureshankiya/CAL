@@ -245,6 +245,52 @@ describe("gravity load path members", () => {
     expect(wind.M).toBeCloseTo((0.6 * 20 * s * (l / 12) ** 2) / 8, 6);
   });
 
+  it("stud wall opening: header load to the jambs, jack studs over the head height, notes minima", () => {
+    const r = designWall(ctx, {
+      id: "w",
+      mark: "1W-2",
+      description: "",
+      species: "DF-L",
+      grade: "Stud",
+      size: "2x6",
+      spacing: 16,
+      plateHeight: 9,
+      topPlates: 2,
+      bottomPlates: 1,
+      length: 12,
+      sheathing: "both",
+      self: { psf: 10 },
+      area: [],
+      walls: [],
+      extra: [
+        { kind: "line", type: "D", label: "Roof", w: 300 },
+        { kind: "line", type: "Lr", label: "Roof", w: 240 },
+        { kind: "point", type: "D", label: "Girder truss", P: 1000, x: 5 },
+      ],
+      wind: { mode: "none" },
+      deflN: 240,
+      packs: [],
+      openings: [{ label: "D1", type: "door", x1: 4, x2: 10, head: 7, jacks: 1, kings: 2, header: "4x10 DF-L No.2" }],
+    });
+    const h = r.headers[0];
+    // w = 300 + 10 psf × (9 − 7) ft = 320 plf D; 240 plf Lr
+    expect(h.w.D).toBeCloseTo(320, 6);
+    expect(h.w.Lr).toBeCloseTo(240, 6);
+    // 1000 lb at 1 ft from the left jamb: 1000 × 5/6 left, 1000 × 1/6 right
+    expect(h.R.left.D).toBeCloseTo((320 * 6) / 2 + (1000 * 5) / 6, 6);
+    expect(h.R.right.D).toBeCloseTo((320 * 6) / 2 + 1000 / 6, 6);
+    expect(h.jacks.P.D).toBeCloseTo(h.R.left.D, 6);
+    expect(h.jacks.n).toBe(1);
+    expect(h.jacks.col.le1d1 * h.jacks.mat.d).toBeCloseTo(7 * 12 - 1.5, 6); // jack length = head − bottom plate
+    expect(r.checks.some((c) => c.name.startsWith("Jack studs, D1 (left jamb)"))).toBe(true);
+    // the point load on the header reaches the base at the jambs, not lost and not doubled
+    const jamb = r.reactions.filter((x) => x.name.startsWith("D1"));
+    expect(jamb.reduce((a, x) => a + x.byType.D, 0)).toBeCloseTo(1000, 6);
+    // 6 ft opening: notes require 2 jacks and 3 kings each side
+    expect(r.flags.some((f) => f.includes("require 3"))).toBe(true);
+    expect(r.flags.some((f) => f.includes("require 2"))).toBe(true);
+  });
+
   it("connector: downward checked per duration column, uplift on the 160 column", () => {
     const hw = defaultHardware().map((h) =>
       h.id === "LUS210" ? { ...h, down: { "100": 1000, "125": 1200 }, uplift: 400 } : h,

@@ -295,6 +295,56 @@ export function WallSheet({ m, r, index, total, received, connections }: SheetPr
       {r.kings.map((p) => (
         <StudBlock key={p.label} r={r} sc={p} title={`${p.label} — wind from half the opening`} />
       ))}
+      {r.headers.map((h) => {
+        const o = h.opening;
+        const v = (x: Record<string, number>) =>
+          ["D", "L", "Lr", "S", "W"]
+            .filter((t) => Math.abs(x[t]) > 1e-9)
+            .map((t) => `${t} ${f0(x[t])}`)
+            .join(", ") || "0";
+        return (
+          <div key={h.label}>
+            <SectionHead
+              title={`Opening ${h.label} — ${o.type ?? "opening"} ${f2(h.width)} ft wide, header to the jambs`}
+            />
+            <TR desc="Header" expr={<>{o.header || "Per framing plan"}</>} />
+            {o.head !== undefined ? (
+              <TR
+                desc={`Head height${o.type === "window" && o.sill !== undefined ? " / sill height" : ""}`}
+                expr={
+                  <>
+                    {f2(o.head)} ft{o.type === "window" && o.sill !== undefined ? ` / ${f2(o.sill)} ft` : ""}
+                  </>
+                }
+              />
+            ) : null}
+            <TR desc="Line load on the header (incl. wall above the head)" expr={<>w = {v(h.w)} lb/ft</>} />
+            {Object.values(h.points.left).some((x) => x) || Object.values(h.points.right).some((x) => x) ? (
+              <TR
+                desc="Point loads on the header to the jambs (lever rule)"
+                expr={
+                  <>
+                    left {v(h.points.left)} lb; right {v(h.points.right)} lb
+                  </>
+                }
+              />
+            ) : null}
+            <TR
+              desc="Jamb reactions = w × L_o / 2 + point-load shares"
+              expr={
+                <>
+                  left {v(h.R.left)} lb; right {v(h.R.right)} lb
+                </>
+              }
+            />
+            <StudBlock
+              r={r}
+              sc={h.jacks}
+              title={`${h.jacks.label} — (${h.jacks.n}) ${r.input.size} jack studs, l = ${f1(h.jacks.col.le1d1 * h.jacks.mat.d)} in`}
+            />
+          </div>
+        );
+      })}
       {r.wind ? (
         <>
           <SectionHead title="Out-of-plane deflection — IBC Table 1604.3" />

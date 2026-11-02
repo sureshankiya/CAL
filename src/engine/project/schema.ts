@@ -296,7 +296,12 @@ export const wallOpeningSchema = z.object({
   label: z.string(),
   x1: nonneg,
   x2: nonneg,
-  kings: z.number().int().min(1).max(4),
+  kings: z.number().int().min(1).max(6),
+  type: z.enum(["door", "window"]).optional(),
+  head: pos.optional(),
+  sill: nonneg.optional(),
+  jacks: z.number().int().min(1).max(4).optional(),
+  header: z.string().optional(),
 });
 
 export const wallSpecSchema = z.object({
