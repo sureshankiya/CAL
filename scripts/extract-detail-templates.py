@@ -7,7 +7,7 @@ circles and text blocks (consecutive TEXT lines merged into paragraphs; keynotes
 new one). The app draws a template as-is (the details are N.T.S.) and replaces only the text
 blocks whose values come from the calculations.
 
-    python3 -I scripts/extract-detail-templates.py path/to/CONNECTION.dxf
+    python3 -I scripts/extract-detail-templates.py path/to/1CONNECTION.dxf path/to/2CONNECTION.dxf
 """
 
 import json
@@ -19,20 +19,41 @@ from ezdxf import bbox, path
 from ezdxf.math import triangulation
 from ezdxf.render import hatching
 
-# template id -> (title text anchor x, y) of a 312.5 x 276 cell, or an explicit box
+# template id -> (source file index, (title anchor x, y) of a 312.5 x 276 cell | (x0, y0, x1, y1))
 CELLS = {
-    "ext-bearing-footing": (6618, -1996),
-    "tie-in": (7244, -1997),
-    "shear-wall-to-existing": (7244, -2273),
-    "hdu-to-existing": (9088, -2122),
-    "roof-tie": (8838, 307),
-    "shear-transfer-clip": (7555, -2548),
-    "ledger-lag": (7555, -2824),
+    # 1CONNECTION.dxf: detail library grid
+    "ext-bearing-footing": (0, (6618, -1996)),
+    "tie-in": (0, (7244, -1997)),
+    "shear-wall-to-existing": (0, (7244, -2273)),
+    "hdu-to-existing": (0, (9088, -2122)),
+    "roof-tie": (0, (8838, 307)),
+    "shear-transfer-clip": (0, (7555, -2548)),
+    "ledger-lag": (0, (7555, -2824)),
+    # 2CONNECTION.dxf: issued sheets S-5 to S-8 (its footing details are left out: their notes are exploded
+    # to line strokes, so the calculated values cannot be written in)
+    "shear-wall-section": (1, (14985, 9765, 15365, 10030)),
+    "hdu-section": (1, (15370, 9810, 15640, 9955)),
+    "tji-hanger": (1, (15948, 9826, 16112, 9959)),
+    "sistered-joist": (1, (16826, 9846, 16967, 9968)),
+    "panel-edge-blocked": (1, (16971, 9986, 17100, 10037)),
+    "opening-framing": (1, (17688, 9838, 17985, 10112)),
+    "top-plate-splice": (1, (17688, 9697, 17836, 9824)),
+    "bearing-wall-base": (1, (17986, 9697, 18136, 9752)),
+    "post-base": (1, (18137, 9697, 18287, 9758)),
 }
 
 
-def box_of(anchor):
-    x, y = anchor
+# leftovers to cut out of a template, in its own coordinates: values drawn as strokes (PDF imports)
+# that would otherwise show beside the calculated text
+ERASE = {
+    "shear-wall-section": [(345, 165, 395, 184)],
+}
+
+
+def box_of(a):
+    if len(a) == 4:
+        return a
+    x, y = a
     return (x - 75, y + 11, x + 237, y + 253)
 
 
@@ -120,7 +141,7 @@ def merge_texts(texts):
     """single-line TEXT entities of one height and column, one under the other -> paragraph blocks"""
     blocks = []
     for t in sorted(texts, key=lambda t: (-t["y"], t["x"])):
-        if t["h"] >= 7.9 and t["y"] < 8:  # first line of a two-line detail title
+        if (t["h"] >= 7.9 and t["y"] < 8) or t["y"] < 0 or t["h"] < 0.5:  # title lines below the cut, specks
             continue
         def follows(b):
             return (
@@ -139,17 +160,17 @@ def merge_texts(texts):
     return blocks
 
 
-def main(src, dst):
-    doc = ezdxf.readfile(src)
-    msp = doc.modelspace()
-    cache = bbox.Cache()
+def main(srcs, dst):
+    docs = [ezdxf.readfile(s) for s in srcs]
+    caches = [bbox.Cache() for _ in docs]
     out = {}
-    for tid, anchor in CELLS.items():
+    for tid, (fi, anchor) in CELLS.items():
+        msp, cache = docs[fi].modelspace(), caches[fi]
         box = box_of(anchor)
         W, H = box[2] - box[0], box[3] - box[1]
         acc = dict(lines=[], hatch=[], tris=[], circles=[], texts=[], blocks=[])
         for e in msp:
-            if e.dxftype() in ("POINT", "ATTDEF", "VIEWPORT"):
+            if e.dxftype() in ("POINT", "ATTDEF", "VIEWPORT", "IMAGE"):
                 continue
             b = bbox.extents([e], fast=True, cache=cache)
             if not b.has_data:
@@ -158,6 +179,8 @@ def main(src, dst):
             if not (box[0] < cx < box[2] and box[1] < cy < box[3]):
                 continue
             if b.size.x > 0.9 * W or b.size.y > 0.9 * H:  # sheet grid / cell borders
+                continue
+            if any(e0 < cx - box[0] < e1 and f0 < cy - box[1] < f1 for e0, f0, e1, f1 in ERASE.get(tid, [])):
                 continue
             explode(e, acc, box)
         blocks = acc["blocks"] + merge_texts(acc["texts"])
@@ -168,4 +191,5 @@ def main(src, dst):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else "src/lib/detailTemplates.json")
+    # extract-detail-templates.py 1CONNECTION.dxf 2CONNECTION.dxf [out.json]
+    main(sys.argv[1:3], sys.argv[3] if len(sys.argv) > 3 else "src/lib/detailTemplates.json")

@@ -759,6 +759,15 @@ function titleStrip(w: Writer, d: Detail, num: number, scale: string, cx: number
     .forEach((l, i) => w.text(S, cx + 0.25, ly - 0.1 - i * 0.08, 0.055, l));
 }
 
+/** smallest plotted height for a calculated value written into a library detail, in. */
+const MIN_TEXT = 0.06;
+const MAX_TEXT = 0.11;
+/** cells for the large library details (columns, rows); others are sized from their note height */
+const SPANS: Record<string, [number, number]> = {
+  "shear-wall-section": [2, 1],
+  "opening-framing": [2, 2],
+};
+
 interface Template {
   w: number;
   h: number;
@@ -781,16 +790,21 @@ function drawTemplate(w: Writer, tpl: NonNullable<Detail["tpl"]>, x: number, y: 
   for (const [a, b, c, d] of t.hatch) w.line("S-DETL-HATC", ...P(a, b), ...P(c, d));
   for (const q of t.tris) w.solid("S-DETL", [P(q[0], q[1]), P(q[2], q[3]), P(q[4], q[5])]);
   for (const [cx, cy, r] of t.circles) w.circle("S-DETL", ...P(cx, cy), r * k);
-  const rules = tpl.text.map(([re, v]) => [new RegExp(re, "i"), v] as const);
-  for (const b of t.blocks) {
-    const hit = rules.find(([re]) => re.test(b.lines.join(" ")));
+  const rules = tpl.text.map(
+    ([key, v]) => [key.startsWith("#") ? Number(key.slice(1)) : new RegExp(key, "i"), v] as const,
+  );
+  for (const [bi, b] of t.blocks.entries()) {
+    const hit = rules.find(([key]) => (typeof key === "number" ? key === bi : key.test(b.lines.join(" "))));
+    if (hit && !hit[1]) continue;
     const chars = Math.max(12, ...b.lines.map((l) => l.length));
     let lines = hit ? wrap(hit[1], chars) : b.lines;
     // a longer calculated note may use the space down to the next note under it, then gets smaller text
     const below = t.blocks.filter((o) => o !== b && o.y < b.y && Math.abs(o.x - b.x) < 40).map((o) => o.y + 1.2 * o.h);
     const room = Math.max(b.lines.length, Math.floor((b.y - Math.max(-Infinity, ...below)) / b.ls));
-    const f = lines.length > room ? Math.max(0.65, Math.sqrt(room / lines.length)) : 1;
-    if (f < 1) lines = wrap(hit![1], Math.floor(chars / f));
+    let f = lines.length > room ? Math.max(0.65, Math.sqrt(room / lines.length)) : 1;
+    // every note plots between 1/16 in. (legible) and 0.11 in. (large titles on the source sheet)
+    f = Math.min(Math.max(f, MIN_TEXT / (b.h * k)), MAX_TEXT / (b.h * k));
+    if (hit && f !== 1) lines = wrap(hit[1], Math.max(12, Math.floor(chars / f)));
     const rad = (b.rot * Math.PI) / 180;
     lines.forEach((l, i) => {
       const [px, py] = P(b.x + Math.sin(rad) * i * b.ls * f, b.y - Math.cos(rad) * i * b.ls * f);
@@ -817,7 +831,7 @@ function drawDetail(w: Writer, d: Detail, num: number, cx: number, cy: number, b
     return;
   }
   // drawing area in the middle, callouts left and right
-  const colW = bw * 0.27;
+  const colW = bw * 0.24;
   const ax = cx + colW + 0.1;
   const aw = bw - 2 * colW - 0.2;
   const fh = 0.075;
@@ -826,7 +840,7 @@ function drawDetail(w: Writer, d: Detail, num: number, cx: number, cy: number, b
   const ah = cy + bh - 0.15 - ay;
   foot.forEach((l, i) => w.text(T, cx + 0.15, cy + band + 0.12 + (foot.length - 1 - i) * 1.5 * fh, fh, l, NOTE));
   const [x0, y0, x1, y1] = extent(d.prims);
-  const pad = 3;
+  const pad = 1.5;
   const [spf, label] =
     SCALES.find(([s]) => ((x1 - x0 + 2 * pad) * s) / 12 <= aw && ((y1 - y0 + 2 * pad) * s) / 12 <= ah) ??
     SCALES[SCALES.length - 1];
@@ -993,41 +1007,80 @@ function drawDetail(w: Writer, d: Detail, num: number, cx: number, cy: number, b
   });
 }
 
+/** cells (columns, rows) a detail needs: a library detail whose notes would plot under ~1/16 in. in one cell takes two */
+function spanOf(d: Detail, bw: number, bh: number): [number, number] {
+  if (!d.tpl) return [1, 1];
+  if (SPANS[d.tpl.id]) return SPANS[d.tpl.id];
+  const t = (TEMPLATES as unknown as Record<string, Template>)[d.tpl.id];
+  const hs = t.blocks.map((b) => b.h).sort((a, b) => a - b);
+  const kNeed = 0.065 / (hs[Math.floor(hs.length / 4)] ?? 3);
+  const cols = Math.min(2, Math.ceil((t.w * kNeed + 0.2) / bw));
+  const rows = Math.min(2, Math.ceil((t.h * kNeed + GRID.band + 0.1) / bh));
+  return [Math.max(1, cols), Math.max(1, rows)];
+}
+
 /** Details sheets: 4 x 4 grid of detail boxes per sheet, title block as on the S0 sheet. */
 export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string): string {
   const w = new Writer();
-  const per = GRID.cols * GRID.rows;
-  const sheets = Math.max(1, Math.ceil(details.length / per));
   const x1 = SH.w - SH.m - SH.tb - 0.25;
   const bw = (x1 - X0) / GRID.cols;
   const bh = (TOP - BOTTOM) / GRID.rows;
-  for (let k = 0; k < sheets; k++) {
+  // place each detail in the first free block of cells, row by row; spanning details as 2 x 1, 1 x 2 or 2 x 2
+  const sheets: boolean[][][] = [];
+  const placed = details.map((d) => {
+    const [c, r] = spanOf(d, bw, bh);
+    for (let k = 0; ; k++) {
+      const used = (sheets[k] ??= Array.from({ length: GRID.rows }, () => Array<boolean>(GRID.cols).fill(false)));
+      for (let row = 0; row + r <= GRID.rows; row++)
+        for (let col = 0; col + c <= GRID.cols; col++) {
+          let free = true;
+          for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) free &&= !used[row + i][col + j];
+          if (!free) continue;
+          for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) used[row + i][col + j] = true;
+          return { d, k, row, col, c, r };
+        }
+    }
+  });
+  const n = Math.max(1, sheets.length);
+  for (let k = 0; k < n; k++) {
     const ox = k * (SH.w + 2);
     const no = k ? `${sheetNo}.${k}` : sheetNo;
     titleBlock(w, ox, info, no, "DETAILS");
-    for (let c = 0; c <= GRID.cols; c++)
+    const B = "S-ANNO-TTLB";
+    w.pline(
+      B,
+      [
+        [ox + X0, BOTTOM],
+        [ox + x1, BOTTOM],
+        [ox + x1, TOP],
+        [ox + X0, TOP],
+        [ox + X0, BOTTOM],
+      ],
+      0.025,
+    );
+    const here = placed.filter((p) => p.k === k);
+    // cell borders: around each placed detail, and the empty cells
+    const cellBox = (col: number, row: number, c: number, r: number) => {
+      const xa = ox + X0 + col * bw;
+      const ya = TOP - (row + r) * bh;
       w.pline(
-        "S-ANNO-TTLB",
+        B,
         [
-          [ox + X0 + c * bw, BOTTOM],
-          [ox + X0 + c * bw, TOP],
+          [xa, ya],
+          [xa + c * bw, ya],
+          [xa + c * bw, ya + r * bh],
+          [xa, ya + r * bh],
+          [xa, ya],
         ],
         0.025,
       );
-    for (let r = 0; r <= GRID.rows; r++)
-      w.pline(
-        "S-ANNO-TTLB",
-        [
-          [ox + X0, BOTTOM + r * bh],
-          [ox + x1, BOTTOM + r * bh],
-        ],
-        0.025,
-      );
-    details.slice(k * per, (k + 1) * per).forEach((d, i) => {
-      const col = i % GRID.cols;
-      const row = Math.floor(i / GRID.cols);
-      drawDetail(w, d, i + 1, ox + X0 + col * bw, TOP - (row + 1) * bh, bw, bh);
-    });
+    };
+    for (const p of here) cellBox(p.col, p.row, p.c, p.r);
+    for (let row = 0; row < GRID.rows; row++)
+      for (let col = 0; col < GRID.cols; col++) if (!sheets[k]?.[row][col]) cellBox(col, row, 1, 1);
+    here.forEach((p, i) =>
+      drawDetail(w, p.d, i + 1, ox + X0 + p.col * bw, TOP - (p.row + p.r) * bh, p.c * bw, p.r * bh),
+    );
   }
   return dxfFile(w);
 }

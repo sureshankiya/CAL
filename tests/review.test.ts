@@ -477,7 +477,13 @@ describe("details sheets", () => {
     const ds = projectDetails(p, designProject(p));
     const sill = ds.find((x) => x.title === "SHEAR WALL SILL ANCHORAGE")!;
     expect(sill.marks).toEqual(["1SW-1", "1SW-2", "1SW-3", "1SW-4", "1SW-5"]);
-    expect(sill.notes.some((n) => /5\/8" DIA\. ANCHOR BOLT @ 48" O\.C\./.test(n.text))).toBe(true);
+    // drawn from the engineer's S-8 base detail with the calculated anchor bolts written in
+    expect(sill.tpl?.id).toBe("bearing-wall-base");
+    expect(sill.tpl!.text.some(([k, v]) => k === "#9" && /5\/8" DIA\. A\.B\.'S @ 48" O\.C\./.test(v))).toBe(true);
+    // shear walls, openings and diaphragm splices come from the issued sheets too
+    expect(ds.find((x) => x.title === "SHEAR WALL SECTION")?.tpl?.id).toBe("shear-wall-section");
+    expect(ds.some((x) => x.tpl?.id === "opening-framing")).toBe(true);
+    expect(ds.some((x) => x.tpl?.id === "top-plate-splice")).toBe(true);
     // no detail for an item without a calculation: the example has no retaining wall
     expect(ds.some((x) => x.title.startsWith("RETAINING"))).toBe(false);
     const dxf = detailsDxf(
