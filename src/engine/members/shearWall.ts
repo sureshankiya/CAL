@@ -849,7 +849,8 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     const ts = Number(s.sillSize.split("x")[0]) >= 3 ? 2.5 : 1.5;
     const bz = boltInConcrete(s.sill.d, ts, SPECIFIC_GRAVITY[s.stud.species], s.sill.embed);
     const Zprime = bz.Z * 1.6;
-    const vStrength = psw ? vS / 0.7 : dem.Eh / s.b;
+    // governing unit shear (FTAO pier / perforated / full wall), as for the bolt check above
+    const vStrength = vS / 0.7;
     const Vu = vStrength * (s.sill.spacing / 12);
     const t = anchorTension({
       d: s.sill.d,

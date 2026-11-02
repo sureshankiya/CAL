@@ -1,8 +1,9 @@
 /**
  * Typical framing fastening for the general notes sheet — common-nail options of IBC / CBC
  * Table 2304.10.2 (IRC / CRC Table R602.3(1) gives the same values for these items).
- * Data-library status: unverified — confirm against the adopted edition before issue; the
- * table carries the other permitted fasteners (box nails, pneumatic nails, staples).
+ * Data-library status: common-nail entries reviewed against the IBC fastening schedule from
+ * reference, not the printed table — confirm against the adopted edition before issue. The table
+ * also permits box nails, pneumatic nails and staples.
  * Rows: connection, fastener, location / spacing.
  */
 export const TYPICAL_NAILING: Array<[string, string, string]> = [
@@ -40,8 +41,8 @@ export const TYPICAL_NAILING: Array<[string, string, string]> = [
   ],
   [
     "Bottom plate to joist, rim or blocking at braced wall panels",
-    "3-16d common (3-1/2 x 0.162)",
-    "Each 16 in., face nail",
+    "2-16d common (3-1/2 x 0.162)",
+    "16 in. o.c., face nail",
   ],
   ["Top or bottom plate to stud", "2-16d common / 4-8d common", "End nail / toenail"],
   ["Top plates, laps at corners and intersections", "2-16d common (3-1/2 x 0.162)", "Face nail"],
@@ -61,7 +62,12 @@ export const TYPICAL_NAILING: Array<[string, string, string]> = [
   ["Ledger strip supporting joists or rafters", "3-16d common (3-1/2 x 0.162)", "Each joist or rafter, face nail"],
   ["2 in. subfloor to joist or girder", "2-16d common (3-1/2 x 0.162)", "Face nail each bearing"],
   [
-    "Wood structural panels 3/8 to 1/2 in. (roof, wall, subfloor)",
+    "Wood structural panels 3/8 to 1/2 in. (subfloor, wall)",
+    "6d common (2 x 0.113)",
+    "6 in. edges / 12 in. field (unless scheduled)",
+  ],
+  [
+    "Wood structural panels 3/8 to 1/2 in. (roof)",
     "8d common (2-1/2 x 0.131)",
     "6 in. edges / 12 in. field (unless scheduled)",
   ],
