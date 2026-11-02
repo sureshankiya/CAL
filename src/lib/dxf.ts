@@ -86,8 +86,15 @@ function wrap(s: string, n: number): string[] {
 
 class Writer {
   out: string[] = [];
-  /** rot: degrees; center: x, y is the middle-centre of the text (TEXT 72 = 1, 73 = 2) */
-  text(layer: string, x: number, y: number, h: number, s: string, o: { rot?: number; center?: boolean } = {}) {
+  /** rot: degrees; center: x, y is the middle-centre (TEXT 72 = 1, 73 = 2); right: x, y is the right end of the baseline; style: text style name */
+  text(
+    layer: string,
+    x: number,
+    y: number,
+    h: number,
+    s: string,
+    o: { rot?: number; center?: boolean; right?: boolean; style?: string } = {},
+  ) {
     const at = [x.toFixed(4), y.toFixed(4)];
     // width factor 0.85: wrapping assumes 0.9 h per character, which holds for txt.shx and romans.shx
     this.out.push(
@@ -109,7 +116,39 @@ class Writer {
       "0.85",
     );
     if (o.rot) this.out.push("50", o.rot.toFixed(1));
+    if (o.style) this.out.push("7", o.style);
     if (o.center) this.out.push("72", "1", "73", "2", "11", at[0], "21", at[1], "31", "0");
+    else if (o.right) this.out.push("72", "2", "11", at[0], "21", at[1], "31", "0");
+  }
+  /** filled quadrilateral (rebar dots, arrowheads) */
+  solid(layer: string, p: Array<[number, number]>) {
+    const q = p.length === 3 ? [p[0], p[1], p[2], p[2]] : [p[0], p[1], p[3], p[2]];
+    this.out.push("0", "SOLID", "8", layer);
+    q.forEach(([x, y], i) => this.out.push(`1${i}`, x.toFixed(4), `2${i}`, y.toFixed(4), `3${i}`, "0"));
+  }
+  /** polyline with a constant width (heavy lines) */
+  pline(layer: string, pts: Array<[number, number]>, width: number) {
+    this.out.push(
+      "0",
+      "POLYLINE",
+      "8",
+      layer,
+      "66",
+      "1",
+      "10",
+      "0",
+      "20",
+      "0",
+      "30",
+      "0",
+      "40",
+      width.toFixed(4),
+      "41",
+      width.toFixed(4),
+    );
+    for (const [x, y] of pts)
+      this.out.push("0", "VERTEX", "8", layer, "10", x.toFixed(4), "20", y.toFixed(4), "30", "0");
+    this.out.push("0", "SEQEND", "8", layer);
   }
   circle(layer: string, x: number, y: number, r: number) {
     this.out.push("0", "CIRCLE", "8", layer, "10", x.toFixed(4), "20", y.toFixed(4), "30", "0", "40", r.toFixed(4));
@@ -546,6 +585,106 @@ export function generalNotesDxf(g: GeneralNotesSheet, info: SheetInfo): string {
   return dxfFile(w);
 }
 
+/** layers (colour for the plot style, linetype), text styles: slanted ROMANS notes, sans titles */
+const LAYERS: Array<[string, number, string]> = [
+  ["S-DETL", 7, "CONTINUOUS"],
+  ["S-DETL-HATC", 8, "CONTINUOUS"],
+  ["S-DETL-HIDN", 8, "HIDDEN"],
+  ["S-ANNO-DIMS", 2, "CONTINUOUS"],
+  ["S-ANNO-TEXT", 2, "CONTINUOUS"],
+  ["S-ANNO-SYMB", 7, "CONTINUOUS"],
+  ["S-ANNO-TTLB", 7, "CONTINUOUS"],
+  ["S-ANNO-NOTE", 2, "CONTINUOUS"],
+  ["S-ANNO-SCHD", 2, "CONTINUOUS"],
+];
+const STYLES: Array<[string, string, number]> = [
+  ["STANDARD", "txt", 0],
+  ["HC-NOTE", "romans.shx", 15],
+  ["HC-TITLE", "arial.ttf", 0],
+];
+const table = (name: string, rows: string[][]) => [
+  "0",
+  "TABLE",
+  "2",
+  name,
+  "70",
+  String(rows.length),
+  ...rows.flat(),
+  "0",
+  "ENDTAB",
+];
+const dxfTables = () => [
+  "0",
+  "SECTION",
+  "2",
+  "TABLES",
+  ...table("LTYPE", [
+    ["0", "LTYPE", "2", "CONTINUOUS", "70", "0", "3", "Solid line", "72", "65", "73", "0", "40", "0.0"],
+    [
+      "0",
+      "LTYPE",
+      "2",
+      "HIDDEN",
+      "70",
+      "0",
+      "3",
+      "Hidden __ __ __",
+      "72",
+      "65",
+      "73",
+      "2",
+      "40",
+      "0.375",
+      "49",
+      "0.25",
+      "49",
+      "-0.125",
+    ],
+  ]),
+  ...table(
+    "LAYER",
+    [["0", 7, "CONTINUOUS"] as [string, number, string], ...LAYERS].map(([n, c, lt]) => [
+      "0",
+      "LAYER",
+      "2",
+      n,
+      "70",
+      "0",
+      "62",
+      String(c),
+      "6",
+      lt,
+    ]),
+  ),
+  ...table(
+    "STYLE",
+    STYLES.map(([n, f, ob]) => [
+      "0",
+      "STYLE",
+      "2",
+      n,
+      "70",
+      "0",
+      "40",
+      "0.0",
+      "41",
+      "1.0",
+      "50",
+      String(ob),
+      "71",
+      "0",
+      "42",
+      "0.1",
+      "3",
+      f,
+      "4",
+      "",
+    ]),
+  ),
+  "0",
+  "ENDSEC",
+];
+
 const dxfFile = (w: Writer) =>
   [
     "0",
@@ -558,6 +697,7 @@ const dxfFile = (w: Writer) =>
     "AC1009",
     "0",
     "ENDSEC",
+    ...dxfTables(),
     "0",
     "SECTION",
     "2",
@@ -584,7 +724,7 @@ const SCALES: Array<[number, string]> = [
   [0.1875, '3/16" = 1\'-0"'],
   [0.125, '1/8" = 1\'-0"'],
 ];
-const GRID = { cols: 4, rows: 4, band: 0.75 };
+const GRID = { cols: 4, rows: 4, band: 0.55 };
 
 function extent(ps: Prim[]): [number, number, number, number] {
   const xs: number[] = [];
@@ -599,45 +739,48 @@ function extent(ps: Prim[]): [number, number, number, number] {
   return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
 }
 
-/** one detail in the cell with lower-left (cx, cy) */
-function drawDetail(
-  w: Writer,
-  d: Detail,
-  num: number,
-  sheetNo: string,
-  cx: number,
-  cy: number,
-  bw: number,
-  bh: number,
-) {
+/**
+ * One detail in the cell with lower-left (cx, cy), drawn like the engineer's issued detail sheets:
+ * plain concrete outline with solid bar dots, soil-block patches at grade, slanted capital
+ * callouts on both sides with arrow leaders, "*" footnotes, circled number and large title.
+ */
+function drawDetail(w: Writer, d: Detail, num: number, cx: number, cy: number, bw: number, bh: number) {
   const O = "S-DETL";
   const HT = "S-DETL-HATC";
   const T = "S-ANNO-TEXT";
   const S = "S-ANNO-SYMB";
-  // title band: bubble, title, scale
-  w.line(S, cx, cy + GRID.band, cx + bw, cy + GRID.band);
-  const bx = cx + 0.42;
-  const by = cy + GRID.band / 2;
-  w.circle(S, bx, by, 0.28);
-  w.line(S, bx - 0.28, by, bx + 0.28, by);
-  w.text(S, bx, by + 0.13, 0.14, String(num), { center: true });
-  w.text(S, bx, by - 0.13, 0.08, sheetNo, { center: true });
-  const tw = bw - 1.0;
-  const th = Math.min(0.14, tw / (ADV * Math.max(1, d.title.length)));
-  w.text(S, cx + 0.85, cy + 0.4, th, d.title);
-  w.line(S, cx + 0.85, cy + 0.36, cx + 0.85 + Math.min(tw, d.title.length * ADV * th), cy + 0.36);
-  // drawing area (left) and callout column (right)
-  const ax = cx + 0.15;
-  const aw = bw * 0.56;
-  const ay = cy + GRID.band + 0.25;
-  const ah = bh - GRID.band - 0.45;
+  const NOTE = { style: "HC-NOTE" };
+  // title band: circled number, large title; marks and scale at the right
+  const band = GRID.band;
+  w.line(S, cx, cy + band, cx + bw, cy + band);
+  const bx = cx + 0.38;
+  const by = cy + band / 2;
+  w.circle(S, bx, by, 0.2);
+  w.text(S, bx, by, 0.14, String(num), { center: true, style: "HC-TITLE" });
+  const marks = `AT: ${d.marks.join(", ")}`;
+  const side = 2.0;
+  const tw = bw - 0.75 - side;
+  const th = Math.min(0.24, tw / (0.62 * Math.max(1, d.title.length)));
+  w.text(S, cx + 0.7, by - th / 2, th, d.title, { style: "HC-TITLE" });
+  // drawing area in the middle, callouts left and right
+  const colW = bw * 0.27;
+  const ax = cx + colW + 0.1;
+  const aw = bw - 2 * colW - 0.2;
+  const fh = 0.075;
+  const foot = (d.foot ?? []).flatMap((f) => wrap(`* ${f}`, Math.floor((bw - 0.3) / (ADV * fh))));
+  const ay = cy + band + 0.12 + foot.length * 1.5 * fh + 0.1;
+  const ah = cy + bh - 0.15 - ay;
+  foot.forEach((l, i) => w.text(T, cx + 0.15, cy + band + 0.12 + (foot.length - 1 - i) * 1.5 * fh, fh, l, NOTE));
   const [x0, y0, x1, y1] = extent(d.prims);
-  const pad = 3; // real inches kept for dimension strings
+  const pad = 3;
   const [spf, label] =
     SCALES.find(([s]) => ((x1 - x0 + 2 * pad) * s) / 12 <= aw && ((y1 - y0 + 2 * pad) * s) / 12 <= ah) ??
     SCALES[SCALES.length - 1];
   const k = spf / 12;
-  w.text(S, cx + 0.85, cy + 0.17, 0.08, `SCALE: ${label}`);
+  wrap(marks, Math.floor(side / (ADV * 0.075)))
+    .slice(0, 3)
+    .forEach((l, i) => w.text(S, cx + bw - 0.1, cy + band - 0.2 - i * 0.12, 0.075, l, { right: true }));
+  w.text(S, cx + bw - 0.1, cy + 0.12, 0.075, `SCALE: ${label}`, { right: true });
   const ox = ax + aw / 2 - ((x0 + x1) / 2) * k;
   const oy = ay + ah / 2 - ((y0 + y1) / 2) * k;
   const P = (x: number, y: number): [number, number] => [ox + x * k, oy + y * k];
@@ -647,37 +790,34 @@ function drawDetail(
     w.rect(layer, a[0], a[1], b[0], b[1]);
     return [a, b] as const;
   };
-  let seed = 7;
-  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   for (const p of d.prims) {
     if (p.t === "line") seg(p.hidden ? "S-DETL-HIDN" : O, P(...p.a), P(...p.b));
-    else if (p.t === "rect") box(p.x, p.y, p.w, p.h);
+    else if (p.t === "rect" || p.t === "conc") box(p.x, p.y, p.w, p.h);
     else if (p.t === "wood") {
       const [a, b] = box(p.x, p.y, p.w, p.h);
       seg(O, a, b);
       seg(O, [a[0], b[1]], [b[0], a[1]]);
-    } else if (p.t === "conc") {
-      const [a, b] = box(p.x, p.y, p.w, p.h);
-      const sp = 0.09;
-      for (let x = a[0] + sp / 2; x < b[0] - 0.02; x += sp)
-        for (let y = a[1] + sp / 2; y < b[1] - 0.02; y += sp) {
-          const px = Math.min(b[0] - 0.03, x + (rnd() - 0.5) * sp * 0.6);
-          const py = Math.min(b[1] - 0.03, y + (rnd() - 0.5) * sp * 0.6);
-          if (rnd() < 0.35) {
-            const z = 0.022;
-            w.line(HT, px, py, px + z, py);
-            w.line(HT, px + z, py, px + z / 2, py + z * 0.87);
-            w.line(HT, px + z / 2, py + z * 0.87, px, py);
-          } else w.line(HT, px, py, px + 0.005, py);
-        }
     } else if (p.t === "earth") {
+      // soil-block patches below grade: vertical strokes, then horizontal strokes
       const [a, b] = [P(p.x1, p.y), P(p.x2, p.y)];
-      seg(O, a, b);
-      for (let x = a[0] + 0.06; x < b[0] - 0.08; x += 0.2)
-        for (let j = 0; j < 3; j++) w.line(HT, x + j * 0.035, a[1], x + j * 0.035 - 0.06, a[1] - 0.06);
+      for (let x = a[0] + 0.03; x + 0.2 <= b[0]; x += 0.42) {
+        for (let j = 0; j < 4; j++) w.line(HT, x + j * 0.025, a[1] - 0.005, x + j * 0.025, a[1] - 0.06);
+        for (let j = 0; j < 3; j++) w.line(HT, x + 0.1, a[1] - 0.012 - j * 0.02, x + 0.19, a[1] - 0.012 - j * 0.02);
+        w.line(HT, x - 0.02, a[1], x + 0.21, a[1]);
+      }
     } else if (p.t === "circle") {
       const c = P(...p.c);
-      w.circle(O, c[0], c[1], Math.max(0.01, p.r * k));
+      const r = p.r * k;
+      if (p.r <= 0.5) {
+        // reinforcing bar / nail: solid dot
+        const q = Math.max(0.018, r);
+        w.solid(O, [
+          [c[0] - q, c[1] - q],
+          [c[0] + q, c[1] - q],
+          [c[0] + q, c[1] + q],
+          [c[0] - q, c[1] + q],
+        ]);
+      } else w.circle(O, c[0], c[1], r);
     } else if (p.t === "dim") {
       const a = P(...p.a);
       const b = P(...p.b);
@@ -689,16 +829,12 @@ function drawDetail(
       const A: [number, number] = [a[0] + n[0] * o, a[1] + n[1] * o];
       const B2: [number, number] = [b[0] + n[0] * o, b[1] + n[1] * o];
       const D = "S-ANNO-DIMS";
-      const ext = (q: number[], Q: [number, number]) =>
-        w.line(
-          D,
-          q[0] + n[0] * 0.04 * Math.sign(o),
-          q[1] + n[1] * 0.04 * Math.sign(o),
-          Q[0] + n[0] * 0.05 * Math.sign(o),
-          Q[1] + n[1] * 0.05 * Math.sign(o),
-        );
-      ext(a, A);
-      ext(b, B2);
+      const sg = Math.sign(o);
+      for (const [q, Q] of [
+        [a, A],
+        [b, B2],
+      ] as const)
+        w.line(D, q[0] + n[0] * 0.04 * sg, q[1] + n[1] * 0.04 * sg, Q[0] + n[0] * 0.05 * sg, Q[1] + n[1] * 0.05 * sg);
       w.line(D, A[0], A[1], B2[0], B2[1]);
       for (const q of [A, B2])
         w.line(
@@ -710,57 +846,76 @@ function drawDetail(
         );
       let ang = (Math.atan2(u[1], u[0]) * 180) / Math.PI;
       if (ang > 90.1 || ang <= -89.9) ang += 180;
-      const side = Math.sign(o);
-      w.text(D, (A[0] + B2[0]) / 2 + n[0] * 0.07 * side, (A[1] + B2[1]) / 2 + n[1] * 0.07 * side, 0.07, p.text, {
+      w.text(D, (A[0] + B2[0]) / 2 + n[0] * 0.07 * sg, (A[1] + B2[1]) / 2 + n[1] * 0.07 * sg, 0.075, p.text, {
         rot: ((ang % 360) + 360) % 360,
         center: true,
+        style: "HC-NOTE",
       });
     }
   }
-  // callouts: top to bottom in the order of their targets, leader to each
-  const nx = ax + aw + 0.2;
-  const nw = cx + bw - 0.12 - nx;
-  const items = [...d.notes].sort((p, q) => q.at[1] - p.at[1] || p.at[0] - q.at[0]);
-  const marks = `AT: ${d.marks.join(", ")}`;
-  let h = 0.085;
-  const lay = (hh: number) => wrapAll(hh).total <= bh - GRID.band - 0.3;
-  const wrapAll = (hh: number) => {
-    const ch = Math.max(8, Math.floor(nw / (ADV * hh)));
-    const blocks = [marks, ...items.map((i) => i.text)].map((t) => wrap(t, ch));
-    return { blocks, total: blocks.reduce((a, b) => a + b.length * 1.45 * hh + 0.6 * hh, 0) };
-  };
-  while (h > 0.06 && !lay(h)) h -= 0.005;
-  const { blocks } = wrapAll(h);
-  // each callout at the height of its target (leaders near horizontal), stacked without overlap
-  const hgt = blocks.map((ls) => ls.length * 1.45 * h + 0.6 * h);
-  const tops = blocks.map(() => cy + bh - 0.2);
-  for (let i = 1; i < blocks.length; i++)
-    tops[i] = Math.min(P(...items[i - 1].at)[1] + 0.7 * h, tops[i - 1] - hgt[i - 1]);
-  // push back up from the bottom where the stack runs out of room
-  let floor = cy + GRID.band + 0.1;
-  for (let i = blocks.length - 1; i >= 0; i--) {
-    if (tops[i] - hgt[i] < floor) tops[i] = floor + hgt[i];
-    floor = tops[i];
-  }
-  blocks.forEach((ls, i) => {
-    ls.forEach((l, j) => w.text(T, nx, tops[i] - h - j * 1.45 * h, h, l));
-    if (i === 0) return;
-    const [tx, ty] = P(...items[i - 1].at);
-    const ly = tops[i] - 0.6 * h;
-    w.line(T, nx - 0.04, ly, nx - 0.14, ly);
-    w.line(T, nx - 0.14, ly, tx, ty);
-    const L2 = Math.hypot(nx - 0.14 - tx, ly - ty) || 1;
-    const ux = (nx - 0.14 - tx) / L2;
-    const uy = (ly - ty) / L2;
-    w.line(T, tx, ty, tx + 0.07 * ux - 0.025 * uy, ty + 0.07 * uy + 0.025 * ux);
-    w.line(T, tx, ty, tx + 0.07 * ux + 0.025 * uy, ty + 0.07 * uy - 0.025 * ux);
-    w.line(
-      T,
-      tx + 0.07 * ux - 0.025 * uy,
-      ty + 0.07 * uy + 0.025 * ux,
-      tx + 0.07 * ux + 0.025 * uy,
-      ty + 0.07 * uy - 0.025 * ux,
+  // callouts on the side of the drawing nearer their target, each level with it, arrow leaders
+  const midX = ax + aw / 2;
+  const items = d.notes.map((n) => ({ ...n, p: P(...n.at) }));
+  const sides = [items.filter((i) => i.p[0] < midX), items.filter((i) => i.p[0] >= midX)];
+  // keep the two columns balanced
+  while (sides[0].length > sides[1].length + 2)
+    sides[1].push(
+      sides[0].splice(
+        sides[0].findIndex((i) => i.p[0] === Math.max(...sides[0].map((x) => x.p[0]))),
+        1,
+      )[0],
     );
+  while (sides[1].length > sides[0].length + 2)
+    sides[0].push(
+      sides[1].splice(
+        sides[1].findIndex((i) => i.p[0] === Math.min(...sides[1].map((x) => x.p[0]))),
+        1,
+      )[0],
+    );
+  const colTop = cy + bh - 0.15;
+  const colBot = ay;
+  let h = 0.08;
+  const fit = (hh: number) =>
+    sides.every(
+      (sd) =>
+        sd.reduce(
+          (a, i) => a + wrap(i.text, Math.max(8, Math.floor((colW - 0.15) / (ADV * hh)))).length * 1.4 * hh + 0.5 * hh,
+          0,
+        ) <=
+        colTop - colBot,
+    );
+  while (h > 0.06 && !fit(h)) h -= 0.005;
+  const chars = Math.max(8, Math.floor((colW - 0.15) / (ADV * h)));
+  sides.forEach((sd, si) => {
+    sd.sort((p, q) => q.p[1] - p.p[1]);
+    const blocks = sd.map((i) => wrap(i.text, chars));
+    const hgt = blocks.map((ls) => ls.length * 1.4 * h + 0.5 * h);
+    const tops = sd.map((i) => i.p[1] + 0.6 * h);
+    for (let i = 0; i < tops.length; i++) tops[i] = Math.min(tops[i], i ? tops[i - 1] - hgt[i - 1] : colTop);
+    let floor = colBot;
+    for (let i = tops.length - 1; i >= 0; i--) {
+      if (tops[i] - hgt[i] < floor) tops[i] = floor + hgt[i];
+      floor = tops[i];
+    }
+    const left = si === 0;
+    const tx0 = left ? cx + colW : cx + bw - colW + 0.05;
+    blocks.forEach((ls, i) => {
+      ls.forEach((l, j) => w.text(T, tx0, tops[i] - h - j * 1.4 * h, h, l, left ? { ...NOTE, right: true } : NOTE));
+      const [px, py] = sd[i].p;
+      const ly = tops[i] - 0.55 * h;
+      const sx = left ? tx0 + 0.04 : tx0 - 0.04;
+      const kx = left ? sx + 0.1 : sx - 0.1;
+      w.line(T, sx, ly, kx, ly);
+      w.line(T, kx, ly, px, py);
+      const L2 = Math.hypot(kx - px, ly - py) || 1;
+      const ux = (kx - px) / L2;
+      const uy = (ly - py) / L2;
+      w.solid(T, [
+        [px, py],
+        [px + 0.08 * ux - 0.022 * uy, py + 0.08 * uy + 0.022 * ux],
+        [px + 0.08 * ux + 0.022 * uy, py + 0.08 * uy - 0.022 * ux],
+      ]);
+    });
   });
 }
 
@@ -776,12 +931,28 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
     const ox = k * (SH.w + 2);
     const no = k ? `${sheetNo}.${k}` : sheetNo;
     titleBlock(w, ox, info, no, "DETAILS");
-    for (let c = 0; c <= GRID.cols; c++) w.line("S-ANNO-TTLB", ox + X0 + c * bw, BOTTOM, ox + X0 + c * bw, TOP);
-    for (let r = 0; r <= GRID.rows; r++) w.line("S-ANNO-TTLB", ox + X0, BOTTOM + r * bh, ox + x1, BOTTOM + r * bh);
+    for (let c = 0; c <= GRID.cols; c++)
+      w.pline(
+        "S-ANNO-TTLB",
+        [
+          [ox + X0 + c * bw, BOTTOM],
+          [ox + X0 + c * bw, TOP],
+        ],
+        0.025,
+      );
+    for (let r = 0; r <= GRID.rows; r++)
+      w.pline(
+        "S-ANNO-TTLB",
+        [
+          [ox + X0, BOTTOM + r * bh],
+          [ox + x1, BOTTOM + r * bh],
+        ],
+        0.025,
+      );
     details.slice(k * per, (k + 1) * per).forEach((d, i) => {
       const col = i % GRID.cols;
       const row = Math.floor(i / GRID.cols);
-      drawDetail(w, d, i + 1, no, ox + X0 + col * bw, TOP - (row + 1) * bh, bw, bh);
+      drawDetail(w, d, i + 1, ox + X0 + col * bw, TOP - (row + 1) * bh, bw, bh);
     });
   }
   return dxfFile(w);

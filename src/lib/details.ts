@@ -28,10 +28,19 @@ export interface Detail {
   prims: Prim[];
   /** callouts with a leader to the point they describe */
   notes: Array<{ text: string; at: Pt }>;
+  /** "*" footnotes under the drawing */
+  foot?: string[];
 }
 
 const inch = (v: number) => `${fmtInFraction(v)}"`;
 const up = (s: string) => s.toUpperCase();
+const SMALL = new Set(["at", "of", "to", "and", "on", "w/", "with", "per", "-"]);
+/** detail titles as on the issued sheets: "Continuous Footing", "Rafters at Ridge Beam" */
+const titleCase = (s: string) =>
+  s
+    .split(" ")
+    .map((x, i) => (i && SMALL.has(x.toLowerCase()) ? x.toLowerCase() : x.charAt(0).toUpperCase() + x.slice(1)))
+    .join(" ");
 
 /** dressed size of a nominal sawn size "2x10" → [1.5, 9.25] */
 export function dressed(size: string): [number, number] {
@@ -46,6 +55,7 @@ export function dressed(size: string): [number, number] {
 class Draw {
   prims: Prim[] = [];
   notes: Detail["notes"] = [];
+  foot: string[] = [];
   line(a: Pt, b: Pt, hidden = false) {
     this.prims.push({ t: "line", a, b, hidden });
   }
@@ -81,8 +91,11 @@ class Draw {
   studs(x1: number, x2: number, y1: number, y2: number, s: number, b = 1.5) {
     for (let x = x1; x <= x2 - b + 1e-6; x += s) this.rect(x, y1, b, y2 - y1);
   }
+  footnote(text: string) {
+    this.foot.push(up(text));
+  }
   done(title: string, mark: string): Detail {
-    return { title: up(title), marks: [mark], prims: this.prims, notes: this.notes };
+    return { title: titleCase(title), marks: [mark], prims: this.prims, notes: this.notes, foot: this.foot };
   }
 }
 
@@ -153,7 +166,8 @@ function stripSection(o: {
   }
   if (o.trans || o.long?.bottom) D.note(`${inch(cover)} clear to earth`, [B / 2 - cover / 2, -depth + cover / 2]);
   D.note(`${o.what}; concrete f'c = ${fmt(o.fc, 0)} psi`, [-B / 2 + 2, top - 2]);
-  D.note(`Bear on undisturbed native soil or approved compacted fill; q_a = ${fmt(o.qa, 0)} psf`, [0, -depth]);
+  D.footnote(`Bottom of footing ${inch(depth)} min. below lowest adjacent grade`);
+  D.footnote(`Bear on undisturbed native soil or approved compacted fill; allowable bearing ${fmt(o.qa, 0)} psf`);
   D.dim([-B / 2, -depth], [B / 2, -depth], -6, fmtFtIn(B / 12));
   D.dim([-B / 2, -depth], [-B / 2, top], 6, inch(h));
   if (top + (o.stem?.height ?? 0) > -depth)
@@ -205,7 +219,8 @@ function footing(r: R<"footing">): Detail {
     `${fmtFtIn(B / 12)} x ${fmtFtIn(L / 12)} x ${inch(f.h)} ${f.thickened ? "thickened slab" : "pad footing"}; f'c = ${fmt(f.fc, 0)} psi`,
     [-B / 2 + 2, top - 2],
   );
-  D.note(`Bear on undisturbed native soil or approved compacted fill; q_a = ${fmt(f.qa, 0)} psf`, [0, bot]);
+  if (!f.thickened) D.footnote(`Bottom of footing ${inch(f.depth)} min. below lowest adjacent grade`);
+  D.footnote(`Bear on undisturbed native soil or approved compacted fill; allowable bearing ${fmt(f.qa, 0)} psf`);
   D.dim([-B / 2, bot], [B / 2, bot], -6, fmtFtIn(B / 12));
   D.dim([-B / 2, bot], [-B / 2, top], 6, inch(f.h));
   return D.done(f.thickened ? "Thickened slab under post" : "Pad footing", r.mark);

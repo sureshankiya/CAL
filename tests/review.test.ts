@@ -475,11 +475,11 @@ describe("details sheets", () => {
   it("one detail per designed condition, identical ones merged, callouts from the calculations", () => {
     const p = exampleProject();
     const ds = projectDetails(p, designProject(p));
-    const sill = ds.find((x) => x.title === "SHEAR WALL SILL ANCHORAGE")!;
+    const sill = ds.find((x) => x.title === "Shear Wall Sill Anchorage")!;
     expect(sill.marks).toEqual(["1SW-1", "1SW-2", "1SW-3", "1SW-4", "1SW-5"]);
     expect(sill.notes.some((n) => /5\/8" DIA\. ANCHOR BOLT @ 48" O\.C\./.test(n.text))).toBe(true);
     // no detail for an item without a calculation: the example has no retaining wall
-    expect(ds.some((x) => x.title.startsWith("RETAINING"))).toBe(false);
+    expect(ds.some((x) => x.title.startsWith("Retaining"))).toBe(false);
     const dxf = detailsDxf(
       ds,
       { project: "P", address: "", client: "", jobRef: "", date: "", revision: "0", preparedBy: "" },
@@ -487,6 +487,11 @@ describe("details sheets", () => {
     );
     expect(dxf).toContain("SD-1.1"); // 28 details: two sheets of 16
     expect(dxf).toContain("\nCIRCLE\n");
+    expect(dxf).toContain("HC-NOTE"); // slanted ROMANS callout style defined in the STYLE table
+    expect(sill.foot ?? []).toEqual([]);
+    expect(ds.find((x) => x.title === "Continuous Footing")!.foot![0]).toMatch(
+      /^BOTTOM OF FOOTING .* MIN\. BELOW LOWEST ADJACENT GRADE$/,
+    );
     expect(dxf.trim().endsWith("0\nEOF")).toBe(true);
   });
 });
