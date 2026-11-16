@@ -1,6 +1,12 @@
 import type { SheetEntry } from "@/components/report/package";
-import { generateNotes, type GeneralNotesSheet, type Project, type ProjectDesign } from "@/engine/project";
-import { DETAIL_SHEETS, type Detail, type DetailCat, type Prim } from "./details";
+import {
+  generalNotesSheet,
+  generateNotes,
+  type GeneralNotesSheet,
+  type Project,
+  type ProjectDesign,
+} from "@/engine/project";
+import { DETAIL_SHEETS, projectDetails, type Detail, type DetailCat, type Prim } from "./details";
 import TEMPLATES from "./detailTemplates.json";
 import { layoutPackage } from "./exportLayout";
 
@@ -183,25 +189,43 @@ class Writer {
 }
 
 /** Draws one table with its top-left corner at (x, y); returns its bottom y and width. */
-function drawTable(w: Writer, t: DxfTable, x: number, y: number): { bottom: number; width: number } {
-  const L = "S-ANNO-SCHD";
+/** column widths and row heights of a table (heights[0] is the header row) with cells wrapped at maxChars */
+function measureTable(t: DxfTable, maxChars = MAX_CHARS) {
   const n = t.head.length;
   const cells = [t.head, ...t.rows.map((r) => Array.from({ length: n }, (_, i) => r[i] ?? ""))];
-  const chars = t.head.map((_, i) => Math.min(MAX_CHARS, Math.max(...cells.map((r) => r[i].length), 3)));
+  const chars = t.head.map((_, i) => Math.min(maxChars, Math.max(...cells.map((r) => r[i].length), 3)));
   const widths = chars.map((c) => c * CHAR_W + 2 * PAD);
+  const wrapped = cells.map((r) => r.map((c, i) => wrap(c, chars[i])));
+  const heights = wrapped.map((r) => Math.max(...r.map((c) => c.length)) * ROW + ROW * 0.4);
+  return {
+    widths,
+    wrapped,
+    heights,
+    width: widths.reduce((a, b) => a + b, 0),
+    height: heights.reduce((a, b) => a + b, 0),
+  };
+}
+
+function drawTable(
+  w: Writer,
+  t: DxfTable,
+  x: number,
+  y: number,
+  maxChars = MAX_CHARS,
+): { bottom: number; width: number } {
+  const L = "S-ANNO-SCHD";
+  const n = t.head.length;
+  const m = measureTable(t, maxChars);
   const xs = [x];
-  for (const wd of widths) xs.push(xs[xs.length - 1] + wd);
+  for (const wd of m.widths) xs.push(xs[xs.length - 1] + wd);
   w.text("S-ANNO-TTLB", x, y + 0.08, 1.33 * H, t.title);
   let top = y;
   w.line(L, x, top, xs[n], top);
-  for (const r of cells) {
-    const wrapped = r.map((c, i) => wrap(c, chars[i]));
-    const lines = Math.max(...wrapped.map((c) => c.length));
-    const h = lines * ROW + ROW * 0.4;
+  m.wrapped.forEach((wrapped, r) => {
     wrapped.forEach((c, i) => c.forEach((s, k) => w.text(L, xs[i] + PAD, top - ROW * (k + 1), H, s)));
-    top -= h;
+    top -= m.heights[r];
     w.line(L, x, top, xs[n], top);
-  }
+  });
   for (const xx of xs) w.line(L, xx, y, xx, top);
   return { bottom: top, width: xs[n] - x };
 }
@@ -278,6 +302,24 @@ export function sheetTables(sheet: HTMLElement): DxfTable[] {
     out.push({ title: caption || "Schedule", head, rows });
   }
   return out;
+}
+
+/** The schedule tables of the package, read from the laid-out schedule sheets (browser only). */
+export async function scheduleTables(
+  project: Project,
+  design: ProjectDesign,
+  entries: SheetEntry[],
+): Promise<DxfTable[]> {
+  const lay = await layoutPackage(
+    project,
+    design,
+    entries.filter((e) => e.kind === "schedules"),
+  );
+  try {
+    return lay.sheets.flatMap(sheetTables);
+  } finally {
+    lay.done();
+  }
 }
 
 /** The schedules and general notes of the package as DXF text. */
@@ -567,13 +609,19 @@ function titleBlock(w: Writer, ox: number, info: SheetInfo, sheetNo: string, tit
 
 /** S0 general notes sheet; content that does not fit one sheet at the smallest text height continues on further sheets. */
 export function generalNotesDxf(g: GeneralNotesSheet, info: SheetInfo): string {
+  const w = new Writer();
+  drawNotesSheets(w, g, info);
+  return dxfFile(w);
+}
+
+/** draws the general notes sheet(s) from x offset 0; returns the number of sheets used */
+function drawNotesSheets(w: Writer, g: GeneralNotesSheet, info: SheetInfo): number {
   let t = T_MAX;
   let segs = layout(blocks(g, t), t);
   while (t > T_MIN + 1e-9 && segs.some((s) => s.sheet > 0)) {
     t = Math.max(T_MIN, t - 0.0025);
     segs = layout(blocks(g, t), t);
   }
-  const w = new Writer();
   const hb = 2.4 * t;
   const sheets = Math.max(...segs.map((s) => s.sheet)) + 1;
   for (let k = 0; k < sheets; k++) titleBlock(w, k * (SH.w + 2), info, k ? `${g.sheetNo}.${k}` : g.sheetNo);
@@ -589,7 +637,7 @@ export function generalNotesDxf(g: GeneralNotesSheet, info: SheetInfo): string {
       y -= r.h;
     }
   }
-  return dxfFile(w);
+  return sheets;
 }
 
 /** layers (colour for the plot style, linetype), text styles: slanted ROMANS notes, sans titles */
@@ -746,7 +794,11 @@ function extent(ps: Prim[]): [number, number, number, number] {
   return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
 }
 
-/** the engineer's title format: title over a line running to the numbered circle; scale and marks under the line */
+/**
+ * the engineer's title format: title over a line running to the numbered circle, scale under the
+ * line. Up to three marks are named in the title (as in "HOLDOWN (HD1) AT F1 FOOTING"); a longer
+ * list goes under the line.
+ */
 function titleStrip(w: Writer, d: Detail, num: number, scale: string, cx: number, cy: number, bw: number) {
   const S = "S-ANNO-SYMB";
   const r = 0.15;
@@ -754,13 +806,18 @@ function titleStrip(w: Writer, d: Detail, num: number, scale: string, cx: number
   const ly = cy + 0.3;
   const avail = bx - r - cx - 0.45;
   let th = 0.16;
-  let ls = wrap(d.title, Math.floor(avail / (0.75 * th)));
-  while (ls.length > 2 && th > 0.09) ls = wrap(d.title, Math.floor(avail / (0.75 * (th -= 0.01))));
+  const inTitle = d.marks.length > 0 && d.marks.length <= 3;
+  const title = inTitle ? `${d.title} (${d.marks.join(", ")})` : d.title;
+  let ls = wrap(title, Math.floor(avail / (0.75 * th)));
+  while (ls.length > 2 && th > 0.09) ls = wrap(title, Math.floor(avail / (0.75 * (th -= 0.01))));
   ls.forEach((l, i) => w.text(S, cx + 0.25, ly + 0.05 + (ls.length - 1 - i) * 1.4 * th, th, l, { style: "HC-TITLE" }));
   w.line(S, cx + 0.25, ly, bx - r, ly);
   w.circle(S, bx, ly, r);
   w.text(S, bx, ly, 0.13, String(num), { center: true, style: "HC-TITLE" });
-  wrap(`SCALE: ${scale}${d.marks.length ? `    AT: ${d.marks.join(", ")}` : ""}`, Math.floor(avail / (ADV * 0.055)))
+  wrap(
+    `SCALE: ${scale}${d.marks.length && !inTitle ? `    AT: ${d.marks.join(", ")}` : ""}`,
+    Math.floor(avail / (ADV * 0.055)),
+  )
     .slice(0, 2)
     .forEach((l, i) => w.text(S, cx + 0.25, ly - 0.1 - i * 0.08, 0.055, l));
 }
@@ -1035,20 +1092,24 @@ function spanOf(d: Detail, bw: number, bh: number): [number, number] {
   return [Math.max(1, cols), Math.max(1, rows)];
 }
 
+type DItem = { d: Detail; row: number; col: number; c: number; r: number };
+export interface DetailSheet {
+  title: string;
+  cols: number;
+  rows: number;
+  used: boolean[][];
+  /** in reading order: the detail number on the sheet is the position + 1 */
+  items: DItem[];
+}
+const DX1 = SH.w - SH.m - SH.tb - 0.25;
+
 /**
- * Details sheets, title block as on the S0 sheet: one group of sheets per kind of detail, in the
- * engineer's order. Each group uses the smallest grid that holds it on one sheet (2 x 2 up to 4 x 3:
- * larger boxes, no empty sheet); a larger group fills 4 x 4 sheets.
+ * Details sheets: one group of sheets per kind of detail, in the engineer's order. Each group uses
+ * the smallest grid that holds it on one sheet (2 x 2 up to 4 x 3: larger boxes, no empty sheet); a
+ * larger group fills 4 x 4 sheets and the overflow sheet again takes the smallest grid.
  */
-export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string): string {
-  const w = new Writer();
-  const x1 = SH.w - SH.m - SH.tb - 0.25;
-  // sheet numbers run on from sheetNo: SD-1, SD-2 …
-  const m = /^(.*?)(\d+)$/.exec(sheetNo);
-  const numberOf = (i: number) => (m ? `${m[1]}${Number(m[2]) + i}` : `${sheetNo}.${i + 1}`);
-  type Item = { d: Detail; row: number; col: number; c: number; r: number };
-  type Sheet = { title: string; cols: number; rows: number; used: boolean[][]; items: Item[] };
-  const blank = (title: string, cols: number, rows: number): Sheet => ({
+export function planDetailSheets(details: Detail[]): DetailSheet[] {
+  const blank = (title: string, cols: number, rows: number): DetailSheet => ({
     title,
     cols,
     rows,
@@ -1056,8 +1117,8 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
     items: [],
   });
   /** packs the group row by row; spanning details take 2 cells; false when it needs more than maxSheets */
-  const pack = (list: Sheet[], group: Detail[], title: string, cols: number, rows: number, maxSheets: number) => {
-    const cw = (x1 - X0) / cols;
+  const pack = (list: DetailSheet[], group: Detail[], title: string, cols: number, rows: number, maxSheets: number) => {
+    const cw = (DX1 - X0) / cols;
     const ch = (TOP - BOTTOM) / rows;
     for (const d of group) {
       const [c0, r0] = spanOf(d, cw, ch);
@@ -1080,7 +1141,7 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
     }
     return true;
   };
-  const sheets: Sheet[] = [];
+  const sheets: DetailSheet[] = [];
   const SMALL_GRIDS = [
     [2, 2],
     [3, 2],
@@ -1090,7 +1151,7 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
   for (const cat of Object.keys(DETAIL_SHEETS) as DetailCat[]) {
     const group = details.filter((d) => (d.cat ?? "wall") === cat);
     if (!group.length) continue;
-    let placed: Sheet[] = [];
+    let placed: DetailSheet[] = [];
     for (const [cols, rows] of SMALL_GRIDS) {
       placed = [];
       if (pack(placed, group, DETAIL_SHEETS[cat], cols, rows, 1)) break;
@@ -1101,7 +1162,7 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
       // the last sheet holds the overflow: give it the smallest grid that holds what is left
       const rest = placed[placed.length - 1].items.map((x) => x.d);
       for (const [cols, rows] of SMALL_GRIDS) {
-        const last: Sheet[] = [];
+        const last: DetailSheet[] = [];
         if (pack(last, rest, DETAIL_SHEETS[cat], cols, rows, 1)) {
           placed[placed.length - 1] = last[0];
           break;
@@ -1110,14 +1171,20 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
     }
     sheets.push(...placed);
   }
-  if (!sheets.length) sheets.push(blank("DETAILS", GRID.cols, GRID.rows));
+  // details are numbered in reading order
+  for (const sh of sheets) sh.items.sort((a, b) => a.row - b.row || a.col - b.col);
+  return sheets;
+}
+
+/** draws the planned details sheets, sheet k at x offset (first + k) sheets, numbered numbers[k] */
+function drawDetailSheets(w: Writer, sheets: DetailSheet[], info: SheetInfo, numbers: string[], first = 0) {
   sheets.forEach((sh, k) => {
-    const ox = k * (SH.w + 2);
-    const bw = (x1 - X0) / sh.cols;
+    const ox = (first + k) * (SH.w + 2);
+    const bw = (DX1 - X0) / sh.cols;
     const bh = (TOP - BOTTOM) / sh.rows;
-    const base = ((x1 - X0) / GRID.cols) * ((TOP - BOTTOM) / GRID.rows);
+    const base = ((DX1 - X0) / GRID.cols) * ((TOP - BOTTOM) / GRID.rows);
     NOTE_H = 0.075 * Math.min(1.6, Math.max(1, Math.sqrt((bw * bh) / base)));
-    titleBlock(w, ox, info, numberOf(k), sh.title);
+    titleBlock(w, ox, info, numbers[k], sh.title);
     const cellBox = (col: number, row: number, c: number, r: number) => {
       const xa = ox + X0 + col * bw;
       const ya = TOP - (row + r) * bh;
@@ -1133,12 +1200,187 @@ export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string):
     for (const p of sh.items) cellBox(p.col, p.row, p.c, p.r);
     for (let row = 0; row < sh.rows; row++)
       for (let col = 0; col < sh.cols; col++) if (!sh.used[row]?.[col]) cellBox(col, row, 1, 1);
-    // number the details in reading order
-    const order = [...sh.items].sort((a, b) => a.row - b.row || a.col - b.col);
-    order.forEach((p, i) =>
+    sh.items.forEach((p, i) =>
       drawDetail(w, p.d, i + 1, ox + X0 + p.col * bw, TOP - (p.row + p.r) * bh, p.c * bw, p.r * bh),
     );
   });
   NOTE_H = 0.075;
+}
+
+/** Details sheets alone, numbered on from sheetNo (SD-1, SD-2 …). */
+export function detailsDxf(details: Detail[], info: SheetInfo, sheetNo: string): string {
+  const w = new Writer();
+  const sheets = planDetailSheets(details);
+  if (!sheets.length) sheets.push({ title: "DETAILS", cols: GRID.cols, rows: GRID.rows, used: [], items: [] });
+  drawDetailSheets(
+    w,
+    sheets,
+    info,
+    sheets.map((_, k) => nextSheetNo(sheetNo, k)),
+  );
   return dxfFile(w);
+}
+
+/* ---------------------------------------------------------------- permit set */
+
+/** sheet number k sheets after no, in its own format: S-3 → S-4, S3.0 → S4.0, S3 → S4 */
+export function nextSheetNo(no: string, k = 1): string {
+  const m = /^(.*?)(\d+)(\.0)?$/.exec(no);
+  return m ? `${m[1]}${Number(m[2]) + k}${m[3] ?? ""}` : k ? `${no}.${k}` : no;
+}
+
+export interface SetSheet {
+  number: string;
+  title: string;
+  /** plan: drawn by the engineer; the others are generated */
+  kind: "notes" | "plan" | "details" | "schedules";
+}
+
+/**
+ * The drawing set in order: general notes, the plan sheets the engineer lists in the drawing index,
+ * the details sheets, the schedule sheets. Generated sheets are numbered on from the last plan
+ * sheet in its own format; index rows for details / schedules sheets typed by hand are replaced.
+ */
+export function sheetSet(p: Project, detailTitles: string[], scheduleSheets: number): SetSheet[] {
+  const list = (p.drawingIndex ?? []).filter((s) => s.number.trim());
+  const isNotes = (t: string) => /general notes/i.test(t);
+  const generated = (t: string) => /detail|schedule/i.test(t) && !/plan/i.test(t);
+  const plans = list.filter((s) => !isNotes(s.title) && !generated(s.title));
+  const first = list.find((s) => isNotes(s.title));
+  const m = plans[0] && /^(.*?)(\d+)(\.0)?$/.exec(plans[0].number);
+  const notes: SetSheet = {
+    number: first?.number ?? (m ? `${m[1]}0${m[3] ?? ""}` : "S-0"),
+    title: first?.title || "GENERAL NOTES AND SPECIFICATIONS",
+    kind: "notes",
+  };
+  const out: SetSheet[] = [notes, ...plans.map((s) => ({ ...s, kind: "plan" as const }))];
+  const add = (title: string, kind: SetSheet["kind"]) =>
+    out.push({ number: nextSheetNo(out[out.length - 1].number), title, kind });
+  for (const t of detailTitles) add(t, "details");
+  for (let k = 0; k < scheduleSheets; k++) add("STRUCTURAL SCHEDULES", "schedules");
+  return out.map((s) => ({ ...s, number: s.number.toUpperCase(), title: s.title.toUpperCase() }));
+}
+
+/** mark → "2/S-6" (several details: "1, 3/S-5; 2/S-6") for the detail columns of the schedules */
+export function detailRefs(sheets: DetailSheet[], numbers: string[]): Map<string, string> {
+  const by = new Map<string, Map<string, number[]>>();
+  sheets.forEach((sh, k) =>
+    sh.items.forEach((it, i) => {
+      for (const mark of it.d.marks) {
+        const m = by.get(mark) ?? new Map<string, number[]>();
+        m.set(numbers[k], [...(m.get(numbers[k]) ?? []), i + 1]);
+        by.set(mark, m);
+      }
+    }),
+  );
+  return new Map([...by].map(([mark, m]) => [mark, [...m].map(([no, ns]) => `${ns.join(", ")}/${no}`).join("; ")]));
+}
+
+/** adds a DETAIL column to every schedule whose first column holds marks that are detailed */
+export function withDetailColumn(tables: DxfTable[], refs: Map<string, string>): DxfTable[] {
+  const of = (cell: string) => [
+    ...new Set(
+      cell
+        .split(/[,;]\s*/)
+        .map((m) => refs.get(m.trim()))
+        .filter((x): x is string => !!x),
+    ),
+  ];
+  return tables.map((t) => {
+    const col = t.rows.map((r) => of(r[0] ?? "").join("; "));
+    return col.some(Boolean) && !t.head.includes("DETAIL")
+      ? { ...t, head: [...t.head, "DETAIL"], rows: t.rows.map((r, i) => [...r, col[i] || "-"]) }
+      : t;
+  });
+}
+
+/** schedule tables flowed down columns across ARCH D sheets; a long table continues in the next column */
+function drawScheduleSheets(w: Writer, tables: DxfTable[], info: SheetInfo, numbers: string[] | undefined, first = 0) {
+  const width = DX1 - X0;
+  const height = TOP - BOTTOM - 0.3;
+  const GAP = 0.45;
+  // wrap harder until the table is no wider than the sheet
+  const fit = (t: DxfTable) => {
+    let max = MAX_CHARS;
+    while (max > 8 && measureTable(t, max).width > width) max -= 2;
+    return max;
+  };
+  let sheet = 0;
+  let x = 0;
+  let y = 0;
+  let colW = 0;
+  const place: Array<{ t: DxfTable; max: number; sheet: number; x: number; y: number }> = [];
+  const newColumn = (need: number) => {
+    x += colW + GAP;
+    y = 0;
+    colW = 0;
+    if (x + need > width + 1e-6) {
+      sheet++;
+      x = 0;
+    }
+  };
+  for (const t0 of tables) {
+    const max = fit(t0);
+    let rest: DxfTable | undefined = t0;
+    while (rest) {
+      const m = measureTable(rest, max);
+      if ((y > 0 && height - y < Math.min(m.height, 2)) || x + m.width > width + 1e-6) newColumn(m.width);
+      // rows that fit the space left; at least one, so a tall row cannot stall the flow
+      let used = m.heights[0];
+      let n = 0;
+      while (n < rest.rows.length && used + m.heights[n + 1] <= height - y) used += m.heights[++n];
+      if (n < rest.rows.length && n === 0) n = Math.min(1, rest.rows.length);
+      const part: DxfTable = { ...rest, rows: rest.rows.slice(0, n) };
+      place.push({ t: part, max, sheet, x, y });
+      colW = Math.max(colW, m.width);
+      y += measureTable(part, max).height + GAP;
+      rest = n < rest.rows.length ? { ...rest, title: `${t0.title} (CONT.)`, rows: rest.rows.slice(n) } : undefined;
+      if (rest) newColumn(m.width);
+    }
+  }
+  const count = place.length ? sheet + 1 : 0;
+  if (numbers) {
+    for (let k = 0; k < count; k++) titleBlock(w, (first + k) * (SH.w + 2), info, numbers[k], "STRUCTURAL SCHEDULES");
+    for (const q of place) drawTable(w, q.t, (first + q.sheet) * (SH.w + 2) + X0 + q.x, TOP - 0.3 - q.y, q.max);
+  }
+  return count;
+}
+
+/**
+ * The permit set in one DXF: S0 general notes (drawing index filled from the set), the details
+ * sheets and the schedule sheets, numbered on from the engineer's plan sheets; shear wall and
+ * member schedules carry the detail each mark is drawn in.
+ */
+export function permitSetDxf(p: Project, d: ProjectDesign, tables: DxfTable[], info: SheetInfo): string {
+  const set = planPermitSet(p, d, tables);
+  const w = new Writer();
+  const n0 = drawNotesSheets(w, set.notes, info);
+  drawDetailSheets(w, set.details, info, set.detailNumbers, n0);
+  drawScheduleSheets(w, set.tables, info, set.scheduleNumbers, n0 + set.details.length);
+  return dxfFile(w);
+}
+
+/** sheet numbers, drawing index and detail references of the set (shared by the single-sheet exports) */
+export function planPermitSet(p: Project, d: ProjectDesign, tables: DxfTable[] = []) {
+  const details = planDetailSheets(projectDetails(p, d));
+  const titles = details.map((s) => s.title);
+  // detail numbers do not depend on the schedules (they come last), so the references are known first
+  const numbersOf = (sheets: SetSheet[], kind: SetSheet["kind"]) =>
+    sheets.filter((s) => s.kind === kind).map((s) => s.number);
+  const refs = detailRefs(details, numbersOf(sheetSet(p, titles, 0), "details"));
+  const withRefs = withDetailColumn(tables, refs);
+  const sheets = sheetSet(p, titles, drawScheduleSheets(new Writer(), withRefs, {} as SheetInfo, undefined));
+  const notes = generalNotesSheet(p, d, {
+    index: sheets.map((s) => [s.number, s.title]),
+    detailRef: (mark) => refs.get(mark) ?? "",
+  });
+  return {
+    sheets,
+    notes,
+    details,
+    tables: withRefs,
+    refs,
+    detailNumbers: numbersOf(sheets, "details"),
+    scheduleNumbers: numbersOf(sheets, "schedules"),
+  };
 }

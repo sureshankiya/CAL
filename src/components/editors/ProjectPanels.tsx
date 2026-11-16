@@ -9,7 +9,18 @@ import { SOIL_CLASSES, soilClass } from "@/engine/data/soil";
 import { HARDWARE_KIND_LABEL, defaultHardware, type HardwareItem, type HardwareKind } from "@/engine/data/hardware";
 import { SEISMIC_SYSTEMS } from "@/engine/loads/seismic";
 import { S0_PANELS, S0_TEMPLATE } from "@/engine/data/s0Template";
-import { defaultLateral, generateWeights, type LateralSpec, type WallLineOpening } from "@/engine/project";
+import {
+  applyOfficeDefaults,
+  applyPreset,
+  defaultLateral,
+  generateWeights,
+  loadOffice,
+  officeDefaultsOf,
+  saveOffice,
+  type LateralSpec,
+  type Office,
+  type WallLineOpening,
+} from "@/engine/project";
 import {
   NEW_MEMBER_LABEL,
   newId,
@@ -74,7 +85,10 @@ function DrawingIndexEditor({ p, set }: { p: Project; set: SetProject }) {
           <span />
         )}
       </Grid>
-      <Hint>Printed on the S0 general notes sheet. Empty: the index lists S-0 only.</Hint>
+      <Hint>
+        List the plan sheets you draw (foundation plan, framing plans). The general notes, details and schedule sheets
+        are numbered on from the last one and added to the index on the S0 sheet automatically.
+      </Hint>
     </Collapsible>
   );
 }
@@ -107,6 +121,96 @@ function S0NotesEditor({ p, set }: { p: Project; set: SetProject }) {
         One note per line. {"{FC}"} = concrete f&apos;c, {"{ASCE}"} = ASCE 7 edition, {"{FLOOR_JOISTS}"} = floor joist
         callouts (line dropped when there are none).
       </Hint>
+    </Collapsible>
+  );
+}
+
+/** Per-browser office setup: the defaults a new project starts from, and saved criteria by jurisdiction. */
+export function OfficePanel({ p, set }: { p: Project; set: SetProject }) {
+  const [office, setOffice] = useState(loadOffice);
+  const [name, setName] = useState("");
+  const [note, setNote] = useState("");
+  const names = Object.keys(office.presets).sort();
+  const [pick, setPick] = useState(names[0] ?? "");
+  const store = (o: Office, done: string) => {
+    setNote(saveOffice(o) ? done : "Browser storage is unavailable: not saved.");
+    setOffice(o);
+  };
+  return (
+    <Collapsible title={`Office defaults and jurisdiction presets (${names.length})`}>
+      <Hint>
+        Office defaults: your names for the title block, code cycle, design criteria, S0 note edits, details selection,
+        plan sheet list and hardware list. A new project starts from them.
+      </Hint>
+      <Grid>
+        <SmallButton onClick={() => store({ ...office, defaults: officeDefaultsOf(p) }, "Office defaults saved.")}>
+          Save this project&apos;s setup as office defaults
+        </SmallButton>
+        {office.defaults ? (
+          <SmallButton
+            onClick={() => {
+              set((x) => applyOfficeDefaults(x, office));
+              setNote("Office defaults applied to this project.");
+            }}
+          >
+            Apply office defaults to this project
+          </SmallButton>
+        ) : (
+          <span />
+        )}
+      </Grid>
+      <Hint>
+        Jurisdiction presets: save the code cycle and design criteria (wind, seismic, snow, soil, concrete) of a city
+        once, then apply them to the next project there.
+      </Hint>
+      {names.length ? (
+        <div className="flex gap-1">
+          <div className="flex-1">
+            <Select value={names.includes(pick) ? pick : names[0]} options={names} onChange={setPick} />
+          </div>
+          <SmallButton
+            onClick={() => {
+              const n = names.includes(pick) ? pick : names[0];
+              set((x) => applyPreset(x, n, office));
+              setNote(`${n} criteria applied.`);
+            }}
+          >
+            Apply
+          </SmallButton>
+          <SmallButton
+            tone="danger"
+            title="Delete preset"
+            onClick={() => {
+              const n = names.includes(pick) ? pick : names[0];
+              const { [n]: _gone, ...rest } = office.presets;
+              store({ ...office, presets: rest }, `${n} deleted.`);
+            }}
+          >
+            ✕
+          </SmallButton>
+        </div>
+      ) : null}
+      <div className="flex gap-1">
+        <div className="flex-1">
+          <TextInput value={name || p.info.jurisdiction} onChange={setName} />
+        </div>
+        <SmallButton
+          onClick={() => {
+            const n = (name || p.info.jurisdiction).trim();
+            if (!n) return setNote("Enter the jurisdiction name first.");
+            store(
+              { ...office, presets: { ...office.presets, [n]: { cycleId: p.cycleId, criteria: p.criteria } } },
+              `${n} saved from this project's criteria.`,
+            );
+            setPick(n);
+            setName("");
+          }}
+        >
+          Save current criteria as preset
+        </SmallButton>
+      </div>
+      {note ? <Hint>{note}</Hint> : null}
+      <Hint>Stored in this browser only. Values come from your own projects: verify them for each site.</Hint>
     </Collapsible>
   );
 }

@@ -75,7 +75,12 @@ const lines = (s: string) =>
     .map((l) => l.replace(/\*\*/g, "").replace(/^>\s*/, "").trim())
     .filter(Boolean);
 
-export function generalNotesSheet(p: Project, d: ProjectDesign): GeneralNotesSheet {
+export function generalNotesSheet(
+  p: Project,
+  d: ProjectDesign,
+  /** from the drawing set: the full drawing index, and the detail(s) a mark is drawn in ("2/S-6") */
+  set?: { index: Array<[string, string]>; detailRef: (mark: string) => string },
+): GeneralNotesSheet {
   const c = getCycle(p.cycleId);
   const rs = [...d.outcomes.values()].flatMap((o) => (o.result ? [o.result] : []));
   const has = (...k: AnyResult["kind"][]) => rs.some((r) => k.includes(r.kind));
@@ -288,6 +293,7 @@ export function generalNotesSheet(p: Project, d: ProjectDesign): GeneralNotesShe
       r.sides.map((s) => `${s.row.nail} @ ${s.spacing}/12`).join(" + "),
       r.rod ? "Continuous rod" : r.holdown ? `${r.holdown.item.model} (${r.post.label})` : "-",
       `${fmt(r.input.sill.d, 3)} in. dia. ${r.input.sill.type === "post-installed" ? "adhesive anchor" : "A.B."} @ ${fmt(r.input.sill.spacing, 0)} in. o.c., ${fmt(r.input.sill.embed, 0)} in. emb.`,
+      ...(set ? [set.detailRef(r.mark) || "-"] : []),
     ].map(up),
   );
 
@@ -314,9 +320,11 @@ export function generalNotesSheet(p: Project, d: ProjectDesign): GeneralNotesShe
       lines: s.notes.map((n, i) => up(issued(`${i + 1}. ${n}`))),
     }));
 
-  const index: Array<[string, string]> = (p.drawingIndex ?? []).length
-    ? p.drawingIndex!.map((s) => [up(s.number), up(s.title)])
-    : [["S-0", "GENERAL NOTES AND SPECIFICATIONS"]];
+  const index: Array<[string, string]> =
+    set?.index ??
+    ((p.drawingIndex ?? []).length
+      ? p.drawingIndex!.map((s) => [up(s.number), up(s.title)])
+      : [["S-0", "GENERAL NOTES AND SPECIFICATIONS"]]);
 
   const all: S0Panel[] = [
     ...(concrete
@@ -368,8 +376,8 @@ export function generalNotesSheet(p: Project, d: ProjectDesign): GeneralNotesShe
           {
             title: "SHEAR WALL SCHEDULE",
             kind: "table" as const,
-            head: ["MARK", "SHEATHING", "EDGE / FIELD NAILING", "HOLDOWN", "SILL ANCHOR"],
-            widths: [0.12, 0.25, 0.23, 0.18, 0.22],
+            head: ["MARK", "SHEATHING", "EDGE / FIELD NAILING", "HOLDOWN", "SILL ANCHOR", ...(set ? ["DETAIL"] : [])],
+            widths: set ? [0.1, 0.22, 0.2, 0.16, 0.2, 0.12] : [0.12, 0.25, 0.23, 0.18, 0.22],
             rows: wallRows,
             foot: [
               "ALL PANEL EDGES BLOCKED. 3/8 IN. MIN. NAIL EDGE DISTANCE. SILL ANCHORS WITH 3 IN. X 3 IN. X 0.229 IN. PLATE WASHERS. HOLDOWNS PER MANUFACTURER WITH ALL SPECIFIED FASTENERS.",

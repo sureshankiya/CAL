@@ -586,3 +586,113 @@ describe("details selection: calculated and general typical details", () => {
     expect(detailCatalog(p, designProject(p)).filter((x) => x.general && x.on)).toEqual([]);
   });
 });
+
+import { nextSheetNo, permitSetDxf, planPermitSet, sheetSet, withDetailColumn } from "@/lib/dxf";
+
+describe("permit set: one DXF, shared sheet numbers, detail references", () => {
+  it("numbers the generated sheets on from the plan sheets in their own format", () => {
+    expect(nextSheetNo("S-3")).toBe("S-4");
+    expect(nextSheetNo("S3.0", 2)).toBe("S5.0");
+    const p = {
+      ...exampleProject(),
+      drawingIndex: [
+        { number: "S0.0", title: "General notes" },
+        { number: "S1.0", title: "Foundation plan" },
+        { number: "S2.0", title: "Framing plan and details" },
+        { number: "S9.0", title: "Typ. details" },
+      ],
+    };
+    const set = sheetSet(p, ["TYP. FTG. CONNECTION DETAILS"], 1);
+    expect(set.map((s) => `${s.number} ${s.kind}`)).toEqual([
+      "S0.0 notes",
+      "S1.0 plan",
+      "S2.0 plan",
+      "S3.0 details",
+      "S4.0 schedules",
+    ]);
+    // no index typed: S-0, then S-1 …
+    expect(sheetSet(exampleProject(), ["A"], 0).map((s) => s.number)).toEqual(["S-0", "S-1"]);
+  });
+
+  it("schedules carry the detail of each mark; the S0 index lists every sheet", () => {
+    const p = exampleProject();
+    const d = designProject(p);
+    const tables = [
+      {
+        title: "Shear walls",
+        head: ["Mark", "Sheathing"],
+        rows: [
+          ["1SW-1", "15/32"],
+          ["ZZ-9", "-"],
+        ],
+      },
+    ];
+    const set = planPermitSet(p, d, tables);
+    const ref = set.refs.get("1SW-1")!;
+    expect(ref).toMatch(/^\d+(, \d+)*\/S-\d+/);
+    expect(set.tables[0].head).toEqual(["Mark", "Sheathing", "DETAIL"]);
+    expect(set.tables[0].rows).toEqual([
+      ["1SW-1", "15/32", ref],
+      ["ZZ-9", "-", "-"],
+    ]);
+    expect(withDetailColumn([{ title: "t", head: ["a"], rows: [["none"]] }], set.refs)[0].head).toEqual(["a"]);
+    // the index on S0 is the whole set, and the shear wall schedule on S0 has the detail column
+    expect(set.notes.index.map((r) => r[0])).toEqual(set.sheets.map((s) => s.number));
+    const sw = set.notes.panels.find((x) => x.title === "SHEAR WALL SCHEDULE") as Extract<S0Panel, { kind: "table" }>;
+    expect(sw.head[sw.head.length - 1]).toBe("DETAIL");
+    const dxf = permitSetDxf(p, d, tables, {
+      project: "P",
+      address: "A",
+      client: "C",
+      jobRef: "J",
+      date: "2026-01-01",
+      revision: "0",
+      preparedBy: "E",
+    });
+    expect(dxf).toContain("STRUCTURAL SCHEDULES");
+    for (const s of set.sheets.filter((x) => x.kind !== "plan")) expect(dxf).toContain(`\n${s.number}\n`);
+  });
+
+  it("a long schedule continues in the next column instead of running off the sheet", () => {
+    const p = exampleProject();
+    const rows = Array.from({ length: 400 }, (_, i) => [`X-${i}`, "value"]);
+    const set = planPermitSet(p, designProject(p), [{ title: "Long", head: ["Mark", "V"], rows }]);
+    expect(set.scheduleNumbers.length).toBeGreaterThanOrEqual(1);
+    const dxf = permitSetDxf(p, designProject(p), [{ title: "Long", head: ["Mark", "V"], rows }], {
+      project: "",
+      address: "",
+      client: "",
+      jobRef: "",
+      date: "",
+      revision: "0",
+      preparedBy: "",
+    });
+    expect(dxf).toContain("Long (CONT.)");
+    expect(dxf).toContain("X-399");
+  });
+});
+
+import { applyOfficeDefaults, applyPreset, newProject, officeDefaultsOf } from "@/engine/project";
+
+describe("office defaults and jurisdiction presets", () => {
+  it("a new project takes the saved setup; a preset replaces the criteria only", () => {
+    const src = { ...sanMiguelProject(), s0Notes: { "WOOD FRAMING NOTES": "1. MY NOTE" } };
+    src.info.preparedBy = "S. Ankiya";
+    const office = {
+      defaults: officeDefaultsOf(src),
+      presets: { Escondido: { cycleId: src.cycleId, criteria: src.criteria } },
+    };
+    const p = applyOfficeDefaults(newProject("Job"), office);
+    expect(p.info.name).toBe("Job");
+    expect(p.info.preparedBy).toBe("S. Ankiya");
+    expect(p.s0Notes).toEqual(src.s0Notes);
+    expect(p.criteria).toEqual(src.criteria);
+    expect(new Set(p.hardware.map((h) => h.id)).size).toBe(p.hardware.length);
+    const q = applyPreset(newProject("Other"), "Escondido", office);
+    expect(q.criteria).toEqual(src.criteria);
+    expect(q.info.jurisdiction).toBe("Escondido");
+    expect(q.s0Notes).toBeUndefined();
+    expect(applyPreset(q, "Nowhere", office)).toBe(q);
+    expect(applyOfficeDefaults(q, { presets: {} })).toBe(q);
+  });
+});
