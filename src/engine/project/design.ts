@@ -16,6 +16,8 @@ import { fromDefault } from "../core/provenance";
 import { soilClass } from "../data/soil";
 import { analyseLateral, type Dir, type LateralResult } from "../lateral/analysis";
 import { rigidDistribution, type RigidStoryResult } from "../lateral/rigid";
+import { semiRigidDistribution } from "../lateral/semiRigid";
+import { resolveWood } from "../design/wood";
 import { driftLimitFactor } from "../loads/seismic";
 import { velocityPressure } from "../loads/wind";
 import {
@@ -36,6 +38,7 @@ import { designConnector, type ConnectorResult } from "../members/connector";
 import { designFooting, type FootingResult } from "../members/footing";
 import { designPost, type PostResult } from "../members/post";
 import { designShearWall, shearWallWeight, type ShearWallDemand, type ShearWallResult } from "../members/shearWall";
+import { designShearPanel, shearPanelWeight, type ShearPanelResult } from "../members/shearPanel";
 import { designTruss, type TrussResult } from "../members/truss";
 import { designWall, type WallResult } from "../members/wall";
 import { designDiaphragm, type DiaphragmDemand, type DiaphragmResult } from "../members/diaphragm";
@@ -44,6 +47,7 @@ import { designMasonryWall, type MasonryWallResult } from "../members/masonryWal
 import { designHoldownFooting, type HoldownFootingResult } from "../members/holdownFooting";
 import { designTieIn, type TieInResult } from "../members/tieIn";
 import { designWoodTruss, type WoodTrussResult } from "../members/woodTruss";
+import { designSteelTruss, type SteelTrussResult } from "../members/steelTruss";
 import { designRetainingWall, type RetainingWallResult } from "../members/retainingWall";
 import { designGuardPost, type GuardPostResult } from "../members/guardPost";
 import { designCfsWall, type CfsWallResult } from "../members/cfsWall";
@@ -57,7 +61,7 @@ import {
 } from "../members/steel";
 import { designTransfer, type TransferDemand, type TransferResult } from "../members/transfer";
 import { designUplift, type UpliftResult } from "../members/uplift";
-import type { DiaphragmSpec, MemberSpec, Project, ShearWallSpec, TransferSpec } from "./schema";
+import type { DiaphragmSpec, MemberSpec, Project, ShearPanelSpec, ShearWallSpec, TransferSpec } from "./schema";
 
 export type AnyResult =
   | JoistResult
@@ -82,9 +86,11 @@ export type AnyResult =
   | HoldownFootingResult
   | TieInResult
   | WoodTrussResult
+  | SteelTrussResult
   | RetainingWallResult
   | GuardPostResult
-  | CfsWallResult;
+  | CfsWallResult
+  | ShearPanelResult;
 
 export interface DesignOutcome {
   spec: MemberSpec;
@@ -240,7 +246,7 @@ function tensionOf(
 /** Wall-line demand on a shear wall: its share of the line force. */
 function shearWallDemand(
   p: Project,
-  s: ShearWallSpec,
+  s: ShearWallSpec | ShearPanelSpec,
   lateral: LateralResult | undefined,
   outcomes: Map<string, DesignOutcome>,
 ): ShearWallDemand {
@@ -250,13 +256,11 @@ function shearWallDemand(
     );
   const lf = lateral.lines.find((x) => x.line.id === s.lineId);
   if (!lf) throw new Error("Wall line not found — assign the shear wall to a wall line");
-  const inLine = p.members.filter((m): m is ShearWallSpec => m.kind === "shearWall" && m.lineId === s.lineId);
-  const weights = inLine.map((m) => shearWallWeight(m));
-  const total = weights.reduce((a, b) => a + b, 0);
-  const share = total > 0 ? shearWallWeight(s) / total : 0;
+  const total = p.members.reduce((a, m) => a + (isLineMember(m) && m.lineId === s.lineId ? lineWeight(p, m) : 0), 0);
+  const share = total > 0 ? lineWeight(p, s) / total : 0;
   const story = p.lateral.stories.find((x) => x.id === lf.line.storyId)!;
   let stacked: ShearWallDemand["stacked"];
-  if (s.upliftFrom) {
+  if (s.kind === "shearWall" && s.upliftFrom) {
     const up = outcomes.get(s.upliftFrom)?.result;
     if (!up || up.kind !== "shearWall") throw new Error("Stacked wall above has an error or is not a shear wall");
     stacked = { mark: up.mark, Ts: up.Tmax.seismic, Tw: up.Tmax.wind, Tu: up.hdAnchor?.Tu ?? 0 };
@@ -279,6 +283,18 @@ function shearWallDemand(
   };
 }
 
+const isLineMember = (m: MemberSpec): m is ShearWallSpec | ShearPanelSpec =>
+  m.kind === "shearWall" || m.kind === "shearPanel";
+
+/** Capacity weight of a shear wall or panel for sharing its wall line. */
+const lineWeight = (p: Project, m: ShearWallSpec | ShearPanelSpec) =>
+  m.kind === "shearWall"
+    ? shearWallWeight(m)
+    : shearPanelWeight(
+        m,
+        p.hardware.find((h) => h.id === m.panelId),
+      );
+
 /** Gravity on top of a shear wall: entered plus linked loads (line w; point P spread over the wall). */
 function shearWallTop(s: ShearWallSpec, linked: ExtraLoad[]) {
   const top = { ...s.top };
@@ -289,6 +305,8 @@ function shearWallTop(s: ShearWallSpec, linked: ExtraLoad[]) {
   return top;
 }
 
+const DRIFT_KINDS = new Set<string>(["joist", "ijoist", "beam", "steelBeam", "wall"]);
+
 function designOne(
   p: Project,
   ctx: DesignContext,
@@ -297,6 +315,8 @@ function designOne(
   outcomes: Map<string, DesignOutcome>,
   lateral: LateralResult | undefined,
 ): AnyResult {
+  if ("extra" in m && m.extra.some((e) => e.kind === "drift") && !DRIFT_KINDS.has(m.kind))
+    throw new Error(`${m.mark}: snow drift loads apply to joists, I-joists, beams, steel beams and walls only`);
   switch (m.kind) {
     case "joist":
       return designJoist(ctx, { ...m, extra: [...m.extra, ...linked] });
@@ -350,6 +370,8 @@ function designOne(
       });
     case "shearWall":
       return designShearWall(ctx, { ...m, top: shearWallTop(m, linked) }, shearWallDemand(p, m, lateral, outcomes));
+    case "shearPanel":
+      return designShearPanel(ctx, m, shearWallDemand(p, m, lateral, outcomes));
     case "steelBeam":
       return designSteelBeam(ctx, { ...m, extra: [...m.extra, ...linked] });
     case "steelColumn":
@@ -431,6 +453,8 @@ function designOne(
     }
     case "woodTruss":
       return designWoodTruss(ctx, m);
+    case "steelTruss":
+      return designSteelTruss(ctx, m);
     case "retainingWall": {
       const sc = p.criteria.soil.class ? soilClass(p.criteria.soil.class) : undefined;
       return designRetainingWall(ctx, {
@@ -471,7 +495,22 @@ const planOf = (p: Project, dir: Dir) => {
 };
 
 /** Effective length of a shear wall for line sharing and collectors (FTAO: the piers). */
-const wallLength = (w: ShearWallSpec) => (w.opening ? w.opening.L1 + w.opening.L2 : w.b);
+const wallLength = (w: ShearWallSpec) =>
+  w.opening ? w.opening.L1 + w.opening.L2 : w.perforated ? w.perforated.segments.reduce((a, L) => a + L, 0) : w.b;
+
+/** Plan length of a panel mark (panel width × count), ft. */
+const panelLength = (p: Project, w: ShearPanelSpec) =>
+  ((p.hardware.find((h) => h.id === w.panelId)?.panel?.width ?? 0) / 12) * w.count;
+
+/** Full-height segments of a perforated wall with their start positions along the line. */
+function perforatedSegments(w: ShearWallSpec): Array<{ mark: string; L: number; x?: number }> {
+  let at = w.x;
+  return w.perforated!.segments.map((L, i) => {
+    const seg = { mark: `${w.mark} segment ${i + 1}`, L, x: at };
+    if (at !== undefined) at += L + (w.perforated!.openings[i]?.width ?? 0);
+    return seg;
+  });
+}
 
 function diaphragmDemand(p: Project, d: DiaphragmSpec, lateral: LateralResult | undefined): DiaphragmDemand {
   if (!p.lateral?.enabled || !lateral)
@@ -498,19 +537,23 @@ function diaphragmDemand(p: Project, d: DiaphragmSpec, lateral: LateralResult | 
       name: l.name,
       pos: l.pos!,
       walls: p.members
-        .filter((m): m is ShearWallSpec => m.kind === "shearWall" && m.lineId === l.id)
+        .filter((m): m is ShearWallSpec | ShearPanelSpec => isLineMember(m) && m.lineId === l.id)
         .flatMap((w) =>
-          // FTAO wall: its two full-height piers (the opening is spanned by the strap / header)
-          w.opening
-            ? [
-                { mark: `${w.mark} pier 1`, L: w.opening.L1, x: w.x },
-                {
-                  mark: `${w.mark} pier 2`,
-                  L: w.opening.L2,
-                  x: w.x === undefined ? undefined : w.x + w.opening.L1 + w.opening.Lo,
-                },
-              ]
-            : [{ mark: w.mark, L: wallLength(w), x: w.x }],
+          w.kind === "shearPanel"
+            ? [{ mark: w.mark, L: panelLength(p, w), x: w.x }]
+            : // FTAO wall: its two full-height piers (the opening is spanned by the strap / header)
+              w.opening
+              ? [
+                  { mark: `${w.mark} pier 1`, L: w.opening.L1, x: w.x },
+                  {
+                    mark: `${w.mark} pier 2`,
+                    L: w.opening.L2,
+                    x: w.x === undefined ? undefined : w.x + w.opening.L1 + w.opening.Lo,
+                  },
+                ]
+              : w.perforated
+                ? perforatedSegments(w)
+                : [{ mark: w.mark, L: wallLength(w), x: w.x }],
         ),
     })),
     Omega0: lateral.system.Omega0,
@@ -566,6 +609,15 @@ function markExisting(m: MemberSpec, r: AnyResult) {
       !m.fieldVerified,
     ),
   );
+  if (m.ungraded)
+    r.assumptions.unshift(
+      fromDefault(
+        "Ungraded existing lumber",
+        `No legible grade stamp: design values of the species and grade in ${r.callout} assumed — confirm by a grade stamp or grading by an approved agency`,
+        "engineer's assumption",
+        true,
+      ),
+    );
   r.flags.unshift(
     `${what.toUpperCase()} — re-checked for the new loads. ${m.fieldVerified ? "Properties verified in the field." : "Field verify size, grade, condition and bearing; notify the engineer of any difference."}`,
   );
@@ -602,6 +654,7 @@ export function designProject(p: Project): ProjectDesign {
           V: p.criteria.wind.V,
           exposure: p.criteria.wind.exposure,
           Kzt: p.criteria.wind.Kzt,
+          siteClass: p.criteria.seismic.siteClass,
         },
         p.assemblies,
       );
@@ -658,11 +711,12 @@ function applyRigid(p: Project, lateral: LateralResult, outcomes: Map<string, De
   const k = new Map<string, number>();
   for (const o of outcomes.values()) {
     const r = o.result;
-    if (r?.kind !== "shearWall" || !(r.drift.dxe > 0)) continue;
-    const id = (o.spec as ShearWallSpec).lineId;
+    if ((r?.kind !== "shearWall" && r?.kind !== "shearPanel") || !(r.drift.dxe > 0)) continue;
+    const id = (o.spec as ShearWallSpec | ShearPanelSpec).lineId;
     k.set(id, (k.get(id) ?? 0) + r.demand.QE / r.drift.dxe);
   }
   const results: Array<RigidStoryResult & { storyId: string; storyName: string; kind: "seismic" | "wind" }> = [];
+  const semi: NonNullable<LateralResult["semiRigid"]> = [];
   let applied = false;
   for (const sf of lateral.stories) {
     const ls = lat.lines.filter((l) => l.storyId === sf.storyId);
@@ -678,6 +732,16 @@ function applyRigid(p: Project, lateral: LateralResult, outcomes: Map<string, De
     const per = new Map<string, { E: number; W: number; dE: number; tE: number; dW: number; tW: number }>();
     for (const dir of ["X", "Y"] as Dir[]) {
       if (!rl.some((l) => l.dir === dir)) continue;
+      if (lat.distribution === "semirigid") {
+        const sr = semiRigidStory(p, lat, sf, dir, rl, cm);
+        if (typeof sr === "string") {
+          if (!lateral.warnings.includes(sr)) lateral.warnings.push(sr);
+          continue;
+        }
+        semi.push(...sr.results);
+        for (const [id, v] of sr.per) per.set(id, v);
+        continue;
+      }
       const rs = rigidDistribution(rl, sf.VE, dir, cm, plan, true);
       const rw = rigidDistribution(rl, sf.VW[dir], dir, { x: lat.Lx / 2, y: lat.Ly / 2 }, plan, false);
       results.push({ ...rs, storyId: sf.storyId, storyName: sf.name, kind: "seismic" });
@@ -711,7 +775,59 @@ function applyRigid(p: Project, lateral: LateralResult, outcomes: Map<string, De
     }
   }
   lateral.rigid = results;
+  lateral.semiRigid = semi;
   return applied;
+}
+
+/**
+ * Semi-rigid line forces of one story and direction: diaphragm EI from the designed RD / FD chord,
+ * GA from the story's G_a. Returns a warning when the data are missing.
+ */
+function semiRigidStory(
+  p: Project,
+  lat: NonNullable<Project["lateral"]>,
+  sf: LateralResult["stories"][number],
+  dir: Dir,
+  rl: Array<{ id: string; dir: Dir; pos: number; k: number }>,
+  cm: { x: number; y: number },
+):
+  | string
+  | {
+      results: NonNullable<LateralResult["semiRigid"]>;
+      per: Map<string, { E: number; W: number; dE: number; tE: number; dW: number; tW: number }>;
+    } {
+  const story = lat.stories.find((x) => x.id === sf.storyId);
+  const d = p.members.find(
+    (m): m is DiaphragmSpec => m.kind === "diaphragm" && m.storyId === sf.storyId && m.dir === dir,
+  );
+  if (!story?.diaphragmGa || !d)
+    return `${sf.name}, ${dir}: semi-rigid analysis needs the diaphragm G_a on the story and an RD / FD diaphragm member — flexible distribution used`;
+  const chord = resolveWood(
+    { kind: "sawn", species: d.chord.species, grade: d.chord.grade, size: d.chord.size, plies: 1 },
+    getCycle(p.cycleId).nds,
+  );
+  const span = dir === "X" ? lat.Ly : lat.Lx;
+  const W = (dir === "X" ? lat.Lx : lat.Ly) * 12;
+  const A = chord.bPly * chord.d;
+  const EI = (chord.E * A * W * W) / 2;
+  const GA = 1000 * story.diaphragmGa * W;
+  const lines = rl.filter((l) => l.dir === dir).map((l) => ({ id: l.id, pos: l.pos, k: l.k }));
+  const e = (dir === "X" ? cm.y : cm.x) - span / 2;
+  const rs = semiRigidDistribution(lines, sf.VE, span, EI, GA, e, 0.05 * span);
+  const rw = semiRigidDistribution(lines, sf.VW[dir], span, EI, GA, 0, 0);
+  const per = new Map<string, { E: number; W: number; dE: number; tE: number; dW: number; tW: number }>();
+  for (const l of rs.lines) {
+    const w = rw.lines.find((x) => x.id === l.id)!;
+    per.set(l.id, { E: l.total, dE: l.direct, tE: l.total - l.direct, W: w.total, dW: w.total, tW: 0 });
+  }
+  const base = { storyId: sf.storyId, storyName: sf.name, dir, chordE: chord.E, chordA: A, Ga: story.diaphragmGa };
+  return {
+    results: [
+      { ...rs, ...base, kind: "seismic" },
+      { ...rw, ...base, kind: "wind" },
+    ],
+    per,
+  };
 }
 
 /** Members that take load from the given member (for the load-path view). */

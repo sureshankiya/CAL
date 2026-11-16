@@ -10,8 +10,10 @@ import {
   LateralPanel,
   LevelsPanel,
   MembersPanel,
+  OfficePanel,
   ProjectInfoPanel,
 } from "@/components/editors/ProjectPanels";
+import { DetailsPanel } from "@/components/editors/DetailsPanel";
 import { DrawingsPanel } from "@/components/drawings/DrawingsPanel";
 import { MarkdownExportDialog, MarkdownImportDialog } from "@/components/editors/MarkdownDialog";
 import { prepareDownloads, saveFile, saveMessage } from "@/lib/download";
@@ -19,6 +21,7 @@ import { reportHtml } from "@/lib/reportHtml";
 import { reportFileName } from "@/lib/exportLayout";
 import { getCycle } from "@/engine/core/codes";
 import {
+  applyOfficeDefaults,
   designProject,
   duplicateMember,
   exampleProject,
@@ -27,6 +30,7 @@ import {
   deckExampleProject,
   fileNameFor,
   loadLocal,
+  loadOffice,
   newMemberSpec,
   newProject,
   parseProject,
@@ -148,6 +152,68 @@ function Index() {
     );
   }
 
+  async function exportDxf() {
+    if (printBlocked() || exporting) return;
+    const name = reportFileName(deferred, "html").replace(/\.html$/, "-schedules.dxf");
+    try {
+      const text = await (await import("@/lib/dxf")).scheduleDxf(deferred, design, entries);
+      setMessage(saveMessage(name, await saveFile(name, text, "application/dxf")));
+    } catch (e) {
+      setMessage({ tone: "error", text: `Could not export ${name}: ${e instanceof Error ? e.message : String(e)}` });
+    }
+  }
+
+  /** one of the drawing-set DXFs; all three share the set's sheet numbers, drawing index and detail references */
+  async function exportSet(what: "set" | "notes" | "details") {
+    if (printBlocked() || exporting) return;
+    const base = reportFileName(deferred, "html").replace(/-calculations\.html$|\.html$/, "");
+    let name = `${base}-permit-set.dxf`;
+    try {
+      const dxf = await import("@/lib/dxf");
+      const i = deferred.info;
+      const info = {
+        project: i.name,
+        address: i.address,
+        client: i.client,
+        jobRef: i.jobRef,
+        date: i.date,
+        revision: i.revision,
+        preparedBy: i.preparedBy,
+      };
+      const tables = await dxf.scheduleTables(deferred, design, entries);
+      const set = dxf.planPermitSet(deferred, design, tables);
+      const file = (no: string) => no.replace(/[^\w.-]+/g, "");
+      let text: string;
+      if (what === "notes") {
+        name = `${base}-${file(set.notes.sheetNo)}-general-notes.dxf`;
+        text = dxf.generalNotesDxf(set.notes, info);
+      } else if (what === "details") {
+        if (!set.details.length)
+          return setMessage({ tone: "info", text: "No details selected (see the Details sheets panel)." });
+        name = `${base}-${file(set.detailNumbers[0])}-details.dxf`;
+        text = dxf.detailsDxf(
+          set.details.flatMap((sh) => sh.items.map((x) => x.d)),
+          info,
+          set.detailNumbers[0],
+        );
+      } else text = dxf.permitSetDxf(deferred, design, tables, info);
+      const saved = saveMessage(name, await saveFile(name, text, "application/dxf"));
+      setMessage(
+        what === "set"
+          ? {
+              ...saved,
+              text: `${saved.text} Sheets: ${set.sheets
+                .filter((x) => x.kind !== "plan")
+                .map((x) => x.number)
+                .join(", ")}.`,
+            }
+          : saved,
+      );
+    } catch (e) {
+      setMessage({ tone: "error", text: `Could not export ${name}: ${e instanceof Error ? e.message : String(e)}` });
+    }
+  }
+
   async function exportReport(kind: "pdf" | "docx") {
     if (printBlocked() || exporting) return;
     const name = reportFileName(deferred, kind);
@@ -202,11 +268,15 @@ function Index() {
               type="button"
               className={btn}
               onClick={() => {
-                const p = newProject();
+                const office = loadOffice();
+                const p = applyOfficeDefaults(newProject(), office);
                 setProject(p);
                 setActiveId(undefined);
                 setSheetKey("cover");
-                setMessage({ tone: "info", text: "New project started." });
+                setMessage({
+                  tone: "info",
+                  text: office.defaults ? "New project started from your office defaults." : "New project started.",
+                });
               }}
             >
               New
@@ -325,6 +395,38 @@ function Index() {
             >
               Export HTML
             </button>
+            <button
+              type="button"
+              className={btn}
+              title="Schedules and general notes as an AutoCAD DXF (text and table grid) to place on the drawings"
+              onClick={exportDxf}
+            >
+              Export DXF
+            </button>
+            <button
+              type="button"
+              className={btn}
+              title="The drawing set in one DXF: S0 general notes, details sheets and schedule sheets, numbered on from the plan sheets in the drawing index; the index and the detail references in the schedules are filled in"
+              onClick={() => void exportSet("set")}
+            >
+              Export permit set (DXF)
+            </button>
+            <button
+              type="button"
+              className={btn}
+              title="S0.0 general notes drawing sheet (ARCH D, 36 x 24): drawing index, codes, design criteria, notes, nailing, hardware and special inspections"
+              onClick={() => void exportSet("notes")}
+            >
+              Export S0 general notes sheet
+            </button>
+            <button
+              type="button"
+              className={btn}
+              title="Details sheets (ARCH D): the details ticked in the Details sheets panel, calculated and general typicals, grouped by sheet"
+              onClick={() => void exportSet("details")}
+            >
+              Export details sheets
+            </button>
             <button type="button" onClick={handlePrint} className={primary}>
               Print / Save PDF
             </button>
@@ -364,11 +466,13 @@ function Index() {
       <div className="mx-auto grid max-w-[1500px] gap-6 px-6 py-8 lg:grid-cols-[380px_1fr] print:block print:max-w-none print:p-0">
         <aside className="no-print space-y-5">
           <ProjectInfoPanel p={project} set={set} />
+          <OfficePanel p={project} set={set} />
           <CriteriaPanel p={project} set={set} />
           <AssembliesPanel p={project} set={set} />
           <LevelsPanel p={project} set={set} />
           <LateralPanel p={project} set={set} />
           <HardwarePanel p={project} set={set} />
+          <DetailsPanel p={deferred} set={set} design={design} />
           <MembersPanel
             p={project}
             design={design}

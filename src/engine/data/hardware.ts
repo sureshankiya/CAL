@@ -11,7 +11,7 @@
  * be entered by the engineer before the connector can be checked.
  */
 
-export type HardwareKind = "holdown" | "tie" | "hanger" | "post-cap" | "post-base" | "strap" | "angle";
+export type HardwareKind = "holdown" | "tie" | "hanger" | "post-cap" | "post-base" | "strap" | "angle" | "panel";
 
 export const HARDWARE_KIND_LABEL: Record<HardwareKind, string> = {
   holdown: "Hold-down",
@@ -21,6 +21,7 @@ export const HARDWARE_KIND_LABEL: Record<HardwareKind, string> = {
   "post-base": "Post base",
   strap: "Strap tie",
   angle: "Framing angle / clip",
+  panel: "Prefabricated shear panel / portal frame",
 };
 
 export interface HardwareItem {
@@ -46,6 +47,17 @@ export interface HardwareItem {
   anchorDia?: number;
   /** minimum post / end-member thickness (hold-downs), in */
   minPost?: number;
+  /** prefabricated shear panel / portal frame: size (in), allowable in-plane shears (ASD, lb),
+   *  drift at the allowable seismic shear (in), allowable anchor tension (lb) */
+  panel?: {
+    type: "prefab" | "portal";
+    width: number;
+    height: number;
+    Vs: number;
+    Vw: number;
+    drift?: number;
+    anchorT?: number;
+  };
   checked: boolean;
   source: string;
 }

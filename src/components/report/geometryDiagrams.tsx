@@ -298,7 +298,7 @@ export function StudWallElevation({
   stud: string;
   topPlates: number;
   bottomPlates: number;
-  openings: Array<{ label: string; x1: number; x2: number }>;
+  openings: Array<{ label: string; x1: number; x2: number; head?: number; sill?: number; type?: "door" | "window" }>;
   packs: Array<{ x: number; studs: number; label?: string }>;
   sheathing: "both" | "one" | "none";
 }) {
@@ -362,30 +362,20 @@ export function StudWallElevation({
           const a = X(o.x1);
           const b = X(Math.min(o.x2, shownL));
           const hdr = 11.25 * sc;
+          // header bottom at the head height when given; window sill plate, door to the floor
+          const hb = o.head !== undefined ? Math.max(Y(o.head * 12), studTop + hdr) : studTop + hdr;
+          const ob = o.type === "window" && o.sill !== undefined ? Y(o.sill * 12) : studBot;
           return (
             <g key={`o${i}`}>
-              <rect x={a} y={studTop} width={b - a} height={hdr} fill="#fff" stroke={INK} strokeWidth={LW.object} />
-              <line x1={a} y1={studTop} x2={b} y2={studTop + hdr} stroke={INK} strokeWidth={LW.hatch} />
-              <line x1={b} y1={studTop} x2={a} y2={studTop + hdr} stroke={INK} strokeWidth={LW.hatch} />
-              <line
-                x1={a}
-                y1={studTop + hdr}
-                x2={b}
-                y2={studBot}
-                stroke={INK}
-                strokeWidth={LW.hatch}
-                strokeDasharray="4 2"
-              />
-              <line
-                x1={b}
-                y1={studTop + hdr}
-                x2={a}
-                y2={studBot}
-                stroke={INK}
-                strokeWidth={LW.hatch}
-                strokeDasharray="4 2"
-              />
-              <text x={(a + b) / 2} y={studTop + hdr + 10} textAnchor="middle" style={TS}>
+              <rect x={a} y={hb - hdr} width={b - a} height={hdr} fill="#fff" stroke={INK} strokeWidth={LW.object} />
+              <line x1={a} y1={hb - hdr} x2={b} y2={hb} stroke={INK} strokeWidth={LW.hatch} />
+              <line x1={b} y1={hb - hdr} x2={a} y2={hb} stroke={INK} strokeWidth={LW.hatch} />
+              <line x1={a} y1={hb} x2={b} y2={ob} stroke={INK} strokeWidth={LW.hatch} strokeDasharray="4 2" />
+              <line x1={b} y1={hb} x2={a} y2={ob} stroke={INK} strokeWidth={LW.hatch} strokeDasharray="4 2" />
+              {ob < studBot ? (
+                <rect x={a} y={ob} width={b - a} height={1.5 * sc} fill="#fff" stroke={INK} strokeWidth={LW.object} />
+              ) : null}
+              <text x={(a + b) / 2} y={hb + 10} textAnchor="middle" style={TS}>
                 {o.label}
               </text>
             </g>

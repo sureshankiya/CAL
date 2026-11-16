@@ -30,6 +30,7 @@ import {
   type VerticalDistribution,
 } from "../loads/seismic";
 import {
+  directionalBandForce,
   endZoneA,
   mwfrsBandForce,
   velocityPressure,
@@ -60,6 +61,8 @@ export interface Story {
   name: string;
   /** story height, floor to the diaphragm above, ft */
   height: number;
+  /** apparent shear stiffness of the diaphragm above, kips/in (SDPWS Table 4.2A) — semi-rigid analysis */
+  diaphragmGa?: number;
   /** diaphragm weight items at the top of this story */
   items: WeightItem[];
 }
@@ -75,7 +78,7 @@ export interface WallLine {
   pos?: number;
 }
 
-export type Distribution = "flexible" | "rigid" | "envelope";
+export type Distribution = "flexible" | "rigid" | "envelope" | "semirigid";
 
 export interface LateralInput {
   enabled: boolean;
@@ -100,6 +103,10 @@ export interface LateralInput {
   distribution?: Distribution;
   /** centre of mass, ft (default: plan centre) */
   com?: { x: number; y: number };
+  /** MWFRS procedure: Ch. 28 Part 1 envelope (default) or Ch. 27 Part 1 directional */
+  windMethod?: "envelope" | "directional";
+  /** seismic procedure: §12.8 ELF (default) or the §12.14 simplified alternative */
+  seismicMethod?: "elf" | "simplified";
 }
 
 export interface Site {
@@ -110,6 +117,7 @@ export interface Site {
   V: number;
   exposure: Exposure;
   Kzt: number;
+  siteClass?: string;
 }
 
 export interface StoryForces {
@@ -174,6 +182,22 @@ export interface LateralResult {
   /** rigid-diaphragm distribution per story and direction, when applied */
   rigid?: Array<import("./rigid").RigidStoryResult & { storyId: string; storyName: string; kind: "seismic" | "wind" }>;
   distribution: Distribution;
+  windMethod: "envelope" | "directional";
+  /** seismic procedure: §12.8 ELF or §12.14 simplified alternative (F factor) */
+  seismicMethod: "elf" | "simplified";
+  F12_14?: number;
+  /** semi-rigid diaphragm distribution per story and direction, when applied */
+  semiRigid?: Array<
+    import("./semiRigid").SemiRigidResult & {
+      storyId: string;
+      storyName: string;
+      dir: Dir;
+      kind: "seismic" | "wind";
+      chordE: number;
+      chordA: number;
+      Ga: number;
+    }
+  >;
 }
 
 /**
@@ -242,17 +266,51 @@ export function analyseLateral(inp: LateralInput, site: Site, assemblies: DeadAs
     const items = s.items.map((it) => ({ ...it, ...itemWeight(it, assemblies, cos) }));
     return { storyId: s.id, items, W: items.reduce((x, y) => x + y.W, 0) };
   });
-  const cs = seismicCoefficient({ SDS: site.SDS, SD1: site.SD1, S1: inp.S1, R: system.R, Ie, hn, TL: inp.TL });
-  const dist = verticalDistribution(
+  const n = inp.stories.length;
+  const simplified = inp.seismicMethod === "simplified";
+  let cs = seismicCoefficient({ SDS: site.SDS, SD1: site.SD1, S1: inp.S1, R: system.R, Ie, hn, TL: inp.TL });
+  let dist = verticalDistribution(
     inp.stories.map((s, i) => ({ id: s.id, w: weights[i].W, h: hx[i] })),
     cs.Cs,
     cs.T,
   );
+  let F12_14: number | undefined;
+  if (simplified) {
+    // §12.14.1.1 limits checked here; the remaining ones (system, irregularities, rigid-diaphragm
+    // structures) are the engineer's to confirm and are listed on the sheet
+    if (n > 3) throw new Error("ASCE 7 §12.14: the simplified procedure is limited to 3 stories");
+    if (site.riskCategory === "III" || site.riskCategory === "IV")
+      throw new Error("ASCE 7 §12.14: the simplified procedure is limited to Risk Category I and II");
+    if (site.siteClass && /^[EF]$/i.test(site.siteClass.trim()))
+      throw new Error("ASCE 7 §12.14: the simplified procedure does not apply to Site Class E or F");
+    F12_14 = [1.0, 1.1, 1.2][n - 1];
+    const Cs = (F12_14 * site.SDS) / system.R;
+    cs = { ...cs, Cs, governs: "12.14-11" };
+    // Eq. 12.14-12: F_x = w_x / W × V (uniform distribution, k = 0)
+    dist = verticalDistribution(
+      inp.stories.map((s, i) => ({ id: s.id, w: weights[i].W, h: 1 })),
+      Cs,
+      cs.T,
+    );
+    dist = {
+      ...dist,
+      k: 0,
+      rows: dist.rows.map((r, i) => ({ ...r, h: hx[inp.stories.findIndex((s) => s.id === r.id)] ?? r.h, whk: r.w })),
+    };
+  }
+  const rho = simplified ? 1 : inp.rho;
 
   // wind
-  const vp = velocityPressure(cycle.asce7, site.V, h, site.exposure, site.Kzt, inp.Ke, true);
+  const vp = velocityPressure(
+    cycle.asce7,
+    site.V,
+    h,
+    site.exposure,
+    site.Kzt,
+    inp.Ke,
+    inp.windMethod !== "directional",
+  );
   const a = endZoneA(Math.min(inp.Lx, inp.Ly), h);
-  const n = inp.stories.length;
   const windAt = (i: number, dir: Dir) => {
     const width = dir === "X" ? inp.Ly : inp.Lx;
     const transverse = dir !== inp.ridge; // force along the direction normal to the ridge
@@ -260,7 +318,14 @@ export function analyseLateral(inp: LateralInput, site: Site, assemblies: DeadAs
     const above = i < n - 1 ? inp.stories[i + 1].height / 2 : 0;
     const wallHeight = upper + above;
     const roofHeight = i === n - 1 ? (transverse ? inp.roofRise : inp.roofRise / 2) : 0;
-    const f = mwfrsBandForce(vp.qEff, { width, wallHeight, roofHeight }, thetaDeg, transverse, a);
+    const band = { width, wallHeight, roofHeight };
+    let f: WindForce;
+    if (inp.windMethod === "directional") {
+      // windward wall pressure at the top of the band (conservative within the band), z ≤ h
+      const z = i === n - 1 ? h : Math.min(hx[i] + above, h);
+      const qz = velocityPressure(cycle.asce7, site.V, z, site.exposure, site.Kzt, inp.Ke, false).qEff;
+      f = directionalBandForce(qz, vp.qEff, z, band, thetaDeg, transverse, dir === "X" ? inp.Lx : inp.Ly, h);
+    } else f = mwfrsBandForce(vp.qEff, band, thetaDeg, transverse, a);
     return { ...f, F: Math.max(f.F, f.Fmin), wallHeight, roofHeight, width };
   };
 
@@ -317,7 +382,7 @@ export function analyseLateral(inp: LateralInput, site: Site, assemblies: DeadAs
       const sf = stories.find((x) => x.storyId === s.id)!;
       ls.forEach((l, k) => {
         const share = sumTrib > 0 ? tribs[k].trib / sumTrib : 0;
-        const Eh = inp.rho * sf.VE * share;
+        const Eh = rho * sf.VE * share;
         const W = sf.VW[dir] * share;
         lines.push({
           line: l,
@@ -350,7 +415,10 @@ export function analyseLateral(inp: LateralInput, site: Site, assemblies: DeadAs
     stories,
     lines,
     warnings,
-    rho: inp.rho,
+    rho,
+    seismicMethod: simplified ? "simplified" : "elf",
+    F12_14,
     distribution: inp.distribution ?? "flexible",
+    windMethod: inp.windMethod ?? "envelope",
   };
 }

@@ -3,13 +3,17 @@
  * procedure (MWFRS, low-rise buildings) and Ch. 30 Part 1 wall components and
  * cladding (h ≤ 60 ft).
  *
- *  - Kz = 2.01 (z / zg)^(2/α), z ≥ 15 ft (Table 26.10-1 note); Exposure B, Ch. 28,
+ *  - Kz = 2.01 (z / zg)^(2/α) (7-16) or 2.41 (z / zg)^(2/α) (7-22), z ≥ 15 ft; Exposure B, Ch. 28,
  *    z < 30 ft: Kz = 0.70 (Table 26.10-1 note a)
  *  - ASCE 7-16: qz = 0.00256 Kz Kzt Kd Ke V²     (Eq. 26.10-1)
  *    ASCE 7-22: qz = 0.00256 Kz Kzt Ke V², p uses qh Kd (Eq. 26.10-1, 28.3-1)
  *  - MWFRS: p = qh [(GCpf) − (GCpi)] (Eq. 28.3-1); horizontal force from windward minus
  *    leeward surfaces (GCpi cancels), Fig. 28.3-1 Load Cases A and B; minimum 16 psf
  *    on walls and 8 psf on the roof vertical projection (§28.3.4)
+ *  - MWFRS, Ch. 27 Part 1 directional procedure (option): p = q G Cp − qi (GCpi) (Eq. 27.3-1), G = 0.85
+ *    (rigid, §26.11.1); windward wall Cp = 0.8 at qz, leeward wall Cp by L/B at qh, roof Cp
+ *    (Fig. 27.3-1, wind normal to the ridge, θ ≥ 10°) windward — larger value — and leeward at qh;
+ *    horizontal force = windward minus leeward (GCpi cancels); §27.1.5 minimum 16 / 8 psf
  *  - C&C walls: p = qh [(GCp) − (GCpi)], Fig. 30.3-1 zones 4 / 5, GCpi = ±0.18
  * Strength-level pressures (ASD combinations use 0.6W).
  */
@@ -18,19 +22,20 @@ import type { Asce7Edition } from "./snow";
 
 export type Exposure = "B" | "C" | "D";
 
-const EXPOSURE_CONST: Record<Exposure, { alpha: number; zg: number }> = {
-  B: { alpha: 7.0, zg: 1200 },
-  C: { alpha: 9.5, zg: 900 },
-  D: { alpha: 11.5, zg: 700 },
+/** ASCE 7-16 Table 26.11-1 with Kz = 2.01 (z / zg)^(2/α); ASCE 7-22 Table 26.11-1 with Kz = 2.41 (z / zg)^(2/α). */
+const EXPOSURE_CONST: Record<Asce7Edition, { c: number } & Record<Exposure, { alpha: number; zg: number }>> = {
+  "ASCE 7-16": { c: 2.01, B: { alpha: 7.0, zg: 1200 }, C: { alpha: 9.5, zg: 900 }, D: { alpha: 11.5, zg: 700 } },
+  "ASCE 7-22": { c: 2.41, B: { alpha: 7.5, zg: 3280 }, C: { alpha: 9.8, zg: 2460 }, D: { alpha: 11.5, zg: 1935 } },
 };
 
 export const KD_BUILDING = 0.85;
 
-/** Velocity pressure exposure coefficient. */
-export function Kz(z: number, exposure: Exposure, mwfrsCh28 = false): number {
-  const { alpha, zg } = EXPOSURE_CONST[exposure];
+/** Velocity pressure exposure coefficient (Table 26.10-1 note: z < 15 ft taken as 15 ft). */
+export function Kz(z: number, exposure: Exposure, mwfrsCh28 = false, edition: Asce7Edition = "ASCE 7-16"): number {
+  const t = EXPOSURE_CONST[edition];
+  const { alpha, zg } = t[exposure];
   const zz = Math.max(z, 15);
-  const k = 2.01 * Math.pow(zz / zg, 2 / alpha);
+  const k = t.c * Math.pow(zz / zg, 2 / alpha);
   if (mwfrsCh28 && exposure === "B" && z < 30) return Math.max(k, 0.7);
   return k;
 }
@@ -58,7 +63,7 @@ export function velocityPressure(
   Ke: number,
   mwfrsCh28: boolean,
 ): VelocityPressure {
-  const kz = Kz(z, exposure, mwfrsCh28);
+  const kz = Kz(z, exposure, mwfrsCh28, edition);
   const Kd = KD_BUILDING;
   if (edition === "ASCE 7-16") {
     const q = 0.00256 * kz * Kzt * Kd * Ke * V * V;
@@ -84,7 +89,7 @@ export function velocityPressure(
     Ke,
     q,
     qEff: q * Kd,
-    expr: `qh = 0.00256 Kh Kzt Ke V² = 0.00256 × ${kz.toFixed(3)} × ${Kzt.toFixed(2)} × ${Ke.toFixed(2)} × ${V.toFixed(0)}²; pressures use qh Kd (Kd = ${Kd.toFixed(2)})`,
+    expr: `qh = 0.00256 Kh Kzt Ke V² = 0.00256 × ${kz.toFixed(3)} × ${Kzt.toFixed(2)} × ${Ke.toFixed(2)} × ${V.toFixed(0)}²`,
   };
 }
 
@@ -155,9 +160,117 @@ export interface WindForce {
   a: number;
   /** horizontal force, lb (strength level) */
   F: number;
-  /** §28.3.4 minimum force, lb */
+  /** §28.3.4 (Ch. 28) / §27.1.5 (Ch. 27) minimum force, lb */
   Fmin: number;
   governs: "envelope" | "minimum";
+  /** Ch. 27 directional procedure: coefficients and pressures used */
+  directional?: {
+    G: number;
+    qz: number;
+    qh: number;
+    z: number;
+    LB: number;
+    hL: number;
+    CpWall: { ww: number; lw: number };
+    CpRoof?: { ww: number; lw: number };
+    /** net horizontal pressures, psf: walls (qz G 0.8 − qh G Cp_lw), roof projection */
+    pWall: number;
+    pRoof: number;
+  };
+}
+
+/** Fig. 27.3-1 leeward wall Cp by L/B (0–1: −0.5, 2: −0.3, ≥ 4: −0.2). */
+export function leewardWallCp(LB: number): number {
+  if (LB <= 1) return -0.5;
+  if (LB <= 2) return -0.5 + 0.2 * (LB - 1);
+  if (LB <= 4) return -0.3 + (0.1 * (LB - 2)) / 2;
+  return -0.2;
+}
+
+// Fig. 27.3-1 roof, wind normal to ridge, θ ≥ 10°: windward (larger of the two values) and leeward Cp,
+// by h/L (≤ 0.25, 0.5, ≥ 1.0); θ = 60° row: 0.01 θ
+const ROOF_THETA = [10, 15, 20, 25, 30, 35, 45, 60];
+const ROOF_WW: Record<string, number[]> = {
+  "0.25": [-0.18, 0.0, 0.2, 0.3, 0.3, 0.4, 0.4, 0.6],
+  "0.5": [-0.18, -0.18, 0.0, 0.2, 0.2, 0.3, 0.4, 0.6],
+  "1": [-0.18, -0.18, -0.18, 0.0, 0.2, 0.2, 0.3, 0.6],
+};
+const ROOF_LW: Record<string, number[]> = {
+  "0.25": [-0.3, -0.5, -0.6, -0.6, -0.6, -0.6, -0.6, -0.6],
+  "0.5": [-0.5, -0.5, -0.6, -0.6, -0.6, -0.6, -0.6, -0.6],
+  "1": [-0.7, -0.6, -0.6, -0.6, -0.6, -0.6, -0.6, -0.6],
+};
+
+const interp = (xs: number[], ys: number[], x: number) => {
+  if (x <= xs[0]) return ys[0];
+  for (let i = 1; i < xs.length; i++)
+    if (x <= xs[i]) return ys[i - 1] + ((ys[i] - ys[i - 1]) * (x - xs[i - 1])) / (xs[i] - xs[i - 1]);
+  return ys[ys.length - 1];
+};
+
+/** Fig. 27.3-1 roof Cp (θ ≥ 10°, wind normal to ridge), linear in θ and h/L. */
+export function roofCp27(thetaDeg: number, hL: number): { ww: number; lw: number } {
+  const t = Math.min(Math.max(thetaDeg, 10), 60);
+  const row = (tab: Record<string, number[]>) => {
+    const at = (k: string) => interp(ROOF_THETA, tab[k], t);
+    return interp([0.25, 0.5, 1], [at("0.25"), at("0.5"), at("1")], hL);
+  };
+  return { ww: row(ROOF_WW), lw: row(ROOF_LW) };
+}
+
+export const G_RIGID = 0.85;
+
+/**
+ * Horizontal MWFRS force on a band by the Ch. 27 directional procedure, strength level.
+ * qzEff / qhEff: pressure multipliers (qz Kd / qh Kd for ASCE 7-22) at the band top and at h.
+ * L = plan dimension parallel to the wind; band.width = B, normal to the wind.
+ */
+export function directionalBandForce(
+  qzEff: number,
+  qhEff: number,
+  z: number,
+  band: WindBand,
+  thetaDeg: number,
+  transverse: boolean,
+  L: number,
+  h: number,
+): WindForce {
+  const G = G_RIGID;
+  const LB = L / band.width;
+  const hL = h / L;
+  const lw = leewardWallCp(LB);
+  const pWall = G * (qzEff * 0.8 - qhEff * lw);
+  const roofCp = transverse && thetaDeg >= 10 ? roofCp27(thetaDeg, hL) : undefined;
+  const pRoof = roofCp ? G * qhEff * (roofCp.ww - roofCp.lw) : 0;
+  // wind parallel to the ridge: the gable-end triangle (band.roofHeight) acts as end wall
+  const wallH = transverse ? band.wallHeight : band.wallHeight + band.roofHeight;
+  const F = pWall * wallH * band.width + (transverse ? pRoof * band.roofHeight * band.width : 0);
+  const Fmin = transverse
+    ? 16 * band.wallHeight * band.width + 8 * band.roofHeight * band.width
+    : 16 * (band.wallHeight + band.roofHeight) * band.width;
+  return {
+    case: transverse ? "A" : "B",
+    wallInt: 0,
+    wallEnd: 0,
+    roofInt: 0,
+    roofEnd: 0,
+    a: 0,
+    F: Math.max(F, 0),
+    Fmin,
+    governs: F >= Fmin ? "envelope" : "minimum",
+    directional: {
+      G,
+      qz: qzEff,
+      qh: qhEff,
+      z,
+      LB,
+      hL,
+      CpWall: { ww: 0.8, lw },
+      CpRoof: roofCp,
+      pWall,
+      pRoof,
+    },
+  };
 }
 
 /**

@@ -1,7 +1,13 @@
 /** Renders the house report (all sheets in order) or a single sheet from the package list. */
 
 import type { Project, ProjectDesign } from "@/engine/project";
-import { HoldownFootingSheet, MasonryWallSheet, TieInSheet, WoodTrussSheet } from "../sheets/Phase4Sheets";
+import {
+  HoldownFootingSheet,
+  MasonryWallSheet,
+  SteelTrussSheet,
+  TieInSheet,
+  WoodTrussSheet,
+} from "../sheets/Phase4Sheets";
 import { CfsWallSheet, GuardPostSheet, RetainingWallSheet } from "../sheets/Phase5Sheets";
 import { metaFor } from "../sheets/common";
 import { IJoistSheet } from "../sheets/IJoistSheet";
@@ -15,7 +21,15 @@ import {
   SummarySheet,
 } from "../sheets/PackageSheets";
 import { WoodMemberSheet } from "../sheets/WoodMemberSheet";
-import { ConnectorSheet, FootingSheet, PostSheet, ShearWallSheet, TrussSheet, WallSheet } from "../sheets/Phase2Sheets";
+import {
+  ConnectorSheet,
+  FootingSheet,
+  PostSheet,
+  ShearWallSheet,
+  ShearPanelSheet,
+  TrussSheet,
+  WallSheet,
+} from "../sheets/Phase2Sheets";
 import { LateralSheet, LoadPathSheet } from "../sheets/LateralSheets";
 import {
   BasePlateSheet,
@@ -176,6 +190,8 @@ function SheetSwitch({
           return <FootingSheet {...common} r={r} />;
         case "shearWall":
           return <ShearWallSheet {...common} r={r} />;
+        case "shearPanel":
+          return <ShearPanelSheet {...common} r={r} />;
         case "steelBeam":
           return <SteelBeamSheet {...common} r={r} />;
         case "steelColumn":
@@ -198,6 +214,8 @@ function SheetSwitch({
           return <TieInSheet {...common} r={r} />;
         case "woodTruss":
           return <WoodTrussSheet {...common} r={r} />;
+        case "steelTruss":
+          return <SteelTrussSheet {...common} r={r} />;
         case "retainingWall":
           return <RetainingWallSheet {...common} r={r} />;
         case "guardPost":

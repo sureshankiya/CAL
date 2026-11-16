@@ -86,7 +86,7 @@ export interface BaseShearResult {
   CsMin: number;
   CsMinS1?: number;
   Cs: number;
-  governs: "12.8-2" | "12.8-3" | "12.8-4" | "12.8-5" | "12.8-6";
+  governs: "12.8-2" | "12.8-3" | "12.8-4" | "12.8-5" | "12.8-6" | "12.14-11";
 }
 
 export function seismicCoefficient(i: BaseShearInput): BaseShearResult {
