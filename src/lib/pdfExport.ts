@@ -28,6 +28,7 @@ import boldItalicUrl from "@/assets/fonts/LiberationSans-BoldItalic.ttf?inline";
 import type { SheetEntry } from "@/components/report/package";
 import type { Project, ProjectDesign } from "@/engine/project";
 import { PAGE, PX_PER_IN, cssColor, layoutPackage, svgToPng } from "./exportLayout";
+import { fromBase64 } from "./attachedPdf";
 
 const PT = 72 / PX_PER_IN; // pt per CSS px
 const PAGE_W = PAGE.w * 72;
@@ -339,11 +340,48 @@ export async function reportPdf(project: Project, design: ProjectDesign, entries
         pag: paginate(sheet),
         left: sheet.dataset.footerLeft ?? "",
         center: sheet.dataset.footerCenter ?? "",
+        // the attached ASCE report: its own pages, one per printed page, under this sheet's title block
+        attached: sheet.querySelector("[data-asce-report]") && project.asceReport ? project.asceReport : undefined,
       };
     });
-    const total = plans.reduce((n, p) => n + p.pag.pages.length, 0);
+    const attachedPages = async (data: string, name: string) => {
+      try {
+        const src = await PDFDocument.load(fromBase64(data), { ignoreEncryption: true });
+        return await pdf.embedPdf(src, src.getPageIndices());
+      } catch (e) {
+        throw new Error(
+          `the attached report ${name} could not be read (${e instanceof Error ? e.message : String(e)})`,
+        );
+      }
+    };
+    const embedded = await Promise.all(
+      plans.map((p) => (p.attached ? attachedPages(p.attached.data, p.attached.fileName) : undefined)),
+    );
+    const total = plans.reduce((n, p, i) => n + (embedded[i]?.length ?? p.pag.pages.length), 0);
     let pageNo = 0;
-    for (const plan of plans) {
+    for (const [i, plan] of plans.entries()) {
+      const att = embedded[i];
+      if (att) {
+        const headH = (plan.pag.head.y1 - plan.pag.head.y0) * PT;
+        const boxW = (PAGE.w - PAGE.left - PAGE.right) * 72;
+        const boxTop = PAGE_H - PAGE.top * 72 - headH - 6;
+        const boxH = boxTop - PAGE.bottom * 72;
+        const images: PDFImage[] = [];
+        for (const svg of plan.imgs) images.push(await pdf.embedPng((await svgToPng(svg)).png));
+        for (const src of att) {
+          pageNo += 1;
+          const page = pdf.addPage([PAGE_W, PAGE_H]);
+          drawBand(page, plan.prims, images, fonts, plan.pag.head, 0);
+          const k = Math.min(boxW / src.width, boxH / src.height);
+          const w = src.width * k;
+          const h = src.height * k;
+          const x = PAGE.left * 72 + (boxW - w) / 2;
+          page.drawPage(src, { x, y: boxTop - h, width: w, height: h });
+          page.drawRectangle({ x, y: boxTop - h, width: w, height: h, borderColor: rgb(0, 0, 0), borderWidth: 0.5 });
+          footer(page, fonts[0], plan.left, plan.center, `Page ${pageNo} of ${total}`);
+        }
+        continue;
+      }
       const images: PDFImage[] = [];
       for (const svg of plan.imgs) images.push(await pdf.embedPng((await svgToPng(svg)).png));
       for (const pg of plan.pag.pages) {

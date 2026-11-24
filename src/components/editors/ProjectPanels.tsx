@@ -16,7 +16,9 @@ import {
   type Project,
   type ProjectDesign,
 } from "@/engine/project";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { PDFDocument } from "pdf-lib";
+import { toBase64 } from "@/lib/attachedPdf";
 import {
   AddButton,
   Badge,
@@ -352,6 +354,7 @@ export function CriteriaPanel({ p, set }: { p: Project; set: SetProject }) {
           </Grid>
         </>
       ) : null}
+      <AsceReportField p={p} set={set} />
     </Collapsible>
   );
 }
@@ -1129,5 +1132,57 @@ export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
         widths are computed and diaphragms, collectors and the rigid option become available.
       </Hint>
     </Collapsible>
+  );
+}
+
+/** Attach the ASCE 7 Hazard Tool report (PDF); it prints behind the design-criteria sheet. */
+function AsceReportField({ p, set }: { p: Project; set: SetProject }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [status, setStatus] = useState<string>();
+  async function attach(f: File) {
+    try {
+      setStatus(`Reading ${f.name} …`);
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      // pdf-lib must open it here, or the PDF export could not merge it later
+      const pages = (await PDFDocument.load(bytes, { ignoreEncryption: true })).getPageCount();
+      set((x) => ({
+        ...x,
+        asceReport: { fileName: f.name, pages, addedAt: new Date().toISOString(), data: toBase64(bytes) },
+      }));
+      setStatus(`${f.name}: ${pages} page(s) attached — printed after the design criteria.`);
+    } catch (e) {
+      setStatus(`Could not read ${f.name}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  return (
+    <Section title="ASCE 7 hazard report">
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        aria-label="ASCE hazard report PDF"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void attach(f);
+          e.target.value = "";
+        }}
+      />
+      {p.asceReport ? (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="flex-1 truncate">
+            {p.asceReport.fileName} <span className="text-muted-foreground">({p.asceReport.pages} p.)</span>
+          </span>
+          <SmallButton onClick={() => fileRef.current?.click()}>Replace</SmallButton>
+          <SmallButton onClick={() => set((x) => ({ ...x, asceReport: undefined }))}>Remove</SmallButton>
+        </div>
+      ) : (
+        <AddButton onClick={() => fileRef.current?.click()}>+ Attach ASCE hazard report (PDF)</AddButton>
+      )}
+      <Hint>
+        {status ??
+          "Printed in the package right after the design criteria, under the title block, with continuous page numbers. Saved in the project file."}
+      </Hint>
+    </Section>
   );
 }

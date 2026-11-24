@@ -130,7 +130,7 @@ export function projectToMarkdown(p: Project): string {
     "## Project",
   ];
   const rec = p as unknown as Record<string, unknown>;
-  const used = new Set<string>(["members", "software"]);
+  const used = new Set<string>(["members", "software", "asceReport"]);
   const emit = (title: string, keys: string[]) => {
     const out: Array<[string, string]> = [];
     for (const k of keys) {

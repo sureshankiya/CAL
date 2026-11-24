@@ -4,6 +4,7 @@ import type { Project, ProjectDesign } from "@/engine/project";
 import { HoldownFootingSheet, MasonryWallSheet, TieInSheet, WoodTrussSheet } from "../sheets/Phase4Sheets";
 import { CfsWallSheet, GuardPostSheet, RetainingWallSheet } from "../sheets/Phase5Sheets";
 import { metaFor } from "../sheets/common";
+import { AsceSheet } from "../sheets/AsceSheet";
 import { IJoistSheet } from "../sheets/IJoistSheet";
 import {
   AssumptionLogSheet,
@@ -125,6 +126,8 @@ function SheetSwitch({
       return <SummarySheet m={meta} design={design} entries={entries} checks={packageChecks(project, design)} />;
     case "criteria":
       return <CriteriaSheet m={meta} design={design} />;
+    case "asce":
+      return project.asceReport ? <AsceSheet m={meta} report={project.asceReport} /> : null;
     case "loads":
       return <LoadsSheet m={meta} />;
     case "lateral":

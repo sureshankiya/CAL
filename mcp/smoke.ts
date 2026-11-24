@@ -1,6 +1,7 @@
 // Self-check: drives mcp/server.ts over stdio like Claude does. Run: bun mcp/smoke.ts
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { PDFDocument } from "pdf-lib";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -11,11 +12,21 @@ await client.connect(new StdioClientTransport({ command: "bun", args: [join(impo
 const call = async (name: string, args: Record<string, unknown> = {}) => {
   const r = (await client.callTool({ name, arguments: args })) as { content: { text: string }[]; isError?: boolean };
   const t = r.content[0].text;
-  return { err: !!r.isError, text: t, json: (() => { try { return JSON.parse(t); } catch { return undefined; } })() };
+  return {
+    err: !!r.isError,
+    text: t,
+    json: (() => {
+      try {
+        return JSON.parse(t);
+      } catch {
+        return undefined;
+      }
+    })(),
+  };
 };
 
 const tools = (await client.listTools()).tools.map((t) => t.name);
-assert.equal(tools.length, 11);
+assert.equal(tools.length, 12);
 
 await call("load_project", { example: "example" });
 const d = await call("run_design");
@@ -38,9 +49,21 @@ assert.ok(!(await call("delete_member", { member: add.json.added.mark })).err);
 const md = (await call("export_markdown")).text;
 const dir = mkdtempSync(join(tmpdir(), "hc-"));
 assert.ok(!(await call("fill_from_markdown", { text: md, mode: "new" })).err);
+// ASCE report: attach, survives save / load, kept out of the Markdown sheet
+const asce = await PDFDocument.create();
+asce.addPage();
+asce.addPage();
+const asceFile = join(dir, "ASCE Hazard Report.pdf");
+writeFileSync(asceFile, await asce.save());
+const att = await call("attach_asce_report", { path: asceFile });
+assert.ok(!att.err && att.json.pages === 2, att.text);
+assert.ok(!(await call("export_markdown")).text.includes("asceReport"));
+writeFileSync(join(dir, "bad.pdf"), "not a pdf");
+assert.ok((await call("attach_asce_report", { path: join(dir, "bad.pdf") })).err);
 const file = join(dir, "t.housecalc.json");
 assert.ok(!(await call("save_project", { path: file })).err);
 const back = await call("load_project", { path: file });
 assert.ok(!back.err && back.json.members > 0, back.text);
+assert.equal((await call("project_summary")).json.asceReport.pages, 2);
 await client.close();
 console.log("mcp smoke OK:", tools.join(", "));

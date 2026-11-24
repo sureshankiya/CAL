@@ -13,6 +13,7 @@ export type SheetKind =
   | "cover"
   | "summary"
   | "criteria"
+  | "asce"
   | "loads"
   | "lateral"
   | "member"
@@ -101,6 +102,16 @@ export function buildPackage(p: Project, design: ProjectDesign): SheetEntry[] {
       title: "Table of contents, member summary and package checks",
     },
     { key: "criteria", kind: "criteria", section: "Design criteria", title: "Design criteria" },
+    ...(p.asceReport
+      ? [
+          {
+            key: "asce",
+            kind: "asce" as const,
+            section: "ASCE 7 hazard report",
+            title: `ASCE 7 Hazard Tool report — site wind, seismic and snow data (${p.asceReport.pages} p.)`,
+          },
+        ]
+      : []),
     { key: "loads", kind: "loads", section: "Design loads", title: "Dead, live, roof live and snow loads" },
   ];
   if (p.lateral?.enabled)
