@@ -5,6 +5,7 @@ name: Desktop build
 on:
   workflow_dispatch:
   push:
+    branches: ["**"]
     tags: ["v*"]
     paths: ["electron/**", ".github/workflows/desktop.yml"]
 
