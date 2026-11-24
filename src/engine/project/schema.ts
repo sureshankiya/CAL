@@ -1000,10 +1000,6 @@ export const projectSchema = z.object({
   hardware: z.array(hardwareItemSchema).default([]),
   lateral: lateralSchema.optional(),
   drawings: z.array(drawingSchema).default([]),
-  /** ASCE 7 Hazard Tool report (PDF, base64) printed behind the design-criteria sheet */
-  asceReport: z
-    .object({ fileName: z.string(), pages: z.number().int().positive(), addedAt: z.string(), data: z.string().min(1) })
-    .optional(),
   review: z.array(reviewItemSchema).default([]),
   notes: z.string().default(""),
   /** drawing import: open items, conflicts and assumptions (shown in the app, not printed) */

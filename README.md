@@ -68,13 +68,6 @@ AI extraction needs an Anthropic API key set as `ANTHROPIC_API_KEY` in the envir
 | Cold-formed steel | CS-# stud walls (optional): allowables from the manufacturer / SSMA table, demands, AISI S100-16 H1.2 with B₁ amplification, deflection |
 | Sign-off | SIGNOFF.md — release checklist; items for the Engineer of Record are listed there |
 
-## ASCE 7 hazard report
-
-Design criteria → **+ Attach ASCE hazard report (PDF)** stores the ASCE Hazard Tool report in the project
-file. The package lists it as its own sheet right after Design criteria; the PDF export places each original
-(vector, searchable) report page under the title block with continuous "Page n of N" numbering, and the Word
-export places each page as an image under the title-block header. Replace / Remove from the same control.
-
 ## Claude connector (MCP)
 
 `mcp/server.ts` is an MCP server that gives Claude direct access to the HouseCalc engine — no
@@ -91,7 +84,6 @@ repository (approve the `housecalc` server once when asked; needs `bun install`)
 | `update_project` | info, criteria, assemblies, hardware, lateral, notes |
 | `fill_from_markdown` / `export_markdown` | the same Markdown input sheet as Fill from .md / Export .md |
 | `run_design` | design the whole package: package checks, load-path problems, member statuses |
-| `attach_asce_report` | attach the ASCE 7 Hazard Tool report PDF (or `remove: true`) |
 
 Claude Desktop: add to `claude_desktop_config.json` (use the absolute path of this folder):
 

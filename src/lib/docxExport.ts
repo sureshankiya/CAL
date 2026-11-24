@@ -31,7 +31,6 @@ import {
 import type { SheetEntry } from "@/components/report/package";
 import type { Project, ProjectDesign } from "@/engine/project";
 import { PAGE, PX_PER_IN, cssColor, hexOf, layoutPackage, svgToPng } from "./exportLayout";
-import { fromBase64, pdfPagesPng } from "./attachedPdf";
 
 const TW = 1440 / PX_PER_IN; // twips per CSS px
 const tw = (px: number) => Math.max(0, Math.round(px * TW));
@@ -466,30 +465,6 @@ export async function reportDocx(project: Project, design: ProjectDesign, entrie
     const pngs: Pngs = new Map();
     for (const sheet of lay.sheets)
       for (const svg of sheet.querySelectorAll("svg")) pngs.set(svg, await svgToPng(svg, 2));
-    // the attached ASCE report: one page image per Word page, sized to the body below the title block
-    const asce =
-      project.asceReport && lay.sheets.some((s) => s.querySelector("[data-asce-report]"))
-        ? await pdfPagesPng(fromBase64(project.asceReport.data), 2.5)
-        : undefined;
-    const asceBody = (pages: NonNullable<typeof asce>) =>
-      pages.map((pg, i) => {
-        const k = Math.min(6.9 / (pg.w / 72), 8.0 / (pg.h / 72));
-        return new Paragraph({
-          alignment: AlignmentType.CENTER,
-          pageBreakBefore: i > 0,
-          spacing: { before: 0, after: 0 },
-          children: [
-            new ImageRun({
-              type: "png",
-              data: pg.png,
-              transformation: {
-                width: Math.round((pg.w / 72) * k * PX_PER_IN),
-                height: Math.round((pg.h / 72) * k * PX_PER_IN),
-              },
-            }),
-          ],
-        });
-      });
     const sections = lay.sheets.map((sheet) => {
       const table = sheet.querySelector(":scope > table") as HTMLTableElement;
       const titleBlock = table.tHead?.querySelector("table") as HTMLTableElement | null;
@@ -515,7 +490,7 @@ export async function reportDocx(project: Project, design: ProjectDesign, entrie
           }),
         },
         footers: { default: footerOf(sheet.dataset.footerLeft ?? "", sheet.dataset.footerCenter ?? "") },
-        children: asce && sheet.querySelector("[data-asce-report]") ? asceBody(asce) : [tableOf(table, pngs, true)],
+        children: [tableOf(table, pngs, true)],
       };
     });
     const doc = new Document({

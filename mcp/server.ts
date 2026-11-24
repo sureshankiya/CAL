@@ -7,10 +7,9 @@
  */
 
 import { readFile, writeFile } from "node:fs/promises";
-import { basename, resolve } from "node:path";
+import { resolve } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { PDFDocument } from "pdf-lib";
 import { z } from "zod";
 import {
   applyMarkdown,
@@ -48,13 +47,7 @@ const fail = (msg: string) => ({ content: [{ type: "text" as const, text: msg }]
 /** Objects merge key by key; arrays and scalars replace; null deletes the key. */
 function merge(base: unknown, patch: unknown): unknown {
   if (patch === null) return undefined;
-  if (
-    typeof patch !== "object" ||
-    Array.isArray(patch) ||
-    typeof base !== "object" ||
-    base === null ||
-    Array.isArray(base)
-  )
+  if (typeof patch !== "object" || Array.isArray(patch) || typeof base !== "object" || base === null || Array.isArray(base))
     return patch;
   const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
   for (const [k, v] of Object.entries(patch)) {
@@ -74,9 +67,7 @@ function commit(candidate: unknown): string[] | undefined {
 }
 
 function findMember(key: string): MemberSpec | undefined {
-  return (
-    project.members.find((m) => m.id === key) ?? project.members.find((m) => m.mark.toLowerCase() === key.toLowerCase())
-  );
+  return project.members.find((m) => m.id === key) ?? project.members.find((m) => m.mark.toLowerCase() === key.toLowerCase());
 }
 
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
@@ -121,10 +112,7 @@ tool(
   {
     description:
       "Open a HouseCalc project: a *.housecalc.json file (path) or a built-in project (example: new | example | sanMiguel | eastLincoln | deck). Replaces the project in memory.",
-    inputSchema: {
-      path: z.string().optional(),
-      example: z.enum(["new", "example", "sanMiguel", "eastLincoln", "deck"]).optional(),
-    },
+    inputSchema: { path: z.string().optional(), example: z.enum(["new", "example", "sanMiguel", "eastLincoln", "deck"]).optional() },
   },
   async ({ path, example }) => {
     if (path) {
@@ -143,8 +131,7 @@ tool(
 tool(
   "save_project",
   {
-    description:
-      "Write the project in memory to a *.housecalc.json file (default: the file it was opened from). Open it in the HouseCalc app to print the PDF/DOCX package.",
+    description: "Write the project in memory to a *.housecalc.json file (default: the file it was opened from). Open it in the HouseCalc app to print the PDF/DOCX package.",
     inputSchema: { path: z.string().optional() },
   },
   async ({ path }) => {
@@ -159,8 +146,7 @@ tool(
 tool(
   "project_summary",
   {
-    description:
-      "Project info, criteria, structures/levels, marks and every member with its callout, status and governing D/C.",
+    description: "Project info, criteria, structures/levels, marks and every member with its callout, status and governing D/C.",
     inputSchema: {},
   },
   async () => {
@@ -168,7 +154,6 @@ tool(
     return ok({
       file: filePath,
       info: project.info,
-      asceReport: project.asceReport && { fileName: project.asceReport.fileName, pages: project.asceReport.pages },
       criteria: project.criteria,
       structures: project.structures,
       marks: project.marks,
@@ -181,8 +166,7 @@ tool(
 tool(
   "get_member",
   {
-    description:
-      "Full input spec of one member (by id or mark) plus its design result: callout, governing check, all checks, reactions, flags, assumptions (verify items flagged).",
+    description: "Full input spec of one member (by id or mark) plus its design result: callout, governing check, all checks, reactions, flags, assumptions (verify items flagged).",
     inputSchema: { member: z.string() },
   },
   async ({ member }) => {
@@ -239,8 +223,7 @@ tool(
 tool(
   "update_member",
   {
-    description:
-      "Change a member (by id or mark): patch is merged onto its spec (objects merge, arrays replace, null deletes). Rejected if the project no longer validates.",
+    description: "Change a member (by id or mark): patch is merged onto its spec (objects merge, arrays replace, null deletes). Rejected if the project no longer validates.",
     inputSchema: { member: z.string(), patch: z.record(z.string(), z.unknown()) },
   },
   async ({ member, patch }) => {
@@ -271,8 +254,7 @@ tool(
 tool(
   "update_project",
   {
-    description:
-      "Change project-level data (info, criteria, assemblies, structures, marks, hardware, lateral, notes, slab, ...): patch merged onto the project (objects merge, arrays replace). Use add/update_member for members.",
+    description: "Change project-level data (info, criteria, assemblies, structures, marks, hardware, lateral, notes, slab, ...): patch merged onto the project (objects merge, arrays replace). Use add/update_member for members.",
     inputSchema: { patch: z.record(z.string(), z.unknown()) },
   },
   async ({ patch }) => {
@@ -286,13 +268,8 @@ tool(
 tool(
   "fill_from_markdown",
   {
-    description:
-      "Fill the project from a HouseCalc Markdown input sheet (same as the app's 'Fill from .md…'). Give text or a path. mode 'fill' updates the current project, 'new' starts a fresh one. Use export_markdown on the example for the format.",
-    inputSchema: {
-      text: z.string().optional(),
-      path: z.string().optional(),
-      mode: z.enum(["fill", "new"]).default("fill"),
-    },
+    description: "Fill the project from a HouseCalc Markdown input sheet (same as the app's 'Fill from .md…'). Give text or a path. mode 'fill' updates the current project, 'new' starts a fresh one. Use export_markdown on the example for the format.",
+    inputSchema: { text: z.string().optional(), path: z.string().optional(), mode: z.enum(["fill", "new"]).default("fill") },
   },
   async ({ text, path, mode }) => {
     const md = text ?? (path ? await readFile(resolve(path), "utf8") : undefined);
@@ -307,8 +284,7 @@ tool(
 tool(
   "export_markdown",
   {
-    description:
-      "The project as a HouseCalc Markdown input sheet (same as the app's 'Export .md'); written to path if given, else returned.",
+    description: "The project as a HouseCalc Markdown input sheet (same as the app's 'Export .md'); written to path if given, else returned.",
     inputSchema: { path: z.string().optional() },
   },
   async ({ path }) => {
@@ -320,40 +296,9 @@ tool(
 );
 
 tool(
-  "attach_asce_report",
-  {
-    description:
-      "Attach the ASCE 7 Hazard Tool report PDF (path) to the project; it prints right after the design-criteria sheet in the PDF / Word package. remove: true detaches it. Save the project afterwards.",
-    inputSchema: { path: z.string().optional(), remove: z.boolean().optional() },
-  },
-  async ({ path, remove }) => {
-    if (remove) {
-      project = { ...project, asceReport: undefined };
-      return ok({ removed: true });
-    }
-    if (!path) return fail("Pass path to the report PDF, or remove: true.");
-    const bytes = await readFile(resolve(path));
-    let pages: number;
-    try {
-      pages = (await PDFDocument.load(bytes, { ignoreEncryption: true })).getPageCount();
-    } catch (e) {
-      return fail(`Not a readable PDF: ${e instanceof Error ? e.message : String(e)}`);
-    }
-    const fileName = basename(path);
-    const errs = commit({
-      ...project,
-      asceReport: { fileName, pages, addedAt: new Date().toISOString(), data: bytes.toString("base64") },
-    });
-    if (errs) return fail(`Rejected:\n${errs.join("\n")}`);
-    return ok({ attached: fileName, pages });
-  },
-);
-
-tool(
   "run_design",
   {
-    description:
-      "Design every member through the load path and return the package checks (marks, errors, failures, uncarried reactions, untied uplift, verify items), lateral status and each member's callout, status and governing D/C.",
+    description: "Design every member through the load path and return the package checks (marks, errors, failures, uncarried reactions, untied uplift, verify items), lateral status and each member's callout, status and governing D/C.",
     inputSchema: {},
   },
   async () => {
