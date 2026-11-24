@@ -19,4 +19,5 @@ coverage
 __pycache__/
 print-check.pdf
 dist-static
+dist-desktop
 dist-artifact

@@ -1,0 +1,30 @@
+# Desktop installers: run from the Actions tab (Run workflow) or push a tag v*.
+# Download the installers from the run's Artifacts section.
+name: Desktop build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run test
+      - run: bun run dist:desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HouseCalc-${{ runner.os }}
+          path: |
+            dist-desktop/*.exe
+            dist-desktop/*.dmg
+            dist-desktop/*.AppImage
+          if-no-files-found: error

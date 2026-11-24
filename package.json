@@ -16,7 +16,9 @@
     "print-check": "node scripts/print-check.mjs",
     "verify:reference": "python3 -I verification/reference.py && python3 -I verification/reference_p2.py && python3 -I verification/reference_p3.py && python3 -I verification/reference_p4.py && python3 -I verification/reference_p5.py && python3 -I verification/portfolio/normalize.py",
     "lock": "node scripts/lock.mjs",
-    "build:static": "vite build -c vite.static.config.ts && node scripts/pack-static.mjs"
+    "build:static": "vite build -c vite.static.config.ts && node scripts/pack-static.mjs",
+    "desktop": "bun run build:static && electron .",
+    "dist:desktop": "bun run build:static && electron-builder --publish never"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.132.1",
@@ -49,6 +51,8 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.2.0",
+    "electron": "39",
+    "electron-builder": "26",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
@@ -62,5 +66,39 @@
     "typescript-eslint": "^8.56.1",
     "vite": "^8.2.0",
     "vitest": "^5.0.0"
+  },
+  "main": "electron/main.cjs",
+  "version": "1.0.1",
+  "description": "HouseCalc \u2014 wood-frame house structural calculations",
+  "author": "HouseCalc",
+  "build": {
+    "appId": "com.housecalc.app",
+    "productName": "HouseCalc",
+    "files": [
+      "electron/**",
+      "dist-static/**",
+      "!node_modules/**"
+    ],
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Engineering"
+    }
   }
 }
