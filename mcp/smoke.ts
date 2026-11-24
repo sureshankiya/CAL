@@ -7,7 +7,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 const client = new Client({ name: "smoke", version: "0" });
-await client.connect(new StdioClientTransport({ command: "bun", args: [join(import.meta.dir, "server.ts")] }));
+await client.connect(new StdioClientTransport({ command: "bun", args: [join(import.meta.dirname, "server.ts")] }));
 const call = async (name: string, args: Record<string, unknown> = {}) => {
   const r = (await client.callTool({ name, arguments: args })) as { content: { text: string }[]; isError?: boolean };
   const t = r.content[0].text;

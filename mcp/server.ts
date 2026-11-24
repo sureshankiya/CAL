@@ -63,6 +63,7 @@ function commit(candidate: unknown): string[] | undefined {
   const r = projectSchema.safeParse(candidate);
   if (!r.success) return r.error.issues.slice(0, 10).map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`);
   project = r.data;
+  return undefined;
 }
 
 function findMember(key: string): MemberSpec | undefined {
@@ -94,7 +95,19 @@ function memberRows() {
 
 const server = new McpServer({ name: "housecalc", version: "1.0.0" });
 
-server.registerTool(
+type ToolOut = { content: { type: "text"; text: string }[]; isError?: boolean };
+/** registerTool with the handler typed from the zod shape here: the SDK's own generics over
+ *  zod v3 shapes overflow tsc (TS2589). The SDK still validates arguments against inputSchema. */
+function tool<S extends z.ZodRawShape>(
+  name: string,
+  config: { description: string; inputSchema: S },
+  handler: (args: z.infer<z.ZodObject<S>>) => Promise<ToolOut>,
+) {
+  const register = server.registerTool.bind(server) as unknown as (n: string, c: object, h: typeof handler) => void;
+  register(name, config, handler);
+}
+
+tool(
   "load_project",
   {
     description:
@@ -115,7 +128,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+tool(
   "save_project",
   {
     description: "Write the project in memory to a *.housecalc.json file (default: the file it was opened from). Open it in the HouseCalc app to print the PDF/DOCX package.",
@@ -130,7 +143,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+tool(
   "project_summary",
   {
     description: "Project info, criteria, structures/levels, marks and every member with its callout, status and governing D/C.",
@@ -150,7 +163,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+tool(
   "get_member",
   {
     description: "Full input spec of one member (by id or mark) plus its design result: callout, governing check, all checks, reactions, flags, assumptions (verify items flagged).",
@@ -179,7 +192,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+tool(
   "add_member",
   {
     description:
@@ -188,7 +201,7 @@ server.registerTool(
       kind: z.string(),
       structureId: z.string().optional(),
       levelId: z.string().optional(),
-      patch: z.record(z.unknown()).optional(),
+      patch: z.record(z.string(), z.unknown()).optional(),
     },
   },
   async ({ kind, structureId, levelId, patch }) => {
@@ -207,11 +220,11 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+tool(
   "update_member",
   {
     description: "Change a member (by id or mark): patch is merged onto its spec (objects merge, arrays replace, null deletes). Rejected if the project no longer validates.",
-    inputSchema: { member: z.string(), patch: z.record(z.unknown()) },
+    inputSchema: { member: z.string(), patch: z.record(z.string(), z.unknown()) },
   },
   async ({ member, patch }) => {
     const m = findMember(member);
@@ -223,7 +236,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+tool(
   "delete_member",
   {
     description: "Remove a member (by id or mark). Load-path links from other members to it are reported, not removed.",
@@ -238,11 +251,11 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+tool(
   "update_project",
   {
     description: "Change project-level data (info, criteria, assemblies, structures, marks, hardware, lateral, notes, slab, ...): patch merged onto the project (objects merge, arrays replace). Use add/update_member for members.",
-    inputSchema: { patch: z.record(z.unknown()) },
+    inputSchema: { patch: z.record(z.string(), z.unknown()) },
   },
   async ({ patch }) => {
     const { members: _ignored, ...rest } = patch;
@@ -252,7 +265,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+tool(
   "fill_from_markdown",
   {
     description: "Fill the project from a HouseCalc Markdown input sheet (same as the app's 'Fill from .md…'). Give text or a path. mode 'fill' updates the current project, 'new' starts a fresh one. Use export_markdown on the example for the format.",
@@ -268,7 +281,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+tool(
   "export_markdown",
   {
     description: "The project as a HouseCalc Markdown input sheet (same as the app's 'Export .md'); written to path if given, else returned.",
@@ -282,7 +295,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+tool(
   "run_design",
   {
     description: "Design every member through the load path and return the package checks (marks, errors, failures, uncarried reactions, untied uplift, verify items), lateral status and each member's callout, status and governing D/C.",
