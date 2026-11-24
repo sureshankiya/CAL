@@ -1265,7 +1265,7 @@ export function WoodMemberSheet({
                   ]
                 : []),
               ...(connections ?? []),
-            ].join("; ") || "Bearing per framing schedule; toe-nailing per CBC Table 2304.10.2",
+            ].join("; ") || "Bearing per framing schedule; toe-nailing per IBC / CBC Table 2304.10.2",
           ],
           [
             "Field verification",

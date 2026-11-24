@@ -200,3 +200,18 @@ describe("starter sheet", () => {
     for (const o of d.outcomes.values()) expect(o.error).toBeUndefined();
   });
 });
+
+describe("code cycle labels", () => {
+  it.each([
+    ["2025 CBC", "2025"],
+    ["2022 CBC (2021 IBC)", "2022"],
+    ["2024 IBC", "IBC2024"],
+    ["2021 IRC", "IBC2021"],
+    ["Oregon 2022 OSSC", "OR2022"],
+    ["Washington 2021 IBC", "WA2021"],
+  ])("%s → %s", (code, id) => {
+    const r = applyMarkdown(newProject(), SHEET.replace("Code: 2025 CBC", `Code: ${code}`), { mode: "new" });
+    if (!r.ok) throw new Error("not applied");
+    expect(r.project.cycleId).toBe(id);
+  });
+});

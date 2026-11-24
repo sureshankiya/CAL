@@ -495,7 +495,7 @@ export function designWall(ctx: DesignContext, wl: WallInput): WallResult {
     assumptions.push(
       fromDefault(
         "Weak-axis bracing",
-        `Studs braced about the weak axis by ${wl.sheathing === "both" ? "sheathing both faces" : "sheathing one face"}, fastened per CBC Table 2304.10.2`,
+        `Studs braced about the weak axis by ${wl.sheathing === "both" ? "sheathing both faces" : "sheathing one face"}, fastened per IBC / CBC Table 2304.10.2`,
         "NDS 3.7.1",
       ),
     );

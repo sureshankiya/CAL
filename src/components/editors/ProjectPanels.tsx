@@ -252,7 +252,7 @@ export function CriteriaPanel({ p, set }: { p: Project; set: SetProject }) {
                       ...c.soil,
                       class: v as "1",
                       bearing: soilClass(v).bearing,
-                      source: `Presumptive, CBC Table 1806.2, Class ${v} — verify soil class in the field`,
+                      source: `Presumptive, IBC / CBC Table 1806.2, Class ${v} — verify soil class in the field`,
                     }
                   : { ...c.soil, class: undefined },
               })

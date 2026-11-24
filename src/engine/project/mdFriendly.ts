@@ -11,6 +11,7 @@
  */
 
 import type { NewMemberKind } from "./templates";
+import { CYCLE_IDS, CYCLE_LIST } from "../core/codes";
 
 export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
@@ -299,6 +300,10 @@ const one = (path: string, value: Json, note?: string): Resolved => ({
   set: [{ path: path.split("."), value }],
   note,
 });
+const badCycle = (raw: string): Resolved => ({
+  ok: false,
+  error: `"${raw}" — HouseCalc cycles: ${CYCLE_LIST.map((c) => c.label).join("; ")}`,
+});
 const numField = (path: string, unit: Unit, labels: string[], doc?: string): Field => ({
   labels,
   doc: doc ?? `${path} (${unit === "none" ? "number" : unit})`,
@@ -374,13 +379,24 @@ export const PROJECT_FIELDS: Field[] = [
   },
   {
     labels: ["code", "code cycle", "building code", "codes", "governing code"],
-    doc: "cycleId (2025 CBC / 2024 IBC → 2025; 2022 CBC / 2021 IBC → 2022)",
-    to: (raw) =>
-      /2025|2024/.test(raw)
-        ? one("cycleId", "2025")
-        : /2022|2021/.test(raw)
-          ? one("cycleId", "2022")
-          : { ok: false, error: `"${raw}" — HouseCalc has the 2025 CBC (2024 IBC) and 2022 CBC (2021 IBC) cycles` },
+    doc: "cycleId (2025 CBC → 2025; 2022 CBC → 2022; 2024 IBC → IBC2024; 2021 IBC → IBC2021; Oregon OSSC → OR2022; Washington → WA2021)",
+    to: (raw) => {
+      const id = (CYCLE_IDS as readonly string[]).find((k) => k.toLowerCase() === raw.trim().toLowerCase());
+      if (id) return one("cycleId", id);
+      if (/oregon|OSSC|ORSC/i.test(raw)) return one("cycleId", "OR2022");
+      if (/washington|WAC/i.test(raw)) return one("cycleId", "WA2021");
+      if (/CBC|CRC|california/i.test(raw) || !/I[BR]C/i.test(raw))
+        return /2025|2024/.test(raw)
+          ? one("cycleId", "2025")
+          : /2022|2021/.test(raw)
+            ? one("cycleId", "2022")
+            : badCycle(raw);
+      return /2024/.test(raw)
+        ? one("cycleId", "IBC2024")
+        : /2021/.test(raw)
+          ? one("cycleId", "IBC2021")
+          : badCycle(raw);
+    },
   },
   {
     labels: ["risk category", "occupancy category", "risk cat"],

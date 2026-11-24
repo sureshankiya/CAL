@@ -6,6 +6,7 @@
  */
 
 import { z } from "zod";
+import { CYCLE_IDS } from "../core/codes";
 
 const num = z.number().finite();
 const pos = num.positive();
@@ -975,7 +976,7 @@ export const projectSchema = z.object({
     /** printed issue (absent = "final"): "final" = issued calculations (no VERIFY / review wording); "check" = working copy */
     issue: z.enum(["final", "check"]).optional(),
   }),
-  cycleId: z.enum(["2025", "2022"]),
+  cycleId: z.enum(CYCLE_IDS),
   criteria: z.object({
     riskCategory: z.enum(["I", "II", "III", "IV"]),
     liveBasis: z.enum(["IRC", "IBC"]),

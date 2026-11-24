@@ -121,9 +121,9 @@ export function MasonryWallSheet({ m, r, index, total, received, connections }: 
   const ax = r.axial;
   const asd = cmu;
   const L = asd ? "" : "u";
-  // TMS 402-22 (2025 cycle): 0.30 f'm A_n (8.3.4.2.1) and 0.20 P / A_n (8.3.5.1.3); TMS 402-16: 0.25 / 0.25
-  const tmsK = m.cycle.id === "2025" ? "0.30" : "0.25";
-  const tmsP = m.cycle.id === "2025" ? "0.20" : "0.25";
+  // TMS 402-22 (2024 I-code cycles): 0.30 f'm A_n (8.3.4.2.1) and 0.20 P / A_n (8.3.5.1.3); TMS 402-16: 0.25 / 0.25
+  const tmsK = m.cycle.edition === "2024" ? "0.30" : "0.25";
+  const tmsP = m.cycle.edition === "2024" ? "0.20" : "0.25";
   return (
     <Frame
       m={m}

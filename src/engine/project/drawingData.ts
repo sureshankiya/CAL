@@ -143,8 +143,13 @@ export function convertDrawingData(text: string): DrawingDataResult {
   if (iso) set("info.date", q(iso), `Issue date: ${date}`);
   const rev = /revision:\s*(RV?\d+|\d+)/i.exec(text)?.[1];
   if (rev) set("info.revision", q(rev), `Revision: ${rev}`);
-  if (/2025\s*CBC|2024\s*IBC/i.test(text)) set("cycleId", q("2025"), "Code cycle: 2025 CBC");
-  else if (/2022\s*CBC|2021\s*IBC/i.test(text)) set("cycleId", q("2022"), "Code cycle: 2022 CBC (as printed)");
+  if (/2025\s*CBC/i.test(text)) set("cycleId", q("2025"), "Code cycle: 2025 CBC");
+  else if (/2022\s*CBC/i.test(text)) set("cycleId", q("2022"), "Code cycle: 2022 CBC (as printed)");
+  else if (/OSSC|ORSC/i.test(text)) set("cycleId", q("OR2022"), "Code cycle: Oregon OSSC / ORSC (as printed)");
+  else if (/WAC\s*51-5[01]/i.test(text))
+    set("cycleId", q("WA2021"), "Code cycle: Washington 2021 IBC / IRC (as printed)");
+  else if (/2024\s*I[BR]C/i.test(text)) set("cycleId", q("IBC2024"), "Code cycle: 2024 IBC / IRC");
+  else if (/2021\s*I[BR]C/i.test(text)) set("cycleId", q("IBC2021"), "Code cycle: 2021 IBC / IRC (as printed)");
 
   /* ------------------------------------------------------------- criteria */
   const rowsOf = (t: Table) =>

@@ -92,8 +92,8 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
     sections.push({
       title: "Slab on grade",
       notes: [
-        `Slab on grade: ${fmt(s.thickness, 1)} in. thick concrete (CRC R506.1 minimum 3-1/2 in.), reinforced with ${s.reinforcement}${s.reinforcement.toLowerCase().includes("none") ? "" : " placed at mid-depth on chairs"}.`,
-        `Under the slab: ${s.vaporRetarder} vapor retarder with lapped and taped joints over ${s.base} (CRC R506.2.2, R506.2.3; CALGreen 4.505.2 capillary break where required).`,
+        `Slab on grade: ${fmt(s.thickness, 1)} in. thick concrete (${c.residential} R506.1 minimum 3-1/2 in.), reinforced with ${s.reinforcement}${s.reinforcement.toLowerCase().includes("none") ? "" : " placed at mid-depth on chairs"}.`,
+        `Under the slab: ${s.vaporRetarder} vapor retarder with lapped and taped joints over ${s.base} (${c.residential} R506.2.2, R506.2.3${c.california ? "; CALGreen 4.505.2 capillary break where required" : ""}).`,
         `Control (contraction) joints ${s.joints}; isolation joints at columns and walls.`,
         "Thickened slab under posts and point loads as shown on the plans and on the thickened-slab sheets.",
       ],
@@ -125,7 +125,7 @@ export function generateNotes(p: Project, d: ProjectDesign): GeneratedNotes {
       title: "Exterior decks",
       notes: [
         "Deck framing: preservative-treated lumber per AWPA U1 (UC4A for posts and members in ground contact), incised where so noted on the sheets; design values include wet service and incising factors.",
-        `Fasteners and connectors in treated wood: hot-dip galvanized (ASTM A153 / A653 G185) or stainless steel (${c.residential} ${p.cycleId === "2025" ? "R304.3" : "R317.3"}).`,
+        `Fasteners and connectors in treated wood: hot-dip galvanized (ASTM A153 / A653 G185) or stainless steel (${c.residential} ${c.edition === "2024" ? "R304.3" : "R317.3"}).`,
         `Ledger: flashed at the house rim, attached with the bolts / lags and spacing on the ledger sheet; no attachment through siding or to brick veneer; deck lateral load connection per ${c.residential} R507.9.2 or as detailed.`,
         "Guard posts: through-bolted to the rim / end joist with the tension devices scheduled on the guard post sheets; do not notch guard posts.",
       ],

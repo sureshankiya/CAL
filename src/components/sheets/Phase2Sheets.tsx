@@ -356,7 +356,7 @@ export function WallSheet({ m, r, index, total, received, connections }: SheetPr
           ["Base load to foundation", `${f0(r.reactions[0].maxDown)} lb/ft max (${r.reactions[0].maxDownCombo})`],
           [
             "Connections",
-            connections?.length ? connections.join("; ") : "Stud-to-plate nailing per CBC Table 2304.10.2",
+            connections?.length ? connections.join("; ") : "Stud-to-plate nailing per IBC / CBC Table 2304.10.2",
           ],
           ["Field verification", verifyText(r)],
         ]}

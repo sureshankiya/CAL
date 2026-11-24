@@ -127,6 +127,14 @@ describe("CMU wall — 1109 San Miguel parity (Tedds MSJC-13)", () => {
     near(r22.axial.Fa! / r.axial.Fa!, 0.3 / 0.25, 1e-9);
     expect(r22.shear.Fvm!).toBeLessThan(r.shear.Fvm!);
   });
+  it("model-code and state cycles calculate exactly as their base I-code edition", () => {
+    const strip = (x: object) => JSON.stringify(x);
+    expect(strip(designMasonryWall({ ...ctx(), cycleId: "IBC2024" }, sanMiguelCmu()))).toBe(
+      strip(designMasonryWall({ ...ctx(), cycleId: "2025" }, sanMiguelCmu())),
+    );
+    for (const id of ["IBC2021", "OR2022", "WA2021"] as const)
+      expect(strip(designMasonryWall({ ...ctx(), cycleId: id }, sanMiguelCmu()))).toBe(strip(r));
+  });
   it("cracked-section capacity is continuous across the balance point", () => {
     const bars = [{ d: 4, A: 0.465 }];
     const a = asdMomentCapacity(-10859, 12, 8, bars, 16.111, 666.67, 32000);

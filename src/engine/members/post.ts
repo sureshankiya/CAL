@@ -282,7 +282,7 @@ export function designPost(ctx: DesignContext, p: PostInput): PostResult {
     );
   if (p.bearing.on === "concrete")
     flags.push(
-      "Post bears on concrete through a post base; base clear of the concrete per manufacturer (decay protection, CBC 2304.12)",
+      "Post bears on concrete through a post base; base clear of the concrete per manufacturer (decay protection, IBC / CBC 2304.12)",
     );
   let alternatives: PostResult["alternatives"];
   if (!pass && p.material.kind === "sawn") {

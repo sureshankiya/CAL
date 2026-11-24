@@ -22,6 +22,7 @@
 
 import { asdCombinations, relevantCombinations, strengthCombinations, type Combination } from "../core/combos";
 import { fmt } from "../core/fmt";
+import { getCycle } from "../core/codes";
 import { LOAD_TYPES, addLoads, loadVector, zeroLoads, type LoadType, type LoadVector } from "../core/loads";
 import { fromDefault, type AssumptionEntry } from "../core/provenance";
 import { analysePanel, type PanelLoad, type PanelResult } from "../analysis/panel";
@@ -405,7 +406,7 @@ export function designMasonryWall(ctx: DesignContext, w: MasonryWallInput): Maso
   const fm = mat.fm ?? 0;
   const fc = mat.fc ?? 0;
   const sqrtFc = Math.sqrt(fc);
-  const tms: TmsEdition = ctx.cycleId === "2025" ? "22" : "16";
+  const tms: TmsEdition = getCycle(ctx.cycleId).edition === "2024" ? "22" : "16";
   const ax = cmu ? axialAllowable(fm, A, K * w.h * 12, r, 0, 32000, tms) : undefined;
   for (const c of combos) {
     let worst = 0;
