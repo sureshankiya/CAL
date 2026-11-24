@@ -1,4 +1,4 @@
-# Desktop installers: run from the Actions tab (Run workflow) or push a tag v*.
+# Desktop installers: run from the Actions tab (Run workflow), push a tag v*, or push a change to the desktop shell.
 # Download the installers from the run's Artifacts section.
 name: Desktop build
 
@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
   push:
     tags: ["v*"]
+    paths: ["electron/**", ".github/workflows/desktop.yml"]
 
 jobs:
   build:
