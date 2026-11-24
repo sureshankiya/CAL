@@ -11,7 +11,17 @@ await client.connect(new StdioClientTransport({ command: "bun", args: [join(impo
 const call = async (name: string, args: Record<string, unknown> = {}) => {
   const r = (await client.callTool({ name, arguments: args })) as { content: { text: string }[]; isError?: boolean };
   const t = r.content[0].text;
-  return { err: !!r.isError, text: t, json: (() => { try { return JSON.parse(t); } catch { return undefined; } })() };
+  return {
+    err: !!r.isError,
+    text: t,
+    json: (() => {
+      try {
+        return JSON.parse(t);
+      } catch {
+        return undefined;
+      }
+    })(),
+  };
 };
 
 const tools = (await client.listTools()).tools.map((t) => t.name);
