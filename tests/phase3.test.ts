@@ -403,6 +403,9 @@ describe("FTAO shear wall (Diekmann)", () => {
     expect(f.pierAspect).toBeCloseTo(1.5, 6);
     expect(r.vS).toBeCloseTo(350, 6);
     expect(f.strap!.ratio).toBeCloseTo(525 / 1705, 4);
+    // sill anchors under the piers: concrete demand from the pier shear (as the bolt check), not E_h / L
+    expect(r.sill.perBolt).toBeCloseTo((350 * 32) / 12, 6);
+    expect(r.sill.concrete!.Vu).toBeCloseTo((500 * 32) / 12, 6); // 350 / 0.7 = 500 plf
   });
 });
 

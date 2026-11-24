@@ -47,6 +47,7 @@ const KIND_ORDER: Record<string, number> = {
   wall: 6,
   post: 7,
   shearWall: 8,
+  shearPanel: 8.1,
   connector: 9,
   footing: 10,
   steelBeam: 3,
@@ -60,6 +61,7 @@ const KIND_ORDER: Record<string, number> = {
   holdownFooting: 10.5,
   tieIn: 10.8,
   woodTruss: 1,
+  steelTruss: 1.2,
   retainingWall: 10.9,
   guardPost: 4.6,
   cfsWall: 6.5,
@@ -220,7 +222,9 @@ export function packageChecks(p: Project, design: ProjectDesign): PackageCheck[]
     if (design.lateralError) out.push({ ok: false, text: `Lateral analysis: ${design.lateralError}` });
     for (const w of design.lateral?.warnings ?? []) out.push({ ok: false, text: `Lateral: ${w}` });
     const lines = design.lateral?.lines ?? [];
-    const empty = lines.filter((l) => !p.members.some((m) => m.kind === "shearWall" && m.lineId === l.line.id));
+    const empty = lines.filter(
+      (l) => !p.members.some((m) => (m.kind === "shearWall" || m.kind === "shearPanel") && m.lineId === l.line.id),
+    );
     out.push({
       ok: empty.length === 0,
       text: empty.length

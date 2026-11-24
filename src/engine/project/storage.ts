@@ -6,6 +6,7 @@
  */
 
 import { softwareStamp, stampDifferences } from "../version";
+import { z } from "zod";
 import { projectSchema, type Project } from "./schema";
 
 export const FILE_EXT = ".housecalc.json";
@@ -66,3 +67,81 @@ export function clearLocal(): void {
     /* storage unavailable */
   }
 }
+
+/* ---------------------------------------------------------------- office defaults and jurisdiction presets */
+
+const OFFICE_KEY = "housecalc:office:v1";
+
+/** what a new project starts from: the engineer's names, code cycle, criteria, S0 note edits, details selection, plan sheets, hardware list */
+const officeDefaultsSchema = projectSchema
+  .pick({
+    cycleId: true,
+    criteria: true,
+    s0Notes: true,
+    detailSheets: true,
+    drawingIndex: true,
+    hardware: true,
+  })
+  .extend({ info: projectSchema.shape.info.pick({ preparedBy: true, checkedBy: true, approvedBy: true }) });
+/** design criteria of one jurisdiction, saved from a project and applied to later ones */
+const presetSchema = projectSchema.pick({ cycleId: true, criteria: true });
+const officeSchema = z.object({
+  defaults: officeDefaultsSchema.optional(),
+  presets: z.record(presetSchema).default({}),
+});
+export type Office = z.infer<typeof officeSchema>;
+
+/** per-browser office settings; empty when storage is unavailable or the stored data does not validate */
+export function loadOffice(): Office {
+  try {
+    const r = officeSchema.safeParse(JSON.parse(window.localStorage.getItem(OFFICE_KEY) ?? "{}"));
+    if (r.success) return r.data;
+  } catch {
+    /* storage unavailable */
+  }
+  return { presets: {} };
+}
+
+export function saveOffice(o: Office): boolean {
+  try {
+    window.localStorage.setItem(OFFICE_KEY, JSON.stringify(o));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** the office defaults of a project (what "Save as office defaults" stores) */
+export const officeDefaultsOf = (p: Project): NonNullable<Office["defaults"]> => ({
+  cycleId: p.cycleId,
+  criteria: p.criteria,
+  s0Notes: p.s0Notes,
+  detailSheets: p.detailSheets,
+  drawingIndex: p.drawingIndex,
+  hardware: p.hardware,
+  info: { preparedBy: p.info.preparedBy, checkedBy: p.info.checkedBy, approvedBy: p.info.approvedBy },
+});
+
+/** a project with the office defaults applied; hardware already in the project is kept, missing items are added */
+export function applyOfficeDefaults(p: Project, o: Office): Project {
+  const d = o.defaults;
+  if (!d) return p;
+  const have = new Set(p.hardware.map((h) => h.id));
+  return {
+    ...p,
+    cycleId: d.cycleId,
+    criteria: d.criteria,
+    s0Notes: d.s0Notes,
+    detailSheets: d.detailSheets,
+    drawingIndex: d.drawingIndex,
+    hardware: [
+      ...p.hardware.map((h) => d.hardware.find((x) => x.id === h.id) ?? h),
+      ...d.hardware.filter((h) => !have.has(h.id)),
+    ],
+    info: { ...p.info, ...d.info },
+  };
+}
+
+/** a project with a jurisdiction's saved criteria and code cycle */
+export const applyPreset = (p: Project, name: string, o: Office): Project =>
+  o.presets[name] ? { ...p, ...o.presets[name], info: { ...p.info, jurisdiction: p.info.jurisdiction || name } } : p;

@@ -12,7 +12,7 @@ import { fromDefault, fromOverride, type AssumptionEntry } from "../core/provena
 import { assemblyDesignValue, type DeadAssembly } from "../loads/dead";
 import { deflectionLimits, type DeflectionPreset } from "../loads/deflection";
 import { liveDef, liveLoad, roofLiveReduction, type LiveBasis, type LiveUse } from "../loads/live";
-import { snowLoads, type Asce7Edition, type SnowResult } from "../loads/snow";
+import { snowDrift, snowLoads, type Asce7Edition, type DriftCase, type SnowResult } from "../loads/snow";
 
 /** Site snow parameters; slope and eave-to-ridge distance come from each member. */
 export interface SiteSnow {
@@ -21,6 +21,8 @@ export interface SiteSnow {
   Ct: number;
   Is: number;
   slippery: boolean;
+  /** ASCE 7-22 winter wind parameter W2 (drifts) */
+  W2?: number;
 }
 
 export interface DesignContext {
@@ -138,12 +140,13 @@ export function resolveSnow(ctx: DesignContext, rise: number, W: number, gable: 
     slippery: ctx.snow.slippery,
     W,
     gable,
+    W2: ctx.snow.W2,
   });
 }
 
 /** A user-entered load on a member (line or point), by load type. */
 export interface ExtraLoad {
-  kind: "line" | "point";
+  kind: "line" | "point" | "drift";
   type: LoadType;
   label: string;
   /** line: plf over x1..x2 (ft); point: lb at x (ft) */
@@ -154,12 +157,62 @@ export interface ExtraLoad {
   x?: number;
   /** load-path link: reaction of another member's support carried here */
   source?: { memberId: string; support: number };
+  /** kind "drift": snow drift peak at x, tapering toward `dir` */
+  drift?: {
+    case: DriftCase;
+    luUpper: number;
+    luLower?: number;
+    hr: number;
+    rise: number;
+    trib: number;
+    dir: "right" | "left";
+  };
 }
 
-export function extraToBeamLoads(extra: ExtraLoad[], total: number): { loads: BeamLoad[]; lines: LoadLine[] } {
+export function extraToBeamLoads(
+  extra: ExtraLoad[],
+  total: number,
+  ctx?: DesignContext,
+): { loads: BeamLoad[]; lines: LoadLine[] } {
   const loads: BeamLoad[] = [];
   const lines: LoadLine[] = [];
   for (const e of extra) {
+    if (e.kind === "drift") {
+      if (!ctx || !e.drift) throw new Error(`Snow drift load "${e.label}" is not supported on this member`);
+      const d = e.drift;
+      const ps = resolveSnow(ctx, d.rise, 0, false).ps;
+      const r = snowDrift({
+        edition: asce7Of(ctx),
+        pg: ctx.snow.pg,
+        ps,
+        W2: ctx.snow.W2,
+        case: d.case,
+        luUpper: d.luUpper,
+        luLower: d.luLower,
+        hr: d.hr,
+      });
+      const x0 = e.x ?? 0;
+      const peak = r.pd * d.trib;
+      const toe = d.dir === "right" ? x0 + r.w : x0 - r.w;
+      // linear from peak at x0 to 0 at the toe, clipped to the member
+      const at = (x: number) => (r.w > 0 ? peak * Math.max(1 - Math.abs(x - x0) / r.w, 0) : 0);
+      const a = Math.min(Math.max(Math.min(x0, toe), 0), total);
+      const b = Math.min(Math.max(Math.max(x0, toe), 0), total);
+      if (r.required && b > a && peak > 0)
+        loads.push({ type: "S", kind: "linear", x1: a, x2: b, w1: at(a), w2: at(b), label: e.label });
+      lines.push({
+        type: "S",
+        label: `${e.label} — snow drift (${d.case === "step" ? "roof step" : "parapet / projection"}): ${r.lines.join("; ")}`,
+        expr: r.required
+          ? `${fmt(r.pd, 1)} psf × ${fmt(d.trib, 3)} ft = ${fmt(peak, 1)} plf at ${fmt(x0, 2)} ft to 0 at ${fmt(toe, 2)} ft (w = ${fmt(r.w, 2)} ft)`
+          : "no drift surcharge",
+        value: r.required ? peak : 0,
+        unit: "plf",
+        ref: r.ref,
+        verify: asce7Of(ctx) === "ASCE 7-22" && ctx.snow.W2 === undefined,
+      });
+      continue;
+    }
     if (e.kind === "line") {
       const x1 = e.x1 ?? 0;
       const x2 = e.x2 ?? total;

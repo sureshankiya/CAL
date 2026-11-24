@@ -114,7 +114,7 @@ function snow722(c: Combination): Combination {
   const label =
     c.kind === "ASD"
       ? c.label.replace(
-          /(^|[^0-9.])(\d*\.?\d*)S\b/g,
+          /(^|[^0-9.A-Za-z_])(\d*\.?\d*)S\b/g,
           (_m, pre: string, k: string) => `${pre}${fmtF((k ? Number(k) : 1) * 0.7)}S`,
         )
       : c.label.replace(/1\.6S\b/, "1.0S").replace(/0\.5S\b/, "0.3S");
