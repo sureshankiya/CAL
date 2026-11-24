@@ -221,7 +221,8 @@ export function SummarySheet({
         rows={rows}
       />
       <SectionHead title="Package checks" />
-      {(final ? checks.filter((c) => !c.verifyItems) : checks).map((c, k) => (
+      {/* final issue prints the passing checks only; open items are in the app's Validation panel */}
+      {(final ? checks.filter((c) => c.ok) : checks).map((c, k) => (
         <TR key={k} desc={c.ok ? "OK" : "ATTENTION"} expr={c.ok ? <>{c.text}</> : <Flag>{c.text}</Flag>} />
       ))}
     </Sheet>

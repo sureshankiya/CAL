@@ -28,7 +28,7 @@ import {
   type NewMemberKind,
   type Project,
 } from "../src/engine/project";
-import { packageChecks } from "../src/components/report/package";
+import { packageChecks, validationItems } from "../src/components/report/package";
 
 const EXAMPLES = {
   new: () => newProject(),
@@ -328,6 +328,8 @@ tool(
     const { d, rows } = memberRows();
     return ok({
       packageChecks: packageChecks(project, d),
+      /** open items to resolve before the final issue (the app's Validation panel) */
+      validation: validationItems(project, d),
       circular: d.circular.map((id) => findMember(id)?.mark ?? id),
       lateralError: d.lateralError,
       members: rows,

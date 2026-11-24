@@ -244,3 +244,45 @@ export function packageChecks(p: Project, design: ProjectDesign): PackageCheck[]
   }
   return out;
 }
+
+export interface ValidationItem {
+  /** "Package" = whole-package check; otherwise the member mark */
+  where: string;
+  memberId?: string;
+  text: string;
+}
+
+const r3 = (x: number) => String(Math.round(x * 1000) / 1000);
+
+/**
+ * Everything to resolve before the package is issued: failing package checks, member
+ * errors and failing checks, REQUIRED INPUT / VERIFY notes and VERIFY assumptions.
+ * Listed in the app's Validation panel; never printed in the final package.
+ */
+export function validationItems(p: Project, design: ProjectDesign): ValidationItem[] {
+  const out: ValidationItem[] = packageChecks(p, design)
+    .filter((c) => !c.ok)
+    .map((c) => ({ where: "Package", text: c.text }));
+  if (design.circular.length)
+    out.push({
+      where: "Package",
+      text: `Circular load path: ${design.circular.map((id) => p.members.find((m) => m.id === id)?.mark ?? id).join(", ")}`,
+    });
+  for (const m of p.members) {
+    const o = design.outcomes.get(m.id);
+    const at = (text: string) => out.push({ where: m.mark, memberId: m.id, text });
+    if (!o) continue;
+    if (o.error) {
+      at(`Error: ${o.error}`);
+      continue;
+    }
+    const r = o.result;
+    if (!r) continue;
+    for (const c of r.checks)
+      if (!c.pass)
+        at(`FAIL — ${c.name}: ${r3(c.demand)} / ${r3(c.capacity)} ${c.unit} = D/C ${r3(c.ratio)} (${c.combo})`);
+    for (const f of r.flags) if (/REQUIRED INPUT|VERIFY/.test(f)) at(f);
+    for (const a of r.assumptions) if (a.verify) at(`VERIFY — ${a.item}: ${a.value}`);
+  }
+  return out;
+}

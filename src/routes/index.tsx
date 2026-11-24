@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { ReportPackage, SheetView } from "@/components/report/ReportPackage";
-import { buildPackage } from "@/components/report/package";
+import { buildPackage, validationItems } from "@/components/report/package";
 import { MemberEditor } from "@/components/editors/MemberEditor";
 import {
   AssembliesPanel,
@@ -11,6 +11,7 @@ import {
   LevelsPanel,
   MembersPanel,
   ProjectInfoPanel,
+  ValidationPanel,
 } from "@/components/editors/ProjectPanels";
 import { DrawingsPanel } from "@/components/drawings/DrawingsPanel";
 import { MarkdownExportDialog, MarkdownImportDialog } from "@/components/editors/MarkdownDialog";
@@ -81,6 +82,7 @@ function Index() {
   const deferred = useDeferredValue(project);
   const design = useMemo(() => designProject(deferred), [deferred]);
   const entries = useMemo(() => buildPackage(deferred, design), [deferred, design]);
+  const validation = useMemo(() => validationItems(deferred, design), [deferred, design]);
   const cycle = getCycle(project.cycleId);
   const active = project.members.find((m) => m.id === activeId);
   const entry = entries.find((e) => e.key === sheetKey) ?? entries[0];
@@ -130,6 +132,15 @@ function Index() {
     return true;
   }
 
+  /** final issue with open validation items: say so with the export result */
+  const withOpen = (msg: { tone: "info" | "error"; text: string }) =>
+    validation.length && deferred.info.issue !== "check"
+      ? {
+          tone: "error" as const,
+          text: `${msg.text} Final issue with ${validation.length} validation item(s) still open — see the Validation panel.`,
+        }
+      : msg;
+
   function downloadReport() {
     if (printBlocked()) return;
     const name = reportFileName(project, "html");
@@ -137,7 +148,7 @@ function Index() {
     saveFile(name, html, "text/html").then((o) =>
       setMessage(
         o === "saved"
-          ? { tone: "info", text: `Saved ${name} — open it in your browser and print to PDF (Letter).` }
+          ? withOpen({ tone: "info", text: `Saved ${name} — open it in your browser and print to PDF (Letter).` })
           : o === "copied"
             ? {
                 tone: "info",
@@ -167,7 +178,9 @@ function Index() {
               tone: "error",
               text: `This view cannot save files — open HouseCalc from a regular web host to export ${name}.`,
             }
-          : saveMessage(name, o),
+          : o === "saved"
+            ? withOpen(saveMessage(name, o))
+            : saveMessage(name, o),
       );
     } catch (e) {
       setMessage({ tone: "error", text: `Could not export ${name}: ${e instanceof Error ? e.message : String(e)}` });
@@ -363,6 +376,7 @@ function Index() {
 
       <div className="mx-auto grid max-w-[1500px] gap-6 px-6 py-8 lg:grid-cols-[380px_1fr] print:block print:max-w-none print:p-0">
         <aside className="no-print space-y-5">
+          <ValidationPanel items={validation} onSelect={selectMember} />
           <ProjectInfoPanel p={project} set={set} />
           <CriteriaPanel p={project} set={set} />
           <AssembliesPanel p={project} set={set} />

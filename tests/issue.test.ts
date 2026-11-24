@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ReportPackage } from "@/components/report/ReportPackage";
-import { buildPackage } from "@/components/report/package";
+import { buildPackage, validationItems } from "@/components/report/package";
 import { scrubText } from "@/components/report/primitives";
 import {
   applyMarkdown,
@@ -116,5 +116,26 @@ describe("final issue", () => {
     expect(scrubText("Class 5 value (1,500 psf) is used. REQUIRED INPUT / VERIFY.")).toBe(
       "Class 5 value (1,500 psf) is used.",
     );
+  });
+});
+
+describe("validation items stay out of the final package", () => {
+  for (const make of [sanMiguelProject, eastLincolnTrussProject, deckExampleProject]) {
+    it(make().info.name, () => {
+      const p = make();
+      const items = validationItems(p, designProject(p));
+      expect(items.length).toBeGreaterThan(0);
+      expect(text({ ...p, info: { ...p.info, issue: "final" } })).not.toMatch(/ATTENTION/);
+      expect(text({ ...p, info: { ...p.info, issue: "check" } })).toMatch(/ATTENTION/);
+    });
+  }
+
+  it("lists failing members with the failing check", () => {
+    const p = sanMiguelProject();
+    const items = validationItems(p, designProject(p));
+    expect(items).toContainEqual({ where: "Package", text: "Members failing: F1" });
+    const f1 = items.filter((v) => v.where === "F1");
+    expect(f1.some((v) => v.text.startsWith("FAIL — ") && /D\/C \d/.test(v.text))).toBe(true);
+    expect(f1.every((v) => v.memberId === p.members.find((m) => m.mark === "F1")!.id)).toBe(true);
   });
 });
