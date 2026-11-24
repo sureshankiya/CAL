@@ -14,3 +14,4 @@ export * from "./eastLincoln";
 export * from "./deckExample";
 export * from "./markdown";
 export * from "./drawingData";
+export * from "./wizard";

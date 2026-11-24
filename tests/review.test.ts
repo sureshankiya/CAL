@@ -696,3 +696,42 @@ describe("office defaults and jurisdiction presets", () => {
     expect(applyOfficeDefaults(q, { presets: {} })).toBe(q);
   });
 });
+
+import { DEFAULT_HOUSE, houseInputErrors, houseWizard } from "@/engine/project";
+
+describe("house wizard", () => {
+  it.each([
+    ["two-story, rafters, sawn floor", DEFAULT_HOUSE],
+    ["one-story, rafters", { ...DEFAULT_HOUSE, stories: 1 as const }],
+    ["two-story, trusses, I-joists", { ...DEFAULT_HOUSE, roof: "trusses" as const, floor: "ijoist" as const }],
+  ])("%s: every member designs and passes, loads linked down to the footings", (_, o) => {
+    const p = houseWizard(newProject("W"), o);
+    const d = designProject(p);
+    const bad = p.members.flatMap((m) => {
+      const oc = d.outcomes.get(m.id)!;
+      return oc.error ? [`${m.mark}: ${oc.error}`] : oc.result!.pass ? [] : [`${m.mark}: ${oc.result!.governing.name}`];
+    });
+    expect(bad).toEqual([]);
+    const kinds = new Set(p.members.map((m) => m.kind));
+    for (const k of ["wall", "beam", "shearWall", "diaphragm", "footing"]) expect(kinds).toContain(k);
+    if (o.stories === 2) {
+      expect(kinds).toContain(o.floor === "ijoist" ? "ijoist" : "joist");
+      // upper shear walls sit on the floor framing with a sole-plate transfer each
+      const upper = p.members.filter((m) => m.kind === "shearWall" && m.levelId === "L2");
+      expect(upper.length).toBe(4);
+      for (const m of upper) {
+        expect(m.kind === "shearWall" && m.sill.type).toBe("framing");
+        expect(p.members.some((t) => t.kind === "transfer" && t.source.kind === "wall" && t.source.id === m.id)).toBe(
+          true,
+        );
+      }
+    }
+    // every footing carries load linked from the walls above
+    for (const f of p.members.filter((m) => m.kind === "footing")) expect(f.links.length).toBeGreaterThan(0);
+  });
+
+  it("rejects dimensions outside its range", () => {
+    expect(houseInputErrors({ ...DEFAULT_HOUSE, width: 60 })).toHaveLength(1);
+    expect(() => houseWizard(newProject(), { ...DEFAULT_HOUSE, shearEave: 0 })).toThrow();
+  });
+});

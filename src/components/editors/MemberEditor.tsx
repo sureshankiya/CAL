@@ -2573,6 +2573,7 @@ function ShearWallEditor({ p, m, upd }: { p: Project; m: ShearWallSpec; upd: Upd
               options={[
                 { value: "cast-in", label: "Cast-in bolt" },
                 { value: "post-installed", label: "Post-installed (ESR)" },
+                { value: "framing", label: "Sole plate on wood floor (upper story)" },
               ]}
               onChange={(v) => upd({ sill: { ...m.sill, type: v } })}
             />

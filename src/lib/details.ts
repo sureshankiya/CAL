@@ -609,7 +609,12 @@ function shearWallElevation(r: R<"shearWall">): Detail {
   const L = s.opening ? s.b * 12 : s.perforated ? s.b * 12 : Math.min(s.b, 8) * 12;
   const [pb] = dressed(s.endPost.size);
   const pw = pb * s.endPost.plies;
-  D.conc(-6, -10, L + 12, 10);
+  const onFloor = s.sill.type === "framing";
+  if (onFloor) {
+    // upper story: sole plate on the subfloor over the rim / floor framing
+    deck(D, -6, L + 6, -0.75);
+    cut(D, -6, -12.5, L + 12, 11.75, "lr");
+  } else D.conc(-6, -10, L + 12, 10);
   D.rect(0, 0, L, 1.5);
   D.rect(0, h - 3, L, 3);
   D.line([0, h - 1.5], [L, h - 1.5]);
@@ -645,8 +650,13 @@ function shearWallElevation(r: R<"shearWall">): Detail {
     D.rect(pw, 4, 2.5, 12);
     D.rect(L - pw - 2.5, 4, 2.5, 12);
   }
-  for (let x = 12; x < L - 6; x += s.sill.spacing) D.line([x, -4], [x, 2]);
-  D.note(`${inch(s.sill.d)} dia. sill anchors @ ${fmt(s.sill.spacing, 0)}" o.c.`, [12, 0]);
+  if (onFloor) {
+    for (let x = 6; x < L - 3; x += 6) nail(D, [x, 1.8], [x, -3]);
+    D.note("Sole plate nailed to rim / blocking through the subfloor per shear transfer (ST)", [12, 0]);
+  } else {
+    for (let x = 12; x < L - 6; x += s.sill.spacing) D.line([x, -4], [x, 2]);
+    D.note(`${inch(s.sill.d)} dia. sill anchors @ ${fmt(s.sill.spacing, 0)}" o.c.`, [12, 0]);
+  }
   if (s.opening && r.ftao) {
     const o = s.opening;
     const x1 = o.L1 * 12;
@@ -1769,7 +1779,8 @@ function calcDetails(p: Project, d: ProjectDesign): Detail[] {
         break;
       case "shearWall":
         add(libHoldownToExisting(r) ?? libHoldownSection(r) ?? holdown(r), "lateral");
-        add(libSillToExisting(r) ?? libSillAnchorage(r) ?? sillAnchor(r), "lateral");
+        if (r.input.sill.type !== "framing")
+          add(libSillToExisting(r) ?? libSillAnchorage(r) ?? sillAnchor(r), "lateral");
         add(libShearWallSection(r) ?? shearWallElevation(r), "lateral");
         break;
       case "shearPanel":

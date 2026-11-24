@@ -431,7 +431,8 @@ export const shearWallSpecSchema = z.object({
   holdownId: z.string().optional(),
   upliftFrom: z.string().optional(),
   sill: z.object({
-    type: z.enum(["cast-in", "post-installed"]),
+    /** framing: sole plate on wood floor framing (upper story), shear transfer checked as a sole-plate transfer */
+    type: z.enum(["cast-in", "post-installed", "framing"]),
     d: pos,
     spacing: pos,
     embed: pos,

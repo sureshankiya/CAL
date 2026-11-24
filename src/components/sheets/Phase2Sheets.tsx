@@ -1535,44 +1535,53 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
         </>
       ) : null}
       <SectionHead title="Sill anchorage" />
-      <TR
-        desc={`Shear per anchor at ${f0(s.sill.spacing)} in. o.c.`}
-        expr={
-          <>
-            V = v<sub>max</sub> × s = {f1(Math.max(r.vS, r.vW))} × {f2(s.sill.spacing / 12)}
-            {eq(`${f0(r.sill.perBolt)} lb`)}
-          </>
-        }
-      />
-      {r.sill.Z !== undefined ? (
+      {s.sill.type === "framing" ? (
         <TR
-          desc={`${fmtInFraction(s.sill.d)} in. bolt in ${s.sillSize} sill — NDS 12.3 (mode ${r.sill.mode})`}
-          expr={
-            <>
-              Z' = Z × C<sub>D</sub> = {f0(r.sill.Z)} × 1.6{eq(`${f0(r.sill.Zprime)} lb`)}
-            </>
-          }
-          pass={r.sill.ratio <= 1}
+          desc="Sole plate on wood floor framing"
+          expr={<>Shear transfer to the framing below: see the sole-plate shear transfer connection (ST)</>}
         />
       ) : (
-        <TR
-          desc={`${s.sill.label ?? "Post-installed anchor"} (ESR)`}
-          expr={<>{f0(r.sill.Zprime)} lb allowable</>}
-          pass={r.sill.ratio <= 1}
-        />
+        <>
+          <TR
+            desc={`Shear per anchor at ${f0(s.sill.spacing)} in. o.c.`}
+            expr={
+              <>
+                V = v<sub>max</sub> × s = {f1(Math.max(r.vS, r.vW))} × {f2(s.sill.spacing / 12)}
+                {eq(`${f0(r.sill.perBolt)} lb`)}
+              </>
+            }
+          />
+          {r.sill.Z !== undefined ? (
+            <TR
+              desc={`${fmtInFraction(s.sill.d)} in. bolt in ${s.sillSize} sill — NDS 12.3 (mode ${r.sill.mode})`}
+              expr={
+                <>
+                  Z' = Z × C<sub>D</sub> = {f0(r.sill.Z)} × 1.6{eq(`${f0(r.sill.Zprime)} lb`)}
+                </>
+              }
+              pass={r.sill.ratio <= 1}
+            />
+          ) : (
+            <TR
+              desc={`${s.sill.label ?? "Post-installed anchor"} (ESR)`}
+              expr={<>{f0(r.sill.Zprime)} lb allowable</>}
+              pass={r.sill.ratio <= 1}
+            />
+          )}
+          {r.sill.concrete ? (
+            <TR
+              desc="Concrete, parallel to edge (strength) — ACI 318 17.7"
+              expr={
+                <>
+                  V<sub>u</sub> = {f0(r.sill.concrete.Vu)} lb ≤ φV<sub>n</sub> = {f0(r.sill.concrete.phiVn)} lb (
+                  {r.sill.concrete.governs})
+                </>
+              }
+              pass={r.sill.concrete.ratio <= 1}
+            />
+          ) : null}
+        </>
       )}
-      {r.sill.concrete ? (
-        <TR
-          desc="Concrete, parallel to edge (strength) — ACI 318 17.7"
-          expr={
-            <>
-              V<sub>u</sub> = {f0(r.sill.concrete.Vu)} lb ≤ φV<sub>n</sub> = {f0(r.sill.concrete.phiVn)} lb (
-              {r.sill.concrete.governs})
-            </>
-          }
-          pass={r.sill.concrete.ratio <= 1}
-        />
-      ) : null}
       <SectionHead title="Seismic drift — SDPWS Eq. 4.3-1, ASCE 7 §12.8.6" />
       <TR
         desc="Strength-level unit shear (ρ = 1.0, §12.12.1)"
@@ -1657,7 +1666,9 @@ export function ShearWallSheet({ m, r, index, total }: SheetProps<ShearWallResul
           ],
           [
             "Sill anchors",
-            `${s.sill.type === "cast-in" ? `${fmtInFraction(s.sill.d)} in. dia. anchor bolts, ${f0(s.sill.embed)} in. embedment` : (s.sill.label ?? "post-installed")} @ ${f0(s.sill.spacing)} in. o.c.`,
+            s.sill.type === "framing"
+              ? "Sole plate to floor framing: see the sole-plate shear transfer (ST)"
+              : `${s.sill.type === "cast-in" ? `${fmtInFraction(s.sill.d)} in. dia. anchor bolts, ${f0(s.sill.embed)} in. embedment` : (s.sill.label ?? "post-installed")} @ ${f0(s.sill.spacing)} in. o.c.`,
           ],
           ["Governing check", `${r.governing.name} — D/C ${f3(r.governing.ratio)} ${r.pass ? "PASS" : "FAIL"}`],
           ["Field verification", verifyText(r)],

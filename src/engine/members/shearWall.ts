@@ -58,7 +58,8 @@ export interface ShearWallSide {
 }
 
 export interface SillAnchor {
-  type: "cast-in" | "post-installed";
+  /** framing: sole plate on wood floor framing (upper story); no anchor check here */
+  type: "cast-in" | "post-installed" | "framing";
   d: number;
   /** spacing, in */
   spacing: number;
@@ -924,6 +925,11 @@ export function designShearWall(ctx: DesignContext, s: ShearWallInput, dem: Shea
     );
     flags.push(
       "Plate washers 3 in. × 3 in. × 0.229 in. at each sill anchor (SDPWS shear wall anchorage); anchors within 12 in. of each end of each sill piece",
+    );
+  } else if (s.sill.type === "framing") {
+    sill = { perBolt, Zprime: 0, ratio: 0 };
+    flags.push(
+      "Sole plate on wood floor framing: the shear transfer to the framing below is checked as a sole-plate shear transfer connection (ST); uplift by the hold-downs / straps to the story below",
     );
   } else {
     if (!s.sill.allowShear)

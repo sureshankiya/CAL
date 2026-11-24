@@ -14,6 +14,7 @@ import {
   ProjectInfoPanel,
 } from "@/components/editors/ProjectPanels";
 import { DetailsPanel } from "@/components/editors/DetailsPanel";
+import { WizardPanel } from "@/components/editors/WizardPanel";
 import { DrawingsPanel } from "@/components/drawings/DrawingsPanel";
 import { MarkdownExportDialog, MarkdownImportDialog } from "@/components/editors/MarkdownDialog";
 import { prepareDownloads, saveFile, saveMessage } from "@/lib/download";
@@ -469,6 +470,15 @@ function Index() {
           <OfficePanel p={project} set={set} />
           <CriteriaPanel p={project} set={set} />
           <AssembliesPanel p={project} set={set} />
+          <WizardPanel
+            p={project}
+            set={set}
+            onDone={(text) => {
+              setActiveId(undefined);
+              setSheetKey("cover");
+              setMessage({ tone: "info", text });
+            }}
+          />
           <LevelsPanel p={project} set={set} />
           <LateralPanel p={project} set={set} />
           <HardwarePanel p={project} set={set} />

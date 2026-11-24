@@ -292,7 +292,9 @@ export function generalNotesSheet(
       r.sides.map((s) => s.row.label).join(" + "),
       r.sides.map((s) => `${s.row.nail} @ ${s.spacing}/12`).join(" + "),
       r.rod ? "Continuous rod" : r.holdown ? `${r.holdown.item.model} (${r.post.label})` : "-",
-      `${fmt(r.input.sill.d, 3)} in. dia. ${r.input.sill.type === "post-installed" ? "adhesive anchor" : "A.B."} @ ${fmt(r.input.sill.spacing, 0)} in. o.c., ${fmt(r.input.sill.embed, 0)} in. emb.`,
+      r.input.sill.type === "framing"
+        ? "Sole plate to floor framing, see shear transfer"
+        : `${fmt(r.input.sill.d, 3)} in. dia. ${r.input.sill.type === "post-installed" ? "adhesive anchor" : "A.B."} @ ${fmt(r.input.sill.spacing, 0)} in. o.c., ${fmt(r.input.sill.embed, 0)} in. emb.`,
       ...(set ? [set.detailRef(r.mark) || "-"] : []),
     ].map(up),
   );

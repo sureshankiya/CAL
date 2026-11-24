@@ -945,7 +945,9 @@ export function SchedulesSheet({ m, design }: { m: SheetMeta; design: ProjectDes
             r.sides.map((x) => `${x.row.nail} @ ${x.spacing}" / 12"`).join(" + "),
             `${f0(Math.max(r.vS, r.vW))} / ${f0(r.vS >= r.vW ? r.vAllowS : r.vAllowW)}`,
             r.holdown ? r.holdown.item.model : "—",
-            `${r.input.sill.type === "cast-in" ? `${fmtInFraction(r.input.sill.d)}" A.B.` : (r.input.sill.label ?? "PIA")} @ ${f0(r.input.sill.spacing)}"`,
+            r.input.sill.type === "framing"
+              ? "Sole plate, see ST"
+              : `${r.input.sill.type === "cast-in" ? `${fmtInFraction(r.input.sill.d)}" A.B.` : (r.input.sill.label ?? "PIA")} @ ${f0(r.input.sill.spacing)}"`,
             pf(r),
           ])}
         />
