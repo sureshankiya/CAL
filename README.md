@@ -97,6 +97,32 @@ AI extraction needs an Anthropic API key set as `ANTHROPIC_API_KEY` in the envir
 | Seismic | ASCE 7 §12.14 simplified alternative (option); USGS S_DS / S_D1 lookup from the site address (confirm before apply) |
 | CAD | Export DXF: schedules and general notes as an AutoCAD R12 DXF (text + table grid, NCS layers S-ANNO-SCHD / -NOTE / -TTLB) |
 
+## Claude connector (MCP)
+
+`mcp/server.ts` is an MCP server that gives Claude direct access to the HouseCalc engine — no
+browser, no screenshots. Claude Code picks it up automatically from `.mcp.json` when opened in this
+repository (approve the `housecalc` server once when asked; needs `bun install`).
+
+| Tool | Does |
+|---|---|
+| `load_project` | open a `*.housecalc.json` file or a built-in project (new, example, sanMiguel, eastLincoln, deck) |
+| `save_project` | write the project file (open it in the app to print the PDF / DOCX package) |
+| `project_summary` | info, criteria, levels, marks, every member with callout, status, governing D/C |
+| `get_member` | one member's input spec and full result: checks, reactions, flags, assumptions |
+| `add_member` / `update_member` / `delete_member` | edit members; every edit is schema-validated before it is kept |
+| `update_project` | info, criteria, assemblies, hardware, lateral, notes |
+| `fill_from_markdown` / `export_markdown` | the same Markdown input sheet as Fill from .md / Export .md |
+| `run_design` | design the whole package: package checks, load-path problems, member statuses |
+
+Claude Desktop: add to `claude_desktop_config.json` (use the absolute path of this folder):
+
+```json
+{ "mcpServers": { "housecalc": { "command": "bun", "args": ["/path/to/CAL/mcp/server.ts"] } } }
+```
+
+Self-check: `bun run mcp:smoke`. The PDF / DOCX report still renders in the app (it is laid out by
+the browser); the connector edits, designs and saves the project that the app prints.
+
 ## Use
 
 ```bash

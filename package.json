@@ -16,10 +16,13 @@
     "print-check": "node scripts/print-check.mjs",
     "verify:reference": "python3 -I verification/reference.py && python3 -I verification/reference_p2.py && python3 -I verification/reference_p3.py && python3 -I verification/reference_p4.py && python3 -I verification/reference_p5.py && python3 -I verification/portfolio/normalize.py",
     "lock": "node scripts/lock.mjs",
+    "mcp": "bun mcp/server.ts",
+    "mcp:smoke": "bun mcp/smoke.ts",
     "build:static": "vite build -c vite.static.config.ts && node scripts/pack-static.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.132.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@pdf-lib/fontkit": "1.1.1",
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/vite": "^4.2.1",

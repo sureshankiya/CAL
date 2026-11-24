@@ -30,6 +30,7 @@ import {
   type ProjectDesign,
 } from "@/engine/project";
 import { useState } from "react";
+import type { ValidationItem } from "@/components/report/package";
 import {
   AddButton,
   Badge,
@@ -1522,6 +1523,51 @@ export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
         width (ft, used when positions are blank). With positions on every line of a story and direction, tributary
         widths are computed and diaphragms, collectors and the rigid option become available.
       </Hint>
+    </Collapsible>
+  );
+}
+
+/** Open items to resolve before the final issue (never printed in the final package). */
+export function ValidationPanel({
+  items,
+  onSelect,
+}: {
+  items: ValidationItem[];
+  onSelect: (memberId: string) => void;
+}) {
+  return (
+    <Collapsible
+      open={items.length > 0}
+      title={
+        items.length ? (
+          <span className="text-destructive">Validation — {items.length} item(s) to resolve before final</span>
+        ) : (
+          "Validation — no open items"
+        )
+      }
+    >
+      {items.length ? (
+        <>
+          <Hint>Not printed in the final package. Select a member item to open it.</Hint>
+          <ul className="max-h-80 space-y-1 overflow-y-auto text-sm">
+            {items.map((v, i) => (
+              <li key={i} className="rounded-md border border-border px-2 py-1.5">
+                {v.memberId ? (
+                  <button type="button" className="text-left" onClick={() => onSelect(v.memberId!)}>
+                    <b>{v.where}</b> — {v.text}
+                  </button>
+                ) : (
+                  <>
+                    <b>{v.where}</b> — {v.text}
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <Hint>Every package check passes; no failing checks, errors or VERIFY items.</Hint>
+      )}
     </Collapsible>
   );
 }
