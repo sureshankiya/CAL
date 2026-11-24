@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "housecalc": {
+      "command": "bun",
+      "args": ["mcp/server.ts"]
+    }
+  }
+}
