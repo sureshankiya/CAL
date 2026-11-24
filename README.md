@@ -74,11 +74,7 @@ AI extraction needs an Anthropic API key set as `ANTHROPIC_API_KEY` in the envir
 bun install
 bun run dev          # http://localhost:8080 (in a container without IPv6: bunx vite dev --host 127.0.0.1)
 bun run build:static # browser-only single-page build (dist-artifact/housecalc.html); no AI extraction
-bun run desktop      # desktop app (Electron window around the static build; offline)
-bun run dist:desktop # desktop installer for this OS in dist-desktop/ (Windows .exe, macOS .dmg, Linux .AppImage)
 ```
-
-Desktop installers for all three systems are built by the **Desktop build** GitHub Action (Actions → Desktop build → Run workflow, or push a `v*` tag); download them from the run's Artifacts. The desktop app has no AI drawing extraction (same as the static build); everything else — calculations, sheets, PDF / Word / HTML export, project files — runs locally.
 
 - **Example** loads a one-story example house; **San Miguel** and **Truss check** load the Phase 4 validation projects; **Deck + RW** loads the Phase 5 options project; **New** / **Open… / Save** manage project files (`*.housecalc.json`).
 - **Fill from .md…** fills the project — information, criteria, assemblies, levels, lateral, hardware and every member — from a Markdown input sheet (choose a `.md` file or paste it). **Export .md** writes the current project in the same format, which is also the template (`examples/example-house.housecalc.md`).
