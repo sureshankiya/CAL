@@ -8,9 +8,12 @@
 import { memberLength, type BeamLoad } from "../analysis/beam";
 import { fmt } from "../core/fmt";
 import { loadVector, LOAD_TYPES, type LoadVector } from "../core/loads";
-import { designWoodBeam, type WoodBeamInput, type WoodBeamResult } from "../design/wood";
+import { designWoodBeam, governingCheck, resolveWood, type WoodBeamInput, type WoodBeamResult } from "../design/wood";
+import { plyConnection, type PlyConnectionInput } from "../design/plies";
 import { firstPassing, maxPassing, maxPassingSpacing } from "../design/sizing";
 import type { Grade, Species } from "../data/sawn";
+import { vibrationCheck } from "../loads/vibration";
+import { openingChecks, type MemberOpening } from "../design/openings";
 import {
   extraToBeamLoads,
   loadAssumptions,
@@ -55,6 +58,12 @@ export interface JoistInput {
   incised?: boolean;
   /** member self weight added to the loads (default: carried by the assembly framing allowance) */
   addSelfWeight?: boolean;
+  /** floor vibration check (serviceability guidance, f ≥ 15 Hz) */
+  vibration?: boolean;
+  /** notches and bored holes */
+  openings?: MemberOpening[];
+  /** existing joist sistered full length with a new joist bearing at both supports */
+  sister?: { species: Species; grade: Grade; size: string; connection?: PlyConnectionInput };
 }
 
 export interface JoistResult extends MemberResultBase {
@@ -101,7 +110,7 @@ function buildLoads(ctx: DesignContext, j: JoistInput) {
       verify: live.override,
     });
   }
-  const ex = extraToBeamLoads(j.extra, total);
+  const ex = extraToBeamLoads(j.extra, total, ctx);
   loads.push(...ex.loads);
   lines.push(...ex.lines);
   return { total, trib, dead, live, wDead, wLive, loads, lines };
@@ -126,6 +135,18 @@ function toWoodInput(ctx: DesignContext, j: JoistInput, loads: BeamLoad[], size 
   };
 }
 
+function scaleReaction(r: MemberReaction, f: number): MemberReaction {
+  if (f === 1) return r;
+  const sc = (v: LoadVector) => loadVector(Object.fromEntries(LOAD_TYPES.map((t) => [t, v[t] * f])));
+  return {
+    ...r,
+    byType: sc(r.byType),
+    perFoot: r.perFoot && sc(r.perFoot),
+    maxDown: r.maxDown * f,
+    minNet: r.minNet * f,
+  };
+}
+
 export function reactionsFrom(design: WoodBeamResult, spacingIn?: number): MemberReaction[] {
   return design.reactions.map((r) => {
     const byType: LoadVector = loadVector({});
@@ -147,10 +168,53 @@ export function reactionsFrom(design: WoodBeamResult, spacingIn?: number): Membe
   });
 }
 
+const scaleLoads = (loads: BeamLoad[], f: number): BeamLoad[] =>
+  loads.map((l) => ({
+    ...l,
+    w1: l.w1 === undefined ? undefined : l.w1 * f,
+    w2: l.w2 === undefined ? undefined : l.w2 * f,
+    P: l.P === undefined ? undefined : l.P * f,
+  }));
+
 export function designJoist(ctx: DesignContext, j: JoistInput): JoistResult {
   const b = buildLoads(ctx, j);
-  const design = designWoodBeam(toWoodInput(ctx, j, b.loads));
+  let design = designWoodBeam(toWoodInput(ctx, j, b.loads));
   const flags: string[] = [];
+  /** existing member's share of the load (1 without a sister) */
+  let share = 1;
+  const sisterLines: string[] = [];
+  if (j.sister) {
+    const sm = resolveWood({ kind: "sawn", ...j.sister, plies: 1 }, ndsOf(ctx));
+    const EIe = design.mat.E * design.mat.I;
+    const EIs = sm.E * sm.I;
+    share = EIe / (EIe + EIs);
+    design = designWoodBeam(toWoodInput(ctx, j, scaleLoads(b.loads, share)));
+    const sd = designWoodBeam({
+      ...toWoodInput(ctx, j, scaleLoads(b.loads, 1 - share)),
+      material: { kind: "sawn", ...j.sister, plies: 1 },
+    });
+    sisterLines.push(
+      `Load shared by stiffness: existing EI = ${EIe.toExponential(3)}, sister ${j.sister.size} ${j.sister.species} ${j.sister.grade} EI = ${EIs.toExponential(3)} lb·in²; existing ${fmt(share * 100, 1)} %, sister ${fmt((1 - share) * 100, 1)} % (equal deflection)`,
+    );
+    const pre = (who: string, cs: typeof design.checks) => cs.map((c) => ({ ...c, name: `${who} — ${c.name}` }));
+    design.checks = [...pre("Existing joist", design.checks), ...pre(`Sister ${j.sister.size}`, sd.checks)];
+    if (j.sister.connection) {
+      const pc = plyConnection(
+        design,
+        { ...design.mat, plies: 2, bPly: Math.min(design.mat.bPly, sm.bPly) },
+        j.sister.connection,
+        (1 - share) / share,
+      );
+      design.checks.push(...pc.checks);
+      sisterLines.push(`Sister fastening: ${pc.callout}; ${pc.lines.join("; ")}`);
+    } else
+      sisterLines.push(
+        "Sister fastening not designed — enter the connection (load applied to the existing joist only)",
+      );
+    flags.push(
+      `Sister ${j.sister.size} ${j.sister.species} ${j.sister.grade} full length, tight to the subfloor, bearing at both supports; existing joist free of decay, splits and notches — field verify`,
+    );
+  }
   if (j.spacing > 24) flags.push("Spacing exceeds 24 in.: repetitive-member factor not applied (NDS 4.3.9)");
   const assumptions = [...loadAssumptions(b.dead, b.live), ...design.assumptions];
   if (!j.addSelfWeight)
@@ -160,8 +224,38 @@ export function designJoist(ctx: DesignContext, j: JoistInput): JoistResult {
       provenance: { kind: "default", source: "loads sheet" },
     });
 
+  if (j.vibration) {
+    const v = vibrationCheck((design.mat.E * design.mat.I) / share, b.wDead, Math.max(...j.spans));
+    if (v) {
+      design.checks.push(v.check);
+      assumptions.push({
+        item: "Floor vibration",
+        value: v.expr,
+        provenance: { kind: "default", source: "Dolan et al. (1999) — guidance; not an IBC / NDS requirement" },
+      });
+    }
+  }
+
+  if (j.openings?.length) {
+    const op = openingChecks(design, j.openings);
+    design.checks.push(...op.checks);
+    for (const l of op.lines)
+      assumptions.push({
+        item: "Notches and holes",
+        value: l,
+        provenance: { kind: "default", source: "NDS 4.4.3; IRC R502.8.1" },
+      });
+  }
+
+  for (const l of sisterLines)
+    assumptions.push({
+      item: "Sistered joist",
+      value: l,
+      provenance: { kind: "default", source: "equal deflection (EI)" },
+    });
+
   let alternatives: JoistResult["alternatives"];
-  if (!design.pass) {
+  if (!design.pass && !j.sister) {
     const runSize = (size: string) => designWoodBeam(toWoodInput(ctx, j, b.loads, size));
     const sizes = JOIST_SIZES.filter((s) => s !== j.size);
     const lightest = firstPassing(sizes, runSize).chosen?.candidate;
@@ -186,11 +280,12 @@ export function designJoist(ctx: DesignContext, j: JoistInput): JoistResult {
     mark: j.mark,
     kind: "joist",
     title: "Floor joist",
-    callout: `${j.size} ${j.species} ${j.grade} @ ${fmt(j.spacing, j.spacing % 1 ? 1 : 0)} in. o.c.`,
-    pass: design.pass,
-    governing: design.governing,
+    callout: `${j.size} ${j.species} ${j.grade} @ ${fmt(j.spacing, j.spacing % 1 ? 1 : 0)} in. o.c.${j.sister ? ` + sister ${j.sister.size} ${j.sister.species} ${j.sister.grade}` : ""}`,
+    pass: design.checks.every((c) => c.pass),
+    governing: governingCheck(design.checks),
     checks: design.checks,
-    reactions: reactionsFrom(design, j.spacing),
+    // linear analysis: the whole joist's reactions are the existing member's share / share
+    reactions: reactionsFrom(design, j.spacing).map((r) => scaleReaction(r, 1 / share)),
     loadLines: b.lines,
     assumptions,
     flags,

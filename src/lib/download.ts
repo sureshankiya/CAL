@@ -3,6 +3,8 @@
  *  - Normal hosting: a browser download.
  *  - claude.ai Artifact viewer with the `downloads` capability: the viewer's save (the
  *    viewer confirms it).
+ *  - Viewer refuses the extension (its allowlist has no .dxf, for example): the file is saved
+ *    inside a .zip of the same name, which the viewer accepts.
  *  - Artifact viewer without it: pages cannot start downloads there, so the contents are
  *    copied to the clipboard and the message says what to paste them into.
  * The capability is resolved at start-up so a click can act synchronously (clipboard writes
@@ -12,7 +14,7 @@
 type DownloadsNs = { save(r: { filename: string; data: string | Blob }): Promise<{ status: string }> };
 type ClaudeWindow = Window & { claude?: { use?: (name: string) => Promise<unknown> } };
 
-export type SaveOutcome = "saved" | "copied" | "declined" | "unavailable" | "error";
+export type SaveOutcome = "saved" | "zipped" | "copied" | "declined" | "unavailable" | "error";
 
 const inViewer = () => typeof window !== "undefined" && typeof (window as ClaudeWindow).claude?.use === "function";
 
@@ -53,7 +55,17 @@ export async function saveFile(filename: string, data: string | Blob | Uint8Arra
         await cap.save({ filename, data: typeof data === "string" ? data : blobOf() });
         return "saved";
       } catch (e) {
-        const code = (e as { code?: string })?.code;
+        let code = (e as { code?: string })?.code;
+        if (code === "rejected_extension") {
+          try {
+            const zip = new (await import("jszip")).default();
+            zip.file(filename, data instanceof Blob ? await data.arrayBuffer() : data);
+            await cap.save({ filename: `${filename}.zip`, data: await zip.generateAsync({ type: "blob" }) });
+            return "zipped";
+          } catch (z) {
+            code = (z as { code?: string })?.code;
+          }
+        }
         if (code === "declined") return "declined";
         if (code === "rate_limited" || code === "bad_request") return "error";
       }
@@ -77,6 +89,11 @@ export function saveMessage(filename: string, outcome: SaveOutcome): { tone: "in
   switch (outcome) {
     case "saved":
       return { tone: "info", text: `Saved ${filename}.` };
+    case "zipped":
+      return {
+        tone: "info",
+        text: `Saved ${filename}.zip — this view saves this file type only inside a zip; unzip it to get ${filename}.`,
+      };
     case "copied":
       return {
         tone: "info",

@@ -14,6 +14,9 @@ import type { HoldownFootingResult } from "@/engine/members/holdownFooting";
 import type { MasonryWallResult } from "@/engine/members/masonryWall";
 import type { TieInResult } from "@/engine/members/tieIn";
 import type { WoodTrussResult } from "@/engine/members/woodTruss";
+import { STEEL_TRUSS_GROUPS, STEEL_TRUSS_PATTERNS, type SteelTrussResult } from "@/engine/members/steelTruss";
+import type { TrussGeometry } from "@/engine/analysis/trussGeometry";
+import { factorText, PHI } from "@/engine/design/steel";
 import { B, DataTable, SectionHead, SubHead, TextRow, TR } from "../report/primitives";
 import { DesignBasis, f0, f1, f2, f3, rich } from "./common";
 import {
@@ -25,7 +28,7 @@ import {
   MemberResult,
   ReactionTable,
 } from "./blocks";
-import { Frame, LoadPath, verifyText } from "./Phase3Sheets";
+import { ClassRows, Frame, LoadPath, SteelBasis, verifyText } from "./Phase3Sheets";
 import type { SheetMeta } from "./common";
 
 interface SheetProps<R> {
@@ -936,8 +939,17 @@ export function TieInSheet({ m, r, index, total }: SheetProps<TieInResult>) {
 }
 
 /** Truss elevation with joint names and governing member forces (compression red, tension blue). */
-function TrussElevation({ r }: { r: WoodTrussResult }) {
-  const g = r.geometry;
+function TrussElevation({
+  g,
+  rows,
+  kip,
+  caption,
+}: {
+  g: TrussGeometry;
+  rows: Array<{ mode: "tension" | "compression" | "zero"; Cmax: number; Tmax: number }>;
+  kip?: boolean;
+  caption: string;
+}) {
   const Wd = 470;
   const pad = 30;
   const xmin = -(g.overhang || 0);
@@ -975,8 +987,8 @@ function TrussElevation({ r }: { r: WoodTrussResult }) {
           {g.members.map((m, i) => {
             const a = g.nodes[m.a];
             const b = g.nodes[m.b];
-            const row = r.rows[i];
-            const F = row.mode === "compression" ? -row.Cmax : row.Tmax;
+            const row = rows[i];
+            const F = (row.mode === "compression" ? -row.Cmax : row.Tmax) / (kip ? 1000 : 1);
             const mx = (X(a.x) + X(b.x)) / 2;
             const my = (Y(a.y) + Y(b.y)) / 2;
             const c = row.mode === "compression" ? DC.compression : row.mode === "zero" ? DC.zero : DC.tension;
@@ -994,7 +1006,7 @@ function TrussElevation({ r }: { r: WoodTrussResult }) {
                 />
                 {row.mode !== "zero" ? (
                   <text x={mx} y={my - 2} style={{ ...txt, fontSize: 6.5, fill: c }} textAnchor="middle">
-                    {fmt(Math.abs(F), 0)}
+                    {fmt(Math.abs(F), kip ? 1 : 0)}
                     {row.mode === "compression" ? "C" : "T"}
                   </text>
                 ) : null}
@@ -1020,8 +1032,7 @@ function TrussElevation({ r }: { r: WoodTrussResult }) {
             />
           ))}
           <text x={pad} y={Hd - 2} style={txt}>
-            Span {fmt(g.span, 2)} ft — maximum ASD member forces, lb (red heavy = compression C, blue dashed = tension
-            T)
+            Span {fmt(g.span, 2)} ft — {caption} (red heavy = compression C, blue dashed = tension T)
             {exag > 1.05 ? `; vertical scale × ${fmt(exag, 1)}` : ""}
           </text>
         </svg>
@@ -1060,7 +1071,9 @@ export function WoodTrussSheet({ m, r, index, total, received, connections }: Sh
             Span {f2(t.span)} ft;{" "}
             {t.type === "parallel"
               ? `depth ${f2(t.depth ?? 2.5)} ft, ${t.panels ?? 8} panels`
-              : `pitch ${f2(t.pitch)}:12 (θ = ${f2(r.thetaDeg)}°), rise ${f2(r.geometry.rise)} ft`}
+              : t.type === "custom"
+                ? `custom layout, ${r.geometry.nodes.length} joints / ${r.geometry.members.length} members, rise ${f2(r.geometry.rise)} ft, design pitch ${f2(t.pitch)}:12`
+                : `pitch ${f2(t.pitch)}:12 (θ = ${f2(r.thetaDeg)}°), rise ${f2(r.geometry.rise)} ft`}
             ; overhang {f2(t.overhang)} ft; spacing {f0(t.spacing)} in. o.c.; heel bearing {f2(t.bearingLen)} in
           </>
         }
@@ -1097,7 +1110,7 @@ export function WoodTrussSheet({ m, r, index, total, received, connections }: Sh
       <LoadPath received={received} connections={connections} />
       <LoadLines lines={r.loadLines} title="Loads on the truss (plf of horizontal projection)" />
       <TR desc="Combinations" expr={<>{r.combosUsed.join("; ")}</>} />
-      <TrussElevation r={r} />
+      <TrussElevation g={r.geometry} rows={r.rows} caption="maximum ASD member forces, lb" />
       <DataTable
         caption="Member forces by load type and governing axial check (+ tension, − compression)"
         head={[
@@ -1245,6 +1258,307 @@ export function WoodTrussSheet({ m, r, index, total, received, connections }: Sh
         notes={[
           "Permanent lateral bracing of webs, top-chord bracing and bottom-chord bracing per BCSI and the truss design.",
           "Erection and temporary bracing by the contractor; heel ties and uplift connectors on the connector schedule.",
+        ]}
+      />
+    </Frame>
+  );
+}
+
+export function SteelTrussSheet({ m, r, index, total, received, connections }: SheetProps<SteelTrussResult>) {
+  const t = r.input;
+  const g = r.geometry;
+  const k = (lb: number) => f2(lb / 1000);
+  const av = r.method === "LRFD" ? "φP_n" : "P_n/Ω";
+  const pat = STEEL_TRUSS_PATTERNS[t.pattern];
+  const groups = (Object.keys(STEEL_TRUSS_GROUPS) as Array<keyof typeof STEEL_TRUSS_GROUPS>).filter((x) => r.mats[x]);
+  const worst = <T,>(xs: T[], f: (x: T) => number) =>
+    xs.length ? xs.reduce((a, b) => (f(b) > f(a) ? b : a)) : undefined;
+  const panelW = t.span / r.panels;
+  return (
+    <Frame
+      m={m}
+      r={r}
+      title={`Steel roof truss design (${m.cycle.aisc360})`}
+      subtitle={
+        <>
+          Pin-jointed analysis, {r.method} — member {index} of {total}: {r.mark}
+        </>
+      }
+    >
+      <SteelBasis m={m} method={r.method} tables={["aisc-hss", "aisc-shapes", "aisc-2-4"]} />
+      <SectionHead title="Truss" />
+      <TR desc="Mark" expr={<B>{`${r.mark} — ${r.callout}`}</B>} />
+      <TR
+        desc="Geometry"
+        expr={
+          <>
+            {pat.label}; span L = {f2(t.span)} ft; rise H = {f2(t.rise)} ft (θ = {f2(r.thetaDeg)}°)
+            {t.pattern === "pitched-parallel" ? `; chord spacing ${f2(t.chordDepth)} ft` : ""}; {r.panels} panels at{" "}
+            {f3(panelW)} ft; overhang {f2(t.overhang)} ft each side; spacing {f2(t.spacing)} ft o.c.
+          </>
+        }
+      />
+      <TR
+        desc="Out-of-plane bracing"
+        expr={
+          <>
+            Top chord {t.topBracing ? `${f2(t.topBracing)} ft` : "at every panel point"}; bottom chord{" "}
+            {t.bottomBracing ? `${f2(t.bottomBracing)} ft` : "at every panel point"}; webs L<sub>c</sub> = member length
+            (K = 1.0)
+          </>
+        }
+      />
+      <TR desc="Supports" expr={<>Left bearing pinned, right bearing on a roller; ideal pins at all joints</>} />
+      <DataTable
+        caption="Sections and material (HouseCalc AISC library)"
+        head={[
+          "Group",
+          "Section",
+          "Grade",
+          "A (in²)",
+          "Wt (plf)",
+          "r_x (in)",
+          "r_y (in)",
+          "F_y (ksi)",
+          "F_u (ksi)",
+        ].map((h) => rich(h))}
+        align={["left", "left", "left", "right", "right", "right", "right", "right", "right"]}
+        small
+        rows={groups.map((x) => {
+          const s = r.mats[x]!;
+          return [
+            STEEL_TRUSS_GROUPS[x],
+            s.shape.name,
+            s.gradeLabel,
+            f2(s.shape.A),
+            f1(s.shape.wt),
+            f2(s.shape.rx),
+            f2(s.shape.ry),
+            f0(s.Fy),
+            f0(s.Fu),
+          ];
+        })}
+      />
+      <LoadPath received={received} connections={connections} />
+      <LoadLines lines={r.loadLines} title="Loads on the truss (plf of horizontal projection)" />
+      <TR desc="Combinations" expr={<>{r.combosUsed.join("; ")}</>} />
+      <TrussElevation g={g} rows={r.rows} kip caption={`maximum ${r.method} member forces, kip`} />
+      <DataTable
+        caption="Joint coordinates (origin at the left bearing)"
+        head={["Joint", "X (ft)", "Y (ft)", "Joint", "X (ft)", "Y (ft)"]}
+        align={["left", "right", "right", "left", "right", "right"]}
+        small
+        rows={Array.from({ length: Math.ceil(g.nodes.length / 2) }, (_, i) => {
+          const a = g.nodes[i];
+          const b = g.nodes[i + Math.ceil(g.nodes.length / 2)];
+          const sup = (id: number) => (id === g.supportLeft ? " (pin)" : id === g.supportRight ? " (roller)" : "");
+          return [
+            `${a.name}${sup(a.id)}`,
+            f3(a.x),
+            f3(a.y),
+            b ? `${b.name}${sup(b.id)}` : "",
+            b ? f3(b.x) : "",
+            b ? f3(b.y) : "",
+          ];
+        })}
+      />
+      <DataTable
+        caption="Member forces by load case (kip, + tension) and governing axial check"
+        head={[
+          "Member",
+          "Joints",
+          "Group",
+          "Section",
+          "L (ft)",
+          "D",
+          "L_r",
+          "S",
+          "W↓",
+          "W↑",
+          "T_max",
+          "C_max",
+          "Available",
+          "D/C",
+          "Combination",
+        ].map((h) => rich(h))}
+        align={[
+          "left",
+          "left",
+          "left",
+          "left",
+          "right",
+          "right",
+          "right",
+          "right",
+          "right",
+          "right",
+          "right",
+          "right",
+          "right",
+          "right",
+          "left",
+        ]}
+        small
+        rows={r.rows.map((x, i) => [
+          x.name,
+          `${g.nodes[g.members[i].a].name}–${g.nodes[g.members[i].b].name}`,
+          x.group,
+          x.shape,
+          f2(x.length),
+          k(x.byType.D),
+          k(x.byType.Lr),
+          k(Math.abs(x.byType.Su) > Math.abs(x.byType.S) ? x.byType.Su : x.byType.S),
+          k(x.byType.Wd),
+          k(x.byType.Wu),
+          k(x.Tmax),
+          k(x.Cmax),
+          x.mode === "compression" ? (x.compError ? "n/a" : f2(x.Pc)) : f2(x.Pt),
+          Number.isFinite(x.ratio) ? f3(x.ratio) : "—",
+          x.combo,
+        ])}
+      />
+      <SectionHead title={`Tension members — AISC ${m.cycle.aisc360} Ch. D`} />
+      <TR
+        desc="Effective net area"
+        expr={
+          <>
+            A<sub>n</sub> = {f2(t.netArea)} A<sub>g</sub>; A<sub>e</sub> = U A<sub>n</sub> = {f2(t.U)} × {f2(t.netArea)}{" "}
+            A<sub>g</sub> (D3-1); yielding {factorText(r.factors.tY, r.method)}, rupture{" "}
+            {factorText(r.factors.tR, r.method)}
+          </>
+        }
+      />
+      {groups.map((grp) => {
+        const x = worst(
+          r.rows.filter((q) => q.group === grp && q.Tmax >= 1),
+          (q) => q.Tmax / 1000 / q.Pt,
+        );
+        if (!x) return null;
+        const s = r.mats[grp]!;
+        const PnY = s.Fy * s.shape.A;
+        const PnR = s.Fu * t.U * t.netArea * s.shape.A;
+        return (
+          <TR
+            key={`t${grp}`}
+            desc={`${STEEL_TRUSS_GROUPS[grp]} ${x.name}`}
+            expr={
+              <>
+                P<sub>n</sub> = F<sub>y</sub>A<sub>g</sub> = {f0(s.Fy)} × {f3(s.shape.A)} = {f2(PnY)} kip (D2-1); P
+                <sub>n</sub> = F<sub>u</sub>A<sub>e</sub> = {f0(s.Fu)} × {f3(t.U * t.netArea * s.shape.A)} = {f2(PnR)}{" "}
+                kip (D2-2); {rich(av)} = {f2(x.Pt)} kip, {x.tLimit}; P<sub>r</sub> = {k(x.Tmax)} kip ({x.Tcombo}); D/C ={" "}
+                {f3(x.Tmax / 1000 / x.Pt)}
+              </>
+            }
+            pass={x.Tmax / 1000 <= x.Pt}
+          />
+        );
+      })}
+      <SectionHead title={`Compression members — AISC ${m.cycle.aisc360} Ch. E`} />
+      {groups.map((grp) => {
+        const x = worst(
+          r.rows.filter((q) => q.group === grp && q.Cmax >= 1),
+          (q) => (q.compError ? Infinity : q.Cmax / 1000 / q.Pc),
+        );
+        if (!x) return null;
+        if (x.compError || !x.comp)
+          return (
+            <TR
+              key={`c${grp}`}
+              desc={`${STEEL_TRUSS_GROUPS[grp]} ${x.name}`}
+              expr={
+                <>
+                  P<sub>r</sub> = {k(x.Cmax)} kip ({x.Ccombo}) — not designed: {x.compError}
+                </>
+              }
+              pass={false}
+            />
+          );
+        const c = x.comp;
+        return (
+          <TR
+            key={`c${grp}`}
+            desc={`${STEEL_TRUSS_GROUPS[grp]} ${x.name}`}
+            expr={
+              <>
+                L<sub>cx</sub> = {f0(c.Lcx)} in, L<sub>cy</sub> = {f0(c.Lcy)} in; L<sub>cx</sub>/r<sub>x</sub> ={" "}
+                {f1(c.SRx)}, L<sub>cy</sub>/r<sub>y</sub> = {f1(c.SRy)}; F<sub>e</sub> = π²E/(L<sub>c</sub>/r)² ={" "}
+                {f2(c.Fe)} ksi (E3-4); F<sub>cr</sub> = {f2(c.Fcr)} ksi (
+                {r.mats[grp]!.Fy / c.Fe <= 2.25 ? "E3-2" : "E3-3"}); P<sub>n</sub> = F<sub>cr</sub>
+                {c.slender ? (
+                  <>
+                    A<sub>e</sub> (E7-1)
+                  </>
+                ) : (
+                  <>
+                    A<sub>g</sub> (E3-1)
+                  </>
+                )}{" "}
+                = {f2(c.Pn)} kip; {rich(av)} = {f2(x.Pc)} kip; P<sub>r</sub> = {k(x.Cmax)} kip ({x.Ccombo}); D/C ={" "}
+                {f3(x.Cmax / 1000 / x.Pc)}
+              </>
+            }
+            pass={x.Cmax / 1000 <= x.Pc}
+          />
+        );
+      })}
+      {(() => {
+        const x = worst(
+          r.rows.filter((q) => q.comp),
+          (q) => q.Cmax / 1000 / (q.Pc || 1),
+        );
+        return x?.comp ? <ClassRows classes={x.comp.classes} /> : null;
+      })()}
+      <TR desc="Compression resistance" expr={<>{factorText(PHI.compression, r.method)} (E1)</>} />
+      {r.tail ? (
+        <>
+          <SectionHead title={`Top-chord tail — cantilever flexure, ${m.cycle.aisc360} Ch. F`} />
+          <TR
+            desc="Tail"
+            expr={
+              <>
+                M<sub>r</sub> = w a²/2 = {f3(r.tail.M)} kip-ft ({r.tail.combo}) ≤ M<sub>c</sub> = {f3(r.tail.Mc)} kip-ft
+                (L<sub>b</sub> = {f2(r.tail.length)} ft, C<sub>b</sub> = 1.0)
+              </>
+            }
+            pass={r.tail.ratio <= 1}
+          />
+        </>
+      ) : null}
+      <SectionHead title="Deflection — service loads, direct stiffness" />
+      <TR
+        desc={`Joint ${r.defl.node}`}
+        expr={
+          <>
+            Δ<sub>live</sub> = {f3(r.defl.live)} in ≤ L/{f0((t.span * 12) / r.defl.liveLim)} = {f3(r.defl.liveLim)} in;
+            Δ<sub>total</sub> = Δ<sub>live</sub> + Δ<sub>D</sub> = {f3(r.defl.live)} + {f3(r.defl.dead)} ={" "}
+            {f3(r.defl.total)} in ≤ {f3(r.defl.totalLim)} in
+          </>
+        }
+        pass={r.defl.live <= r.defl.liveLim && r.defl.total <= r.defl.totalLim}
+      />
+      <TR
+        desc="Horizontal reaction"
+        expr={
+          <>
+            R<sub>x</sub> at the pinned bearing = {f0(r.Rx)} lb (governing combination)
+          </>
+        }
+      />
+      <ChecksSummary checks={r.checks} />
+      <ReactionTable reactions={r.reactions} perFoot />
+      <MemberResult r={r} />
+      <FinalSummary
+        rows={[
+          ["Truss", r.callout],
+          ["Governing check", `${r.governing.name} — D/C ${f3(r.governing.ratio)}`],
+          ["Field / EOR verification", verifyText(r)],
+        ]}
+      />
+      <AssumptionRows items={r.assumptions} />
+      <LimitationNotes
+        notes={[
+          "Joints, gusset plates, welds and bolts designed separately (AISC Ch. J / K); member centroids to meet at the panel points.",
+          "Erection stability and temporary bracing by the contractor; permanent chord and web bracing as stated above.",
         ]}
       />
     </Frame>

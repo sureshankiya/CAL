@@ -1,13 +1,26 @@
 /** Sidebar panels: project, criteria, dead-load assemblies, levels, and the member navigator. */
 
-import { CYCLE_LIST } from "@/engine/core/codes";
+import { CYCLE_LIST, getCycle } from "@/engine/core/codes";
+import { geocodeAddress, usgsSeismic, type SeismicLookup } from "@/lib/usgs";
 import { fmt } from "@/engine/core/fmt";
 import { DEAD_COMPONENTS, assemblySum } from "@/engine/loads/dead";
 import { CE_TABLE } from "@/engine/loads/snow";
 import { SOIL_CLASSES, soilClass } from "@/engine/data/soil";
-import { HARDWARE_KIND_LABEL, defaultHardware, type HardwareKind } from "@/engine/data/hardware";
+import { HARDWARE_KIND_LABEL, defaultHardware, type HardwareItem, type HardwareKind } from "@/engine/data/hardware";
 import { SEISMIC_SYSTEMS } from "@/engine/loads/seismic";
-import { defaultLateral, generateWeights, type LateralSpec, type WallLineOpening } from "@/engine/project";
+import { S0_PANELS, S0_TEMPLATE } from "@/engine/data/s0Template";
+import {
+  applyOfficeDefaults,
+  applyPreset,
+  defaultLateral,
+  generateWeights,
+  loadOffice,
+  officeDefaultsOf,
+  saveOffice,
+  type LateralSpec,
+  type Office,
+  type WallLineOpening,
+} from "@/engine/project";
 import {
   NEW_MEMBER_LABEL,
   newId,
@@ -34,6 +47,173 @@ import {
 } from "./fields";
 
 type SetProject = (fn: (p: Project) => Project) => void;
+
+/** sheet list printed on the S0.0 general notes sheet */
+function DrawingIndexEditor({ p, set }: { p: Project; set: SetProject }) {
+  const list = p.drawingIndex ?? [];
+  const put = (v: typeof list) => set((x) => ({ ...x, drawingIndex: v }));
+  const fromDrawings = [...new Set(p.drawings.flatMap((d) => Object.values(d.sheets)).filter((s) => s.trim()))].filter(
+    (s) => !list.some((r) => r.number === s),
+  );
+  return (
+    <Collapsible title={`Drawing index (${list.length})`}>
+      {list.map((r, i) => (
+        <div key={i} className="flex gap-1">
+          <div className="w-24">
+            <TextInput
+              value={r.number}
+              onChange={(v) => put(list.map((x, k) => (k === i ? { ...x, number: v } : x)))}
+            />
+          </div>
+          <div className="flex-1">
+            <TextInput value={r.title} onChange={(v) => put(list.map((x, k) => (k === i ? { ...x, title: v } : x)))} />
+          </div>
+          <SmallButton tone="danger" title="Remove" onClick={() => put(list.filter((_, k) => k !== i))}>
+            ✕
+          </SmallButton>
+        </div>
+      ))}
+      <Grid>
+        <SmallButton onClick={() => put([...list, { number: `S${list.length}.0`, title: "" }])}>
+          + Add sheet
+        </SmallButton>
+        {fromDrawings.length ? (
+          <SmallButton onClick={() => put([...list, ...fromDrawings.map((n) => ({ number: n, title: "" }))])}>
+            + Sheets from uploaded drawings ({fromDrawings.length})
+          </SmallButton>
+        ) : (
+          <span />
+        )}
+      </Grid>
+      <Hint>
+        List the plan sheets you draw (foundation plan, framing plans). The general notes, details and schedule sheets
+        are numbered on from the last one and added to the index on the S0 sheet automatically.
+      </Hint>
+    </Collapsible>
+  );
+}
+
+/** The engineer's standard S0 note text, editable per project (an edited panel is stored in project.s0Notes). */
+function S0NotesEditor({ p, set }: { p: Project; set: SetProject }) {
+  const [key, setKey] = useState(S0_PANELS[0]);
+  const own = p.s0Notes?.[key];
+  const put = (v: string | undefined) =>
+    set((x) => {
+      const next = { ...x.s0Notes };
+      if (v === undefined) delete next[key];
+      else next[key] = v;
+      return { ...x, s0Notes: Object.keys(next).length ? next : undefined };
+    });
+  return (
+    <Collapsible title={`S0 general notes text (${Object.keys(p.s0Notes ?? {}).length} edited)`}>
+      <Select
+        value={key}
+        options={S0_PANELS.map((k) => ({ value: k, label: `${k}${p.s0Notes?.[k] !== undefined ? " (edited)" : ""}` }))}
+        onChange={setKey}
+      />
+      <textarea
+        className={`${inputCls} h-48 font-mono text-[11px]`}
+        value={own ?? S0_TEMPLATE[key]}
+        onChange={(e) => put(e.target.value)}
+      />
+      {own !== undefined ? <SmallButton onClick={() => put(undefined)}>Reset to standard text</SmallButton> : null}
+      <Hint>
+        One note per line. {"{FC}"} = concrete f&apos;c, {"{ASCE}"} = ASCE 7 edition, {"{FLOOR_JOISTS}"} = floor joist
+        callouts (line dropped when there are none).
+      </Hint>
+    </Collapsible>
+  );
+}
+
+/** Per-browser office setup: the defaults a new project starts from, and saved criteria by jurisdiction. */
+export function OfficePanel({ p, set }: { p: Project; set: SetProject }) {
+  const [office, setOffice] = useState(loadOffice);
+  const [name, setName] = useState("");
+  const [note, setNote] = useState("");
+  const names = Object.keys(office.presets).sort();
+  const [pick, setPick] = useState(names[0] ?? "");
+  const store = (o: Office, done: string) => {
+    setNote(saveOffice(o) ? done : "Browser storage is unavailable: not saved.");
+    setOffice(o);
+  };
+  return (
+    <Collapsible title={`Office defaults and jurisdiction presets (${names.length})`}>
+      <Hint>
+        Office defaults: your names for the title block, code cycle, design criteria, S0 note edits, details selection,
+        plan sheet list and hardware list. A new project starts from them.
+      </Hint>
+      <Grid>
+        <SmallButton onClick={() => store({ ...office, defaults: officeDefaultsOf(p) }, "Office defaults saved.")}>
+          Save this project&apos;s setup as office defaults
+        </SmallButton>
+        {office.defaults ? (
+          <SmallButton
+            onClick={() => {
+              set((x) => applyOfficeDefaults(x, office));
+              setNote("Office defaults applied to this project.");
+            }}
+          >
+            Apply office defaults to this project
+          </SmallButton>
+        ) : (
+          <span />
+        )}
+      </Grid>
+      <Hint>
+        Jurisdiction presets: save the code cycle and design criteria (wind, seismic, snow, soil, concrete) of a city
+        once, then apply them to the next project there.
+      </Hint>
+      {names.length ? (
+        <div className="flex gap-1">
+          <div className="flex-1">
+            <Select value={names.includes(pick) ? pick : names[0]} options={names} onChange={setPick} />
+          </div>
+          <SmallButton
+            onClick={() => {
+              const n = names.includes(pick) ? pick : names[0];
+              set((x) => applyPreset(x, n, office));
+              setNote(`${n} criteria applied.`);
+            }}
+          >
+            Apply
+          </SmallButton>
+          <SmallButton
+            tone="danger"
+            title="Delete preset"
+            onClick={() => {
+              const n = names.includes(pick) ? pick : names[0];
+              const { [n]: _gone, ...rest } = office.presets;
+              store({ ...office, presets: rest }, `${n} deleted.`);
+            }}
+          >
+            ✕
+          </SmallButton>
+        </div>
+      ) : null}
+      <div className="flex gap-1">
+        <div className="flex-1">
+          <TextInput value={name || p.info.jurisdiction} onChange={setName} />
+        </div>
+        <SmallButton
+          onClick={() => {
+            const n = (name || p.info.jurisdiction).trim();
+            if (!n) return setNote("Enter the jurisdiction name first.");
+            store(
+              { ...office, presets: { ...office.presets, [n]: { cycleId: p.cycleId, criteria: p.criteria } } },
+              `${n} saved from this project's criteria.`,
+            );
+            setPick(n);
+            setName("");
+          }}
+        >
+          Save current criteria as preset
+        </SmallButton>
+      </div>
+      {note ? <Hint>{note}</Hint> : null}
+      <Hint>Stored in this browser only. Values come from your own projects: verify them for each site.</Hint>
+    </Collapsible>
+  );
+}
 
 export function ProjectInfoPanel({ p, set }: { p: Project; set: SetProject }) {
   const info = (k: keyof Project["info"], v: string) => set((x) => ({ ...x, info: { ...x.info, [k]: v } }));
@@ -102,6 +282,8 @@ export function ProjectInfoPanel({ p, set }: { p: Project; set: SetProject }) {
           onChange={(e) => set((x) => ({ ...x, notes: e.target.value }))}
         />
       </Field>
+      <DrawingIndexEditor p={p} set={set} />
+      <S0NotesEditor p={p} set={set} />
       {p.importLog?.length ? (
         <Collapsible title={`Drawing import — open items (${p.importLog.length}, not printed)`}>
           <ul className="list-disc space-y-1 pl-4 text-xs">
@@ -113,6 +295,100 @@ export function ProjectInfoPanel({ p, set }: { p: Project; set: SetProject }) {
         </Collapsible>
       ) : null}
     </Section>
+  );
+}
+
+/** S_DS / S_D1 from the USGS web service for the site, applied only when the engineer confirms. */
+function SeismicLookupFields({
+  p,
+  onApply,
+}: {
+  p: Project;
+  onApply: (s: { SDS: number; SD1: number; SDC?: string }) => void;
+}) {
+  const [address, setAddress] = useState(p.info.address ?? "");
+  const [lat, setLat] = useState<number | undefined>();
+  const [lon, setLon] = useState<number | undefined>();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [found, setFound] = useState<SeismicLookup | undefined>();
+  const run = async (f: () => Promise<void>) => {
+    setBusy(true);
+    setMsg("");
+    try {
+      await f();
+    } catch (e) {
+      setMsg(
+        `${e instanceof Error ? e.message : String(e)} (the service may be unreachable from this page — use the USGS web tool)`,
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Collapsible title="Look up S_DS / S_D1 (USGS)">
+      <Field label="Site address">
+        <TextInput value={address} onChange={setAddress} />
+      </Field>
+      <Grid cols={3}>
+        <Field label="Latitude">
+          <NumberInput value={lat} allowEmpty onChange={setLat} />
+        </Field>
+        <Field label="Longitude">
+          <NumberInput value={lon} allowEmpty onChange={setLon} />
+        </Field>
+        <div className="flex items-end gap-1">
+          <SmallButton
+            onClick={() =>
+              !busy &&
+              address.trim() &&
+              run(async () => {
+                const g = await geocodeAddress(address);
+                setLat(g.lat);
+                setLon(g.lon);
+                setMsg(`Matched: ${g.matched}`);
+              })
+            }
+          >
+            Find coordinates
+          </SmallButton>
+          <SmallButton
+            onClick={() =>
+              !busy &&
+              lat !== undefined &&
+              lon !== undefined &&
+              run(async () =>
+                setFound(
+                  await usgsSeismic(
+                    getCycle(p.cycleId).asce7,
+                    lat!,
+                    lon!,
+                    p.criteria.riskCategory,
+                    p.criteria.seismic.siteClass,
+                  ),
+                ),
+              )
+            }
+          >
+            Look up
+          </SmallButton>
+        </div>
+      </Grid>
+      {msg ? <Hint>{msg}</Hint> : null}
+      {found ? (
+        <div className="space-y-1 text-xs">
+          <div>
+            S<sub>s</sub> = {fmt(found.ss, 3)}, S<sub>1</sub> = {fmt(found.s1, 3)}, S<sub>DS</sub> = {fmt(found.sds, 3)}
+            , S<sub>D1</sub> = {fmt(found.sd1, 3)}
+            {found.sdc ? `, SDC ${found.sdc}` : ""} — {getCycle(p.cycleId).asce7}, Risk Category{" "}
+            {p.criteria.riskCategory}, Site Class {p.criteria.seismic.siteClass}
+          </div>
+          <SmallButton onClick={() => onApply({ SDS: found.sds, SD1: found.sd1, SDC: found.sdc })}>
+            Apply to the criteria
+          </SmallButton>
+        </div>
+      ) : null}
+    </Collapsible>
   );
 }
 
@@ -169,9 +445,12 @@ export function CriteriaPanel({ p, set }: { p: Project; set: SetProject }) {
           <NumberInput value={c.snow.Ct} min={0.85} onChange={(v) => crit({ snow: { ...c.snow, Ct: v ?? 1 } })} />
         </Field>
       </Grid>
-      <Grid>
+      <Grid cols={3}>
         <Field label="I_s (ASCE 7-16 only)">
           <NumberInput value={c.snow.Is} min={0.8} onChange={(v) => crit({ snow: { ...c.snow, Is: v ?? 1 } })} />
+        </Field>
+        <Field label="W_2 (ASCE 7-22 drifts)">
+          <NumberInput value={c.snow.W2} allowEmpty min={0.1} onChange={(v) => crit({ snow: { ...c.snow, W2: v } })} />
         </Field>
         <div className="pt-6">
           <Check
@@ -225,6 +504,7 @@ export function CriteriaPanel({ p, set }: { p: Project; set: SetProject }) {
           <TextInput value={c.seismic.SDC} onChange={(v) => crit({ seismic: { ...c.seismic, SDC: v } })} />
         </Field>
       </Grid>
+      <SeismicLookupFields p={p} onApply={(s) => crit({ seismic: { ...c.seismic, ...s } })} />
       <Grid>
         <Field label="Soil bearing (psf)">
           <NumberInput
@@ -730,7 +1010,13 @@ export function HardwarePanel({ p, set }: { p: Project; set: SetProject }) {
     set((x) => ({ ...x, hardware: x.hardware.map((h) => (h.id === id ? { ...h, ...patch } : h)) }));
   const used = new Set(
     p.members.flatMap((m) =>
-      m.kind === "connector" ? [m.hardwareId] : m.kind === "shearWall" && m.holdownId ? [m.holdownId] : [],
+      m.kind === "connector"
+        ? [m.hardwareId]
+        : m.kind === "shearWall" && m.holdownId
+          ? [m.holdownId]
+          : m.kind === "shearPanel"
+            ? [m.panelId]
+            : [],
     ),
   );
   return (
@@ -769,7 +1055,9 @@ export function HardwarePanel({ p, set }: { p: Project; set: SetProject }) {
               <TextInput value={h.report} onChange={(v) => upd(h.id, { report: v })} />
             </Field>
           </Grid>
-          {h.kind === "holdown" || h.kind === "strap" ? (
+          {h.kind === "panel" ? (
+            <PanelFields h={h} upd={(patch) => upd(h.id, patch)} />
+          ) : h.kind === "holdown" || h.kind === "strap" ? (
             <Grid cols={3}>
               <Field label="Tension (lb, 160)">
                 <NumberInput value={h.tension} allowEmpty min={0} onChange={(v) => upd(h.id, { tension: v })} />
@@ -831,6 +1119,30 @@ export function HardwarePanel({ p, set }: { p: Project; set: SetProject }) {
           + Add item
         </AddButton>
         <AddButton
+          onClick={() =>
+            set((x) => ({
+              ...x,
+              hardware: [
+                ...x.hardware,
+                {
+                  id: newId("hw"),
+                  model: "PANEL",
+                  kind: "panel" as HardwareKind,
+                  manufacturer: "",
+                  description: "Prefabricated shear panel / portal frame",
+                  fasteners: "",
+                  report: "",
+                  checked: false,
+                  source: "entered by engineer",
+                  panel: { type: "prefab", width: 24, height: 96, Vs: 0, Vw: 0 },
+                },
+              ],
+            }))
+          }
+        >
+          + Add shear panel / portal frame
+        </AddButton>
+        <AddButton
           onClick={() => {
             const have = new Set(p.hardware.map((h) => h.id));
             set((x) => ({ ...x, hardware: [...x.hardware, ...defaultHardware().filter((h) => !have.has(h.id))] }));
@@ -840,6 +1152,55 @@ export function HardwarePanel({ p, set }: { p: Project; set: SetProject }) {
         </AddButton>
       </Grid>
     </Collapsible>
+  );
+}
+
+/** prefabricated shear panel / portal frame: tabulated values entered from the catalogue or APA report */
+function PanelFields({ h, upd }: { h: HardwareItem; upd: (patch: Partial<HardwareItem>) => void }) {
+  const pn = h.panel ?? { type: "prefab" as const, width: 24, height: 96, Vs: 0, Vw: 0 };
+  const sp = (patch: Partial<typeof pn>) => upd({ panel: { ...pn, ...patch } });
+  return (
+    <>
+      <Grid cols={3}>
+        <Field label="Model">
+          <TextInput value={h.model} onChange={(v) => upd({ model: v })} />
+        </Field>
+        <Field label="Manufacturer">
+          <TextInput value={h.manufacturer} onChange={(v) => upd({ manufacturer: v })} />
+        </Field>
+        <Field label="Type">
+          <Select
+            value={pn.type}
+            options={[
+              { value: "prefab", label: "Prefabricated panel / frame" },
+              { value: "portal", label: "Portal frame (APA)" },
+            ]}
+            onChange={(v) => sp({ type: v })}
+          />
+        </Field>
+        <Field label="Width (in)">
+          <NumberInput value={pn.width} min={1} onChange={(v) => sp({ width: v ?? pn.width })} />
+        </Field>
+        <Field label="Height (in)">
+          <NumberInput value={pn.height} min={1} onChange={(v) => sp({ height: v ?? pn.height })} />
+        </Field>
+        <Field label="Drift at V_s (in)">
+          <NumberInput value={pn.drift} allowEmpty min={0} onChange={(v) => sp({ drift: v })} />
+        </Field>
+        <Field label="V_s allowable, seismic (lb)">
+          <NumberInput value={pn.Vs} min={0} onChange={(v) => sp({ Vs: v ?? 0 })} />
+        </Field>
+        <Field label="V_w allowable, wind (lb)">
+          <NumberInput value={pn.Vw} min={0} onChange={(v) => sp({ Vw: v ?? 0 })} />
+        </Field>
+        <Field label="Anchor tension (lb)">
+          <NumberInput value={pn.anchorT} allowEmpty min={0} onChange={(v) => sp({ anchorT: v })} />
+        </Field>
+      </Grid>
+      <Hint>
+        Enter the tabulated allowable (ASD) values for this height from the current catalogue / ESR / APA report.
+      </Hint>
+    </>
   );
 }
 
@@ -988,6 +1349,16 @@ export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
             <Field label="Height (ft)">
               <NumberInput value={st.height} min={1} onChange={(v) => setStory(i, { height: v ?? st.height })} />
             </Field>
+            {lat.distribution === "semirigid" ? (
+              <Field label="Diaphragm G_a (kips/in)" hint="SDPWS Table 4.2A, diaphragm above this story">
+                <NumberInput
+                  value={st.diaphragmGa}
+                  allowEmpty
+                  min={0.1}
+                  onChange={(v) => setStory(i, { diaphragmGa: v })}
+                />
+              </Field>
+            ) : null}
             <SmallButton
               title="Regenerate weights from the geometry"
               onClick={() => setStory(i, { items: generateWeights(p, lat, i) })}
@@ -1053,6 +1424,28 @@ export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
           <span />
         )}
       </Grid>
+      <Grid>
+        <Field label="Seismic procedure">
+          <Select
+            value={lat.seismicMethod ?? "elf"}
+            options={[
+              { value: "elf", label: "§12.8 Equivalent lateral force" },
+              { value: "simplified", label: "§12.14 Simplified alternative" },
+            ]}
+            onChange={(v) => upd({ seismicMethod: v })}
+          />
+        </Field>
+        <Field label="Wind MWFRS procedure">
+          <Select
+            value={lat.windMethod ?? "envelope"}
+            options={[
+              { value: "envelope", label: "Ch. 28 Part 1 envelope (low-rise)" },
+              { value: "directional", label: "Ch. 27 Part 1 directional" },
+            ]}
+            onChange={(v) => upd({ windMethod: v })}
+          />
+        </Field>
+      </Grid>
       <div className="text-xs font-semibold text-muted-foreground">Diaphragm distribution</div>
       <Grid cols={3}>
         <Field label="Distribution to wall lines">
@@ -1062,6 +1455,7 @@ export function LateralPanel({ p, set }: { p: Project; set: SetProject }) {
               { value: "flexible", label: "Flexible (tributary)" },
               { value: "rigid", label: "Rigid with torsion" },
               { value: "envelope", label: "Envelope of both" },
+              { value: "semirigid", label: "Semi-rigid (diaphragm G_a per story)" },
             ]}
             onChange={(v) => upd({ distribution: v })}
           />

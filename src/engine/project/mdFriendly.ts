@@ -422,6 +422,7 @@ export const PROJECT_FIELDS: Field[] = [
   numField("criteria.snow.Ce", "none", ["ce", "snow exposure factor", "exposure factor"]),
   numField("criteria.snow.Ct", "none", ["ct", "thermal factor"]),
   numField("criteria.snow.Is", "none", ["is", "snow importance factor"]),
+  numField("criteria.snow.W2", "none", ["w2", "winter wind parameter"]),
   numField("criteria.Kcr", "none", ["kcr", "creep factor", "long term deflection factor"]),
   numField("criteria.seismic.SDS", "none", ["sds", "s ds", "sds g"]),
   numField("criteria.seismic.SD1", "none", ["sd1", "s d1"]),
@@ -496,6 +497,7 @@ export const schemaKind = (k: NewMemberKind | string) =>
 
 const TEXT_KINDS: Array<[RegExp, NewMemberKind]> = [
   [/force transfer|ftao/i, "ftaoWall"],
+  [/portal frame|strong-?wall|prefabricated (shear )?panel|shear panel/i, "shearPanel"],
   [/shear\s*wall/i, "shearWall"],
   [/roof diaphragm/i, "roofDiaphragm"],
   [/floor diaphragm/i, "floorDiaphragm"],
@@ -510,6 +512,7 @@ const TEXT_KINDS: Array<[RegExp, NewMemberKind]> = [
   [/concrete wall|stem wall/i, "concreteWall"],
   [/tie.?in|dowel|adhesive anchor/i, "tieIn"],
   [/wood truss|truss design/i, "woodTruss"],
+  [/steel truss/i, "steelTruss"],
   [/truss/i, "truss"],
   [/ledger/i, "ledger"],
   [/hanger|connector|strap|\btie\b(?!.*rafter)|clip/i, "connector"],
@@ -539,6 +542,8 @@ export function kindFromText(text: string, keys: NewMemberKind[]): NewMemberKind
 }
 
 const MARK_KINDS: Array<[string, NewMemberKind]> = [
+  ["STR", "steelTruss"],
+  ["SSW", "shearPanel"],
   ["HSS", "steelColumn"],
   ["FJ", "joist"],
   ["DJ", "joist"],
@@ -1303,6 +1308,7 @@ const KIND_UNITS: Record<string, Record<string, Unit>> = {
   wall: { length: "ft" },
   post: { height: "ft" },
   steelColumn: { height: "ft" },
+  steelTruss: { spacing: "ft" },
   footing: { B: "ft", L: "ft", h: "in", depth: "in", c1: "in", c2: "in" },
 };
 const PROJECT_UNITS: Record<string, Unit> = {

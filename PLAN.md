@@ -207,8 +207,8 @@ Where the sources differ, the BUILD_PLAN decisions govern. Conflicts that need y
 |---|---|---|---|
 | JoistCalc | Structure Genius | Sawn joists, TJI joists, rafters, hangers, ledger nailing, framing-schedule cover, connector schedule | Report kit; joist / TJI / rafter engines; hanger logic; load and V / M / Δ diagrams |
 | StudCalc | Stud Wall Calculator | Bearing walls, openings (header / jack / king / cripples), connections, strip footing, braced walls | Wall, header, connection, footing and bracing engines; wall elevation drawing |
-| TrussCalc | Roof Truss Planner | Wood roof trusses (standard, hybrid, parallel-chord, custom) and joint connections | Truss engine for the Phase 4 in-tool truss design |
-| STRUTURA | Truss Report Master | Steel truss, dark dashboard UI | **Excluded**. Its drawing-recognition server function was reviewed as a pattern only |
+| TrussCalc | Roof Truss Planner | Wood roof trusses (standard, hybrid, parallel-chord, custom) and joint connections | Truss engine for the Phase 4 in-tool truss design; custom joint / member layout added to T-# (Rev. B) |
+| STRUTURA | Truss Report Master | Steel truss (13 roof and 10 bridge patterns), dark dashboard UI | **Rev. B:** roof patterns ported as STR-# steel roof trusses with the corrections in §12.2 (#9–#14); bridge patterns excluded (AASHTO). Its drawing-recognition server function was reviewed as a pattern only |
 
 These three apps also serve as **regression oracles**: identical inputs must give identical results, except for the documented corrections in §12.2.
 
@@ -630,6 +630,12 @@ Marks come from configurable templates that match your drawings — B101 (level 
 | 6 | StudCalc | Lateral load split equally between braced-wall lines | Tributary distribution |
 | 7 | TrussCalc | Unbalanced snow only flagged | Computed per ASCE 7 §7.6 |
 | 8 | StudCalc | Hardware values and NDS-2024 HF / SP entries need verification | Cited data library; VERIFY until checked |
+| 9 | STRUTURA | Section table differs from AISC: rectangular HSS rows carry square-tube values (HSS6X4X1/4 A 4.37 vs 4.30 in²; HSS10X6X1/2 r_y 2.19 vs 2.39 in), W8X18 r_y 1.54 vs 1.23 in, PIPE4STD A 3.17 vs 2.96 in², HSS4X4X1/4 r 1.48 vs 1.52 in; single angles use r about the leg axis, not r_z (unconservative) | HouseCalc AISC shape library; angles and double channels not offered |
+| 10 | STRUTURA | Angles and channels at F_y = 50 ksi; round HSS at 50 ksi (A500 Gr. C round: 46 ksi) | Grades from AISC Manual Table 2-4, selected per member group |
+| 11 | STRUTURA | Tension by gross-section yielding only | AISC D2 yielding and rupture on A_e = U A_n (U, A_n / A_g entered from the connection detail) |
+| 12 | STRUTURA | Compression with K = 1 on the panel length about r_min; no slender-element check | E3 / E7 with L_cx = member length and L_cy = chord bracing length out of plane; C shapes in compression refused (E4) |
+| 13 | STRUTURA | Six fixed LRFD cases (no 1.2D + 1.6L_r / S + 0.5W); truss self weight not in D; wind as vertical plan pressure | ASCE 7 §2.3 / §2.4 combinations from the library with wind down and uplift variants, unbalanced snow; self weight in D; wind remains net vertical on plan, stated as an assumption |
+| 14 | STRUTURA | Displacement reported under factored loads only, no limit | Service live and total deflection against the selected limits |
 
 ---
 
@@ -684,4 +690,4 @@ Each phase ends with a pushed, working build that you can use.
 
 ## 17. Exclusions
 
-Steel trusses, cold-formed steel (except the optional stud-wall check), masonry other than CMU walls / stem walls, structural slab design (slab on grade is covered by notes and thickened-slab checks), fire-resistance design (UL assemblies are referenced in notes only), and drawing / detail production. Schedules and notes are formatted for transfer to drawings.
+Steel bridge trusses (steel roof trusses are STR-#, Rev. B), cold-formed steel (except the optional stud-wall check), masonry other than CMU walls / stem walls, structural slab design (slab on grade is covered by notes and thickened-slab checks), fire-resistance design (UL assemblies are referenced in notes only), and drawing / detail production. Schedules and notes are formatted for transfer to drawings.

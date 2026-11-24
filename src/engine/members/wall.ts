@@ -6,7 +6,10 @@
  * headers as point loads). The wall is split into segments of constant line
  * load; the typical stud in each segment carries w × s. Point loads are carried
  * by stud packs at their positions; king studs at openings carry wind from half
- * the opening width.
+ * the opening width. Openings with jack studs: the loads over the opening (line
+ * loads, wall above the head, point loads within the opening by the lever rule)
+ * go through the header to the jambs; the jack studs are checked as a column
+ * over the head height.
  *
  * Checks (NDS, ASD, every ASCE 7 §2.4 combination with its C_D):
  *  - stud axial compression with C_P (strong axis l_e = stud length; weak axis braced by
@@ -52,6 +55,36 @@ export interface WallOpening {
   x1: number;
   x2: number;
   kings: number;
+  type?: "door" | "window";
+  /** head height (top of the rough opening) above the floor, ft */
+  head?: number;
+  /** window sill height above the floor, ft */
+  sill?: number;
+  /** jack (trimmer) studs each side; when set the header load is carried to the jambs and checked */
+  jacks?: number;
+  /** header callout, e.g. "4x8 DF-L No.2" or a beam mark */
+  header?: string;
+}
+
+/** King studs each side by opening width, per the engineer's standard wood framing notes. */
+export function minKings(width: number): number | undefined {
+  return width <= 2 ? 1 : width <= 4 ? 2 : width <= 8 ? 3 : width <= 12 ? 4 : width <= 16 ? 5 : undefined;
+}
+/** Jack (trimmer) studs each side: 1 for openings under 4 ft, 2 for 4 ft and wider. */
+export const minJacks = (width: number) => (width < 4 ? 1 : 2);
+
+export interface WallHeader {
+  label: string;
+  opening: WallOpening;
+  width: number;
+  /** load on the header over the opening, plf (line loads + wall above the head) */
+  w: LoadVector;
+  /** point loads within the opening, by side, lb */
+  points: { left: LoadVector; right: LoadVector };
+  /** jamb reactions, lb */
+  R: { left: LoadVector; right: LoadVector };
+  /** jack studs at the more heavily loaded jamb */
+  jacks: StudCheck;
 }
 
 export interface WallWind {
@@ -132,6 +165,7 @@ export interface WallResult extends MemberResultBase {
   typical: StudCheck;
   packs: StudCheck[];
   kings: StudCheck[];
+  headers: WallHeader[];
   deflection: {
     w: number;
     delta0: number;
@@ -196,7 +230,7 @@ function evaluate(ctx: DesignContext, wl: WallInput, size = wl.size, spacing = w
 
   // loads along the wall
   const dist = areaWallLoads(ctx, wl.area, wl.walls, wl.length);
-  const ex = extraToBeamLoads(wl.extra, wl.length);
+  const ex = extraToBeamLoads(wl.extra, wl.length, ctx);
   const allLoads = [...dist.loads, ...ex.loads];
   const lines: LoadLine[] = [...dist.lines, ...ex.lines];
   const self = resolveDead(ctx, wl.self);
@@ -264,13 +298,14 @@ function evaluate(ctx: DesignContext, wl: WallInput, size = wl.size, spacing = w
     windTrib: number,
     atEnd: boolean,
     x?: number,
+    len = lIn,
   ): StudCheck => {
     const m = n === 1 ? mat : resolveWood({ kind: "sawn", species: wl.species, grade: wl.grade, size, plies: n }, nds);
     const col = designColumn({
       mat: m,
       cond,
-      length: lIn,
-      le1,
+      length: len,
+      le1: len,
       le2,
       builtUp: n > 1 ? "nailed" : undefined,
       P,
@@ -332,7 +367,11 @@ function evaluate(ctx: DesignContext, wl: WallInput, size = wl.size, spacing = w
   const segAt = (x: number) => segments.find((g) => x >= g.x1 - 1e-9 && x <= g.x2 + 1e-9) ?? segments[0];
   const assigned = new Map<number, LoadVector>();
   const unassigned: string[] = [];
+  const headed = wl.openings.filter((o) => o.jacks);
+  const onHeader = (p: (typeof points)[number]) =>
+    headed.find((o) => (p.x ?? 0) > o.x1 + 1e-6 && (p.x ?? 0) < o.x2 - 1e-6);
   for (const p of points) {
+    if (onHeader(p)) continue;
     let best = -1;
     let dist = Infinity;
     wl.packs.forEach((k, i) => {
@@ -380,6 +419,42 @@ function evaluate(ctx: DesignContext, wl: WallInput, size = wl.size, spacing = w
     );
   });
 
+  // headers: loads over the opening to the jambs; jack studs over the head height
+  const headers: WallHeader[] = headed.map((o) => {
+    const Lo = o.x2 - o.x1;
+    if (!(Lo > 0)) throw new Error(`${o.label}: opening end must be beyond its start`);
+    if (o.head !== undefined && !(o.head > 0 && o.head < wl.plateHeight))
+      throw new Error(`${o.label}: head height must be between the floor and the plate height`);
+    const W = zeroLoads();
+    for (const g of segments) {
+      const a = Math.max(g.x1, o.x1);
+      const b = Math.min(g.x2, o.x2);
+      if (b > a) for (const t of LOAD_TYPES) W[t] += g.w[t] * (b - a);
+    }
+    W.D += self.psf * (wl.plateHeight - (o.head ?? 0)) * Lo;
+    const w = scaleLoads(W, 1 / Lo);
+    const left = zeroLoads();
+    const right = zeroLoads();
+    for (const p of points)
+      if (onHeader(p) === o) {
+        left[p.type] += ((p.P ?? 0) * (o.x2 - (p.x ?? 0))) / Lo;
+        right[p.type] += ((p.P ?? 0) * ((p.x ?? 0) - o.x1)) / Lo;
+      }
+    const R = { left: addLoads(scaleLoads(W, 0.5), left), right: addLoads(scaleLoads(W, 0.5), right) };
+    const side = totalOf(R.left) >= totalOf(R.right) ? "left" : "right";
+    const len = o.head !== undefined ? o.head * 12 - 1.5 * wl.bottomPlates : lIn;
+    const jacks = studCheck(
+      `Jack studs, ${o.label} (${side} jamb)`,
+      o.jacks!,
+      R[side],
+      0,
+      false,
+      side === "left" ? o.x1 : o.x2,
+      len,
+    );
+    return { label: o.label, opening: o, width: Lo, w, points: { left, right }, R, jacks };
+  });
+
   // out-of-plane deflection of the typical stud (service wind with P-Δ)
   const E = typical.col.Eprime;
   const I = mat.I;
@@ -405,6 +480,7 @@ function evaluate(ctx: DesignContext, wl: WallInput, size = wl.size, spacing = w
     typical,
     packs,
     kings,
+    headers,
     wind,
     combos,
     basePerFoot,
@@ -466,6 +542,7 @@ function checksOf(ev: Evaluated): Check[] {
   });
   ev.packs.forEach((p) => add(p.check, p.check.label));
   ev.kings.forEach((k) => add(k, k.label));
+  ev.headers.forEach((h) => add(h.jacks, h.jacks.label));
   if (ev.hasWind)
     checks.push({
       name: "Out-of-plane wind deflection (IBC Table 1604.3)",
@@ -522,10 +599,23 @@ export function designWall(ctx: DesignContext, wl: WallInput): WallResult {
     flags.push(
       "Built-up stud packs: plies nailed together per NDS 15.3.3; full-height packs bearing on solid blocking / squash blocks to the foundation",
     );
-  for (const o of wl.openings)
+  for (const o of wl.openings) {
+    const Lo = o.x2 - o.x1;
+    const what = `${o.label}${o.type ? ` (${o.type}, ${fmtFtIn(Lo)} wide)` : ""}`;
     flags.push(
-      `${o.label}: header bears on jack studs; header and jack-stud loads carried as point loads to stud packs`,
+      o.jacks
+        ? `${what}: header ${o.header || "per framing plan"} on (${o.jacks}) jack + (${o.kings}) king studs each side`
+        : `${what}: header bears on jack studs; header and jack-stud loads carried as point loads to stud packs`,
     );
+    const k = minKings(Lo);
+    if (k === undefined) flags.push(`${o.label}: opening wider than 16 ft — king studs per the framing plan`);
+    else if (o.kings < k)
+      flags.push(`${o.label}: ${o.kings} king stud(s) each side; the general notes require ${k} for this width`);
+    if (o.jacks && o.jacks < minJacks(Lo))
+      flags.push(
+        `${o.label}: ${o.jacks} jack stud(s) each side; the general notes require ${minJacks(Lo)} for this width`,
+      );
+  }
 
   let alternatives: WallResult["alternatives"];
   if (!pass) {
@@ -579,7 +669,18 @@ export function designWall(ctx: DesignContext, wl: WallInput): WallResult {
       byType: p.point,
       ...comboMinMax(p.point),
     })),
-  ];
+    // point loads on a header reach the base at its jambs (line loads stay in the base line)
+    ...ev.headers.flatMap((h) =>
+      (["left", "right"] as const)
+        .filter((k) => totalOf(h.points[k]) > 0)
+        .map((k) => ({
+          name: `${h.label}, ${k} jamb (point loads on the header)`,
+          x: k === "left" ? h.opening.x1 : h.opening.x2,
+          byType: h.points[k],
+          ...comboMinMax(h.points[k]),
+        })),
+    ),
+  ].map((r, i) => ({ ...r, support: i }));
   const typ = `${wl.size} ${wl.species} ${wl.grade} @ ${fmt(wl.spacing, wl.spacing % 1 ? 1 : 0)} in. o.c.`;
   return {
     id: wl.id,
@@ -606,6 +707,7 @@ export function designWall(ctx: DesignContext, wl: WallInput): WallResult {
     typical: ev.typical,
     packs: ev.packs.map((p) => p.check),
     kings: ev.kings,
+    headers: ev.headers,
     deflection: ev.deflection,
     combos: ev.combos,
     basePerFoot: ev.basePerFoot,

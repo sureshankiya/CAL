@@ -14,6 +14,7 @@
  */
 
 import { asdCombinations, combine, relevantCombinations } from "../core/combos";
+import { fireColumn, type FireInput } from "../design/fire";
 import { fmt, fmtFtIn } from "../core/fmt";
 import { LOAD_TYPES, loadVector, zeroLoads, type LoadType, type LoadVector } from "../core/loads";
 import { fromDefault, type AssumptionEntry } from "../core/provenance";
@@ -68,6 +69,8 @@ export interface PostInput {
   selfWeight: boolean;
   wetService?: boolean;
   incised?: boolean;
+  /** calculated fire resistance of the exposed post, 4 sides (NDS Ch. 16) */
+  fire?: FireInput;
 }
 
 export interface PostResult extends MemberResultBase {
@@ -259,6 +262,13 @@ function checksOf(ev: ReturnType<typeof evaluate>): Check[] {
 export function designPost(ctx: DesignContext, p: PostInput): PostResult {
   const ev = evaluate(ctx, p);
   const checks = checksOf(ev);
+  let fireLines: string[] | undefined;
+  if (p.fire) {
+    const Pg = Math.max(0, ...ev.combos.filter((c) => !c.factors.W && !c.factors.E).map((c) => combine(ev.P, c)));
+    const fr = fireColumn(ev.mat, p.fire, Pg, ev.le1, ev.le2);
+    checks.push(fr.check);
+    fireLines = fr.lines;
+  }
   const pass = checks.every((c) => c.pass);
   const flags: string[] = [];
   const assumptions: AssumptionEntry[] = [
@@ -268,6 +278,14 @@ export function designPost(ctx: DesignContext, p: PostInput): PostResult {
       "NDS 3.7.1.2, Appendix G",
     ),
   ];
+  if (fireLines && p.fire)
+    assumptions.push(
+      fromDefault(
+        `Fire resistance ${fmt(p.fire.hours, 1)} h (NDS Ch. 16)`,
+        fireLines.join("; "),
+        "NDS 16.2; Table 16.2.2",
+      ),
+    );
   if (ev.builtUp)
     assumptions.push(
       fromDefault(

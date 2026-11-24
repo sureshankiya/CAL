@@ -8,7 +8,15 @@
  *    where 0 < pg ≤ 20 psf and slope (deg) < W / 50.
  *  - Unbalanced snow on hip and gable roofs (§7.6.1): 2.38° ≤ slope ≤ 30.2°; for W ≤ 20 ft and
  *    simply supported prismatic members from ridge to eave the leeward side carries Is·pg (7-16) or
- *    pg (7-22) with the windward side unloaded. Wider roofs need the drift surcharge (not in this version).
+ *    pg (7-22) with the windward side unloaded. W > 20 ft: windward 0.3 ps, leeward ps plus the
+ *    rectangular surcharge hd·γ/√S over 8·hd·√S/3 from the ridge, hd with lu = W (Fig. 7.6-2).
+ *  - Drift height hd: ASCE 7-16 Fig. 7.6-1 hd = 0.43 lu^(1/3) (pg + 10)^(1/4) − 1.5;
+ *    ASCE 7-22 Eq. 7.6-1 hd = 1.5 √(pg^0.74 lu^0.70 W2^1.7 / γ), W2 = winter wind parameter (Fig. 7.6-1).
+ *    γ = 0.13 pg + 14 ≤ 30 pcf (Eq. 7.7-1).
+ *  - Drifts on lower roofs (§7.7.1): leeward hd (lu = upper roof), windward 0.75 hd (lu = lower roof),
+ *    larger governs; not required when hc / hb < 0.2; w = 4 hd (hd ≤ hc), else hd = hc and
+ *    w = 4 hd² / hc ≤ 8 hc; pd = hd γ (triangular surcharge on the balanced load).
+ *  - Parapets and roof projections (§7.8): windward drift, 0.75 hd with lu = roof length upwind.
  */
 
 export type Asce7Edition = "ASCE 7-16" | "ASCE 7-22";
@@ -29,6 +37,124 @@ export interface SnowInput {
   W: number;
   /** hip / gable roof (unbalanced case applies); false for monoslope */
   gable: boolean;
+  /** ASCE 7-22 winter wind parameter W2 (Fig. 7.6-1 / ASCE Hazard Tool) */
+  W2?: number;
+}
+
+/** ASCE 7-22 default W2 where none is entered: upper end of the Fig. 7.6-1 contours (conservative). */
+export const W2_DEFAULT = 0.65;
+
+/** Snow density, pcf — ASCE 7 Eq. 7.7-1. */
+export const snowDensity = (pg: number) => Math.min(0.13 * pg + 14, 30);
+
+/** Drift height hd, ft (ASCE 7-16 Fig. 7.6-1 / ASCE 7-22 Eq. 7.6-1), with the expression printed. */
+export function driftHeight(
+  edition: Asce7Edition,
+  pg: number,
+  lu: number,
+  W2 = W2_DEFAULT,
+): { hd: number; expr: string } {
+  if (pg <= 0 || lu <= 0) return { hd: 0, expr: "hd = 0 (no snow)" };
+  if (edition === "ASCE 7-16") {
+    const hd = Math.max(0.43 * Math.cbrt(lu) * Math.pow(pg + 10, 0.25) - 1.5, 0);
+    return {
+      hd,
+      expr: `hd = 0.43 lu^(1/3) (pg + 10)^(1/4) − 1.5 = 0.43 × ${lu.toFixed(1)}^(1/3) × ${(pg + 10).toFixed(1)}^(1/4) − 1.5 = ${hd.toFixed(2)} ft (Fig. 7.6-1)`,
+    };
+  }
+  const g = snowDensity(pg);
+  const hd = 1.5 * Math.sqrt((Math.pow(pg, 0.74) * Math.pow(lu, 0.7) * Math.pow(W2, 1.7)) / g);
+  return {
+    hd,
+    expr: `hd = 1.5 √(pg^0.74 lu^0.70 W2^1.7 / γ) = 1.5 √(${pg.toFixed(1)}^0.74 × ${lu.toFixed(1)}^0.70 × ${W2.toFixed(2)}^1.7 / ${g.toFixed(1)}) = ${hd.toFixed(2)} ft (Eq. 7.6-1)`,
+  };
+}
+
+export type DriftCase = "step" | "parapet";
+
+export interface DriftInput {
+  edition: Asce7Edition;
+  pg: number;
+  /** balanced snow load on the lower (drifted) roof, psf */
+  ps: number;
+  W2?: number;
+  case: DriftCase;
+  /** step: upper roof length (leeward fetch); parapet / projection: roof length upwind, ft */
+  luUpper: number;
+  /** step: lower roof length (windward fetch), ft */
+  luLower?: number;
+  /** height of the step / parapet / projection above the lower roof surface, ft */
+  hr: number;
+}
+
+export interface DriftResult {
+  input: DriftInput;
+  gamma: number;
+  hb: number;
+  hc: number;
+  required: boolean;
+  leeward?: { hd: number; expr: string };
+  windward?: { hd: number; expr: string };
+  governs: "leeward" | "windward" | "none";
+  /** design drift height, ft (≤ hc) */
+  hd: number;
+  /** drift width, ft */
+  w: number;
+  /** peak surcharge at the step, psf */
+  pd: number;
+  lines: string[];
+  ref: string;
+}
+
+/** Snow drift on a lower roof against a step (§7.7) or at a parapet / projection (§7.8). */
+export function snowDrift(i: DriftInput): DriftResult {
+  const gamma = snowDensity(i.pg);
+  const hb = i.ps / gamma;
+  const hc = Math.max(i.hr - hb, 0);
+  const lines = [
+    `γ = 0.13 pg + 14 ≤ 30 = ${gamma.toFixed(1)} pcf (Eq. 7.7-1)`,
+    `hb = ps / γ = ${i.ps.toFixed(1)} / ${gamma.toFixed(1)} = ${hb.toFixed(2)} ft; hc = hr − hb = ${i.hr.toFixed(2)} − ${hb.toFixed(2)} = ${hc.toFixed(2)} ft`,
+  ];
+  const ref = i.case === "step" ? "ASCE 7 §7.7.1" : "ASCE 7 §7.8";
+  const none = (why: string): DriftResult => {
+    lines.push(why);
+    return { input: i, gamma, hb, hc, required: false, governs: "none", hd: 0, w: 0, pd: 0, lines, ref };
+  };
+  if (i.pg <= 0) return none("No ground snow — no drift");
+  if (hb > 0 && hc / hb < 0.2)
+    return none(`hc / hb = ${(hc / hb).toFixed(2)} < 0.2 — drift load not required (§7.7.1)`);
+  let leeward: { hd: number; expr: string } | undefined;
+  let windward: { hd: number; expr: string } | undefined;
+  if (i.case === "step") {
+    leeward = driftHeight(i.edition, i.pg, i.luUpper, i.W2);
+    lines.push(`Leeward (lu = upper roof ${i.luUpper.toFixed(1)} ft): ${leeward.expr}`);
+  }
+  const luW = i.case === "step" ? (i.luLower ?? 0) : i.luUpper;
+  if (luW > 0) {
+    const h = driftHeight(i.edition, i.pg, luW, i.W2);
+    windward = { hd: 0.75 * h.hd, expr: `0.75 × ${h.hd.toFixed(2)} = ${(0.75 * h.hd).toFixed(2)} ft` };
+    lines.push(
+      `Windward (lu = ${i.case === "step" ? "lower roof" : "roof upwind"} ${luW.toFixed(1)} ft): ${h.expr}; 0.75 hd = ${windward.expr}`,
+    );
+  }
+  const lw = leeward?.hd ?? 0;
+  const ww = windward?.hd ?? 0;
+  const governs = lw >= ww ? "leeward" : "windward";
+  let hd = Math.max(lw, ww);
+  let w: number;
+  if (hd <= hc) {
+    w = 4 * hd;
+    lines.push(`hd = ${hd.toFixed(2)} ft ≤ hc: w = 4 hd = ${w.toFixed(2)} ft`);
+  } else {
+    w = Math.min((4 * hd * hd) / hc, 8 * hc);
+    lines.push(
+      `hd = ${hd.toFixed(2)} ft > hc: hd = hc = ${hc.toFixed(2)} ft; w = 4 hd² / hc ≤ 8 hc = ${w.toFixed(2)} ft`,
+    );
+    hd = hc;
+  }
+  const pd = hd * gamma;
+  lines.push(`pd = hd γ = ${hd.toFixed(2)} × ${gamma.toFixed(1)} = ${pd.toFixed(1)} psf at the step, to 0 at w`);
+  return { input: i, gamma, hb, hc, required: true, leeward, windward, governs, hd, w, pd, lines, ref };
 }
 
 export interface SnowResult {
@@ -43,7 +169,14 @@ export interface SnowResult {
   rainOnSnow: number;
   /** balanced design value incl. rain-on-snow */
   balanced: number;
-  unbalanced: { applies: boolean; leeward: number; windward: number; note: string };
+  unbalanced: {
+    applies: boolean;
+    leeward: number;
+    windward: number;
+    /** W > 20 ft: rectangular surcharge pd (psf, horizontal projection) over `length` (ft, horizontal) from the ridge */
+    surcharge?: { pd: number; length: number; hd: number; gamma: number; S: number; expr: string };
+    note: string;
+  };
   /** governing uniform load for simply supported rafters (ridge to eave) */
   rafterUniform: number;
   rafterCase: string;
@@ -77,7 +210,7 @@ export function snowLoads(i: SnowInput): SnowResult {
   const balanced = ps + rainOnSnow;
 
   const unbalApplies = i.gable && i.pg > 0 && slopeDeg >= 2.38 - 1e-9 && slopeDeg <= 30.2 + 1e-9;
-  let unbalanced = { applies: false, leeward: 0, windward: 0, note: "Not required (§7.6.1)" };
+  let unbalanced: SnowResult["unbalanced"] = { applies: false, leeward: 0, windward: 0, note: "Not required (§7.6.1)" };
   if (unbalApplies) {
     if (i.W <= 20) {
       unbalanced = {
@@ -87,13 +220,18 @@ export function snowLoads(i: SnowInput): SnowResult {
         note: `W = ${i.W} ft ≤ 20 ft: leeward ${is716 ? "Is·pg" : "pg"}, windward unloaded (§7.6.1)`,
       };
     } else {
+      const S = 12 / i.rise;
+      const g = snowDensity(i.pg);
+      const h = driftHeight(i.edition, i.pg, i.W, i.W2);
+      const pd = (h.hd * g) / Math.sqrt(S);
+      const length = (8 * h.hd * Math.sqrt(S)) / 3;
       unbalanced = {
         applies: true,
         leeward: ps,
         windward: 0.3 * ps,
-        note: "W > 20 ft: leeward ps plus drift surcharge hd·γ/√S — surcharge not computed in this version",
+        surcharge: { pd, length, hd: h.hd, gamma: g, S, expr: h.expr },
+        note: `W = ${i.W} ft > 20 ft: windward 0.3 ps; leeward ps + surcharge hd γ / √S = ${h.hd.toFixed(2)} × ${g.toFixed(1)} / √${S.toFixed(2)} = ${pd.toFixed(1)} psf over 8 hd √S / 3 = ${length.toFixed(2)} ft from the ridge (§7.6.1, Fig. 7.6-2); ${h.expr}`,
       };
-      flags.push("Unbalanced snow drift surcharge for W > 20 ft not computed — VERIFY (ASCE 7 §7.6.1)");
     }
   }
 
@@ -102,6 +240,8 @@ export function snowLoads(i: SnowInput): SnowResult {
   if (unbalanced.applies) cands.push([unbalanced.leeward, "Unbalanced, leeward side"]);
   const gov = cands.reduce((a, b) => (b[0] > a[0] ? b : a));
   if (!is716) flags.push("ASCE 7-22: confirm pg (risk-targeted, ASCE Hazard Tool) and Ct from Table 7.3-2");
+  if (!is716 && unbalanced.surcharge && i.W2 === undefined)
+    flags.push(`ASCE 7-22 winter wind parameter W2 not entered — ${W2_DEFAULT} used — VERIFY (Fig. 7.6-1)`);
 
   return {
     input: i,
