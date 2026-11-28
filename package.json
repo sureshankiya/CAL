@@ -17,7 +17,8 @@
     "verify:reference": "python3 -I verification/reference.py && python3 -I verification/reference_p2.py && python3 -I verification/reference_p3.py && python3 -I verification/reference_p4.py && python3 -I verification/reference_p5.py && python3 -I verification/portfolio/normalize.py",
     "lock": "node scripts/lock.mjs",
     "mcp": "bun mcp/server.ts",
-    "mcp:smoke": "bun mcp/smoke.ts",
+    "mcp:smoke": "bun mcp/smoke.ts && bun mcp/smoke.ts plugin/server.mjs",
+    "build:plugin": "bun build mcp/server.ts --target=node --format=esm --outfile plugin/server.mjs",
     "build:static": "vite build -c vite.static.config.ts && node scripts/pack-static.mjs"
   },
   "dependencies": {

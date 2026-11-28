@@ -85,7 +85,22 @@ repository (approve the `housecalc` server once when asked; needs `bun install`)
 | `fill_from_markdown` / `export_markdown` | the same Markdown input sheet as Fill from .md / Export .md |
 | `run_design` | design the whole package: package checks, load-path problems, member statuses |
 
-Claude Desktop: add to `claude_desktop_config.json` (use the absolute path of this folder):
+**Install as a plugin (any folder, Claude Code terminal or the desktop app's Code tab).** The repository is
+a plugin marketplace; `plugin/` holds the connector bundled into one file (`plugin/server.mjs`, needs Node 18+)
+and the `housecalc-from-drawings` skill that drives HouseCalc through these tools instead of the browser:
+
+```bash
+claude plugin marketplace add sureshankiya/CAL#claude/busy-goodall-hse8mt
+```
+
+```bash
+claude plugin install housecalc@housecalc
+```
+
+After changing the engine or `mcp/server.ts`, rebuild the bundle with `bun run build:plugin`
+(`tests/plugin.test.ts` fails while it is out of date).
+
+Claude Desktop chat (no plugin support): add to `claude_desktop_config.json` (use the absolute path of this folder):
 
 ```json
 { "mcpServers": { "housecalc": { "command": "bun", "args": ["/path/to/CAL/mcp/server.ts"] } } }

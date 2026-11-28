@@ -1,0 +1,5 @@
+{
+  "name": "housecalc",
+  "version": "1.0.0",
+  "description": "HouseCalc structural calculator for Claude: open, edit, design and save HouseCalc projects directly (no browser), plus the drawings-to-HouseCalc workflow skill."
+}

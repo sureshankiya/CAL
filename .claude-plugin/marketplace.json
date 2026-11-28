@@ -1,0 +1,11 @@
+{
+  "name": "housecalc",
+  "owner": { "name": "HouseCalc" },
+  "plugins": [
+    {
+      "name": "housecalc",
+      "source": "./plugin",
+      "description": "HouseCalc connector (MCP) and the drawings-to-HouseCalc skill"
+    }
+  ]
+}
